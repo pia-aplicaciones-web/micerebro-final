@@ -1,0 +1,19 @@
+<svg width="128" height="128" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="CanvasMind Logo">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" style="stop-color:#1EE69A;" />
+      <stop offset="100%" style="stop-color:#29A2F8;" />
+    </linearGradient>
+  </defs>
+  <circle cx="50" cy="50" r="50" fill="black" />
+  <path 
+    d="M 15,50 
+       C 25,40 25,60 35,50 
+       S 45,40 55,50 
+       S 75,40 85,50" 
+    fill="none" 
+    stroke="url(#logoGradient)" 
+    stroke-width="12" 
+    stroke-linecap="round"
+  />
+</svg>

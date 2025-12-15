@@ -1,0 +1,38 @@
+/packages/**/*/dist/
+/examples/
+/dist
+/packages/@apphosting/publish-dev/.local
+/packages/@apphosting/publish-dev/htpasswd
+
+# NPM
+node_modules
+
+# misc
+.vscode
+*.log
+.DS_Store
+/apphosting-*.tgz
+/firebase-frameworks-*.tgz
+
+# firebase
+.firebase
+
+# Next.js
+.next/
+
+# Environment variables
+.env
+.env.local
+.env*.local
+
+# Backup files
+*.tar.gz
+*.zip
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+.vercel

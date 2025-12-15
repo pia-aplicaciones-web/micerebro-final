@@ -1,0 +1,14 @@
+{
+  "projects": {
+    "default": "canvasmind-app"
+  },
+  "targets": {
+    "canvasmind-app": {
+      "hosting": {
+        "app-micerebro": [
+          "app-micerebro"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    "target": "es5",                           /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', 'ES2018', 'ES2019', 'ES2020', 'ES2021', 'ES2022', 'ESNext'. */
+    "lib": ["dom", "dom.iterable", "esnext"], /* Specify a list of library files to be included in the compilation. */
+    "allowJs": true,                          /* Allow javascript files to be compiled. */
+    "skipLibCheck": true,                     /* Skip type checking of all declaration files (*.d.ts). */
+    "strict": false,                          /* Disable strict type-checking to reduce noise. */
+    "forceConsistentCasingInFileNames": true, /* Ensure that casing is consistent in file names. */
+    "noEmit": true,                           /* Do not emit outputs. */
+    "esModuleInterop": true,                  /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
+    "module": "esnext",                       /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', 'es2022', 'esnext'. */
+    "moduleResolution": "node",               /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */
+    "resolveJsonModule": true,                /* Enable importing .json files. */
+    "isolatedModules": true,                  /* Unconditionally emit imports for all files. */
+    "jsx": "preserve",                        /* Specify JSX factory function to use when targeting React JSX emit: 'react', 'react-jsx', 'react-jsxdev', 'preserve'. */
+    "incremental": true,                      /* Enable incremental compilation. */
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+
+    /* Path Aliases Configuration (¡ESTO ES LO IMPORTANTE PARA TU ERROR!) */
+    "baseUrl": ".",                           /* Base directory to resolve non-absolute module names. */
+    "paths": {
+      "@/*": ["./src/*"]                      /* Map "@/*" imports to "./src/*" */
+      // Si tus componentes están directamente en la raíz de tu proyecto
+      // (ej. ./components), y no dentro de una carpeta "src",
+      // entonces cambiarías esto a:
+      // "@/*": ["./*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".next/types/**/*.ts"
+  ], /* Include files or directories to type check. */
+  "exclude": [
+    "node_modules",
+    "packages",
+    "packages/**/*",
+    "docs",
+    "docs/**/*",
+    "starters",
+    "starters/**/*",
+    "react-app",
+    "react-app/**/*",
+    "out",
+    "out/**/*"
+  ]                /* Exclude files or directories from the compilation. */
+}
