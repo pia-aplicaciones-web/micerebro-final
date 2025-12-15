@@ -188,6 +188,45 @@ export default function GalleryElement(props: CommonElementProps) {
   }, []);
 
   const images = galleryContent.images || [];
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  // Handle drag start within gallery
+  const handleGalleryDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDraggedIndex(index);
+    // Also set data for external drag (to canvas)
+    const image = images[index];
+    e.dataTransfer.setData('application/gallery-image', JSON.stringify(image));
+    e.dataTransfer.effectAllowed = 'move';
+  }, [images]);
+
+  // Handle drag over within gallery
+  const handleGalleryDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  // Handle drop within gallery for reordering
+  const handleGalleryDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === dropIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    // Reorder images array
+    const newImages = [...images];
+    const [draggedImage] = newImages.splice(draggedIndex, 1);
+    newImages.splice(dropIndex, 0, draggedImage);
+
+    updateGalleryContent({ images: newImages });
+    setDraggedIndex(null);
+  }, [draggedIndex, images, updateGalleryContent]);
+
+  // Handle drag end
+  const handleGalleryDragEnd = useCallback(() => {
+    setDraggedIndex(null);
+  }, []);
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden rounded-lg shadow-lg border border-gray-200/50 bg-white">
@@ -246,13 +285,23 @@ export default function GalleryElement(props: CommonElementProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {images.map((image) => (
-              <div key={image.id} className="relative group">
-                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+            {images.map((image, index) => (
+              <div
+                key={image.id}
+                className="relative group"
+                draggable
+                onDragStart={(e) => handleGalleryDragStart(e, index)}
+                onDragOver={handleGalleryDragOver}
+                onDrop={(e) => handleGalleryDrop(e, index)}
+                onDragEnd={handleGalleryDragEnd}
+              >
+                <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-opacity ${
+                  draggedIndex === index ? 'opacity-50' : ''
+                }`}>
                   <img
                     src={image.url}
                     alt={image.filename}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover pointer-events-none"
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-image.png';
                     }}

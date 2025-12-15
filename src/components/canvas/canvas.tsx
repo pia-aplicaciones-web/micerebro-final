@@ -166,7 +166,46 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
       });
     }
   };
-  
+
+  // Handle drop de imágenes desde galería
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+
+    const galleryImageData = e.dataTransfer.getData('application/gallery-image');
+    if (!galleryImageData) return;
+
+    try {
+      const image = JSON.parse(galleryImageData) as { id: string; url: string; filename: string };
+
+      // Calcular posición relativa al canvas
+      const container = canvasContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+
+      // Posición donde se soltó la imagen
+      const dropX = e.clientX - rect.left + container.scrollLeft;
+      const dropY = e.clientY - rect.top + container.scrollTop;
+
+      // Crear elemento de imagen
+      addElement('image', {
+        url: image.url,
+        filename: image.filename,
+        properties: {
+          position: { x: dropX, y: dropY },
+          size: { width: 300, height: 200 }
+        }
+      });
+    } catch (error) {
+      console.error('Error procesando drop de imagen:', error);
+    }
+  }, [addElement]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  }, []);
+
   // CRÍTICO: Usar refs para handlers para evitar re-suscripciones constantes
   const dragStateRef = useRef(dragState);
   const saveLastViewRef = useRef(saveLastView);
@@ -558,6 +597,8 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           backgroundSize: `${20 * scale}px ${20 * scale}px`,
         }}
         onMouseDown={handleMouseDown}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
       >
         <div
           ref={canvasContentRef}
