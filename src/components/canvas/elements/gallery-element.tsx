@@ -216,6 +216,10 @@ export default function GalleryElement(props: CommonElementProps) {
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleUploadImage}>
+                <Upload className="mr-2 h-4 w-4" />
+                <span>Subir múltiples</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleClearAll}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 <span>Limpiar todo</span>

@@ -721,12 +721,7 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
             }}
           >
             <div className="h-full flex flex-col">
-              <div className="bg-[#bad324] border-b border-green-600 p-3">
-                <span className="text-sm font-semibold text-white font-['Space_Grotesk']">
-                  Mi galería
-                </span>
-              </div>
-              <div className="flex-1 overflow-hidden p-3">
+              <div className="flex-1 overflow-hidden">
                 <GalleryElement
                   {...galleryElement}
                   scale={1}
