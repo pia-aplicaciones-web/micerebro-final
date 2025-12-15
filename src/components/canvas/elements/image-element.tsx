@@ -97,10 +97,19 @@ export default function ImageElement(props: CommonElementProps) {
         </div>
         
         <div className={cn(
-            "relative flex-grow rounded-lg overflow-hidden drag-handle", 
+            "relative flex-grow rounded-lg overflow-hidden drag-handle",
             `cursor-grab active:cursor-grabbing`
             )}
             style={{ transform: `rotate(${rotation || 0}deg)` }}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/canvas-image', JSON.stringify({
+                id,
+                url: imageUrl,
+                filename: label || 'imagen'
+              }));
+              e.dataTransfer.effectAllowed = 'move';
+            }}
         >
           <div className="relative w-full h-full bg-card">
             <Image

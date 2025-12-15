@@ -142,6 +142,45 @@ export default function GalleryElement(props: CommonElementProps) {
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
 
+    // Primero intentar recibir elementos de imagen desde el canvas
+    const canvasImageData = e.dataTransfer.getData('application/canvas-image');
+    if (canvasImageData) {
+      try {
+        const canvasImage = JSON.parse(canvasImageData) as { id: string; url: string; filename?: string };
+
+        // Verificar si la imagen ya existe en la galería
+        const currentImages = galleryContent.images || [];
+        const exists = currentImages.some(img => img.url === canvasImage.url);
+
+        if (!exists) {
+          const newImage: GalleryImage = {
+            id: `img_${Date.now()}`,
+            url: canvasImage.url,
+            filename: canvasImage.filename || `imagen_${Date.now()}`,
+            uploadedAt: new Date().toISOString()
+          };
+
+          updateGalleryContent({
+            images: [...currentImages, newImage]
+          });
+
+          toast({
+            title: 'Imagen agregada',
+            description: 'Imagen movida desde el canvas a la galería'
+          });
+        } else {
+          toast({
+            title: 'Imagen ya existe',
+            description: 'Esta imagen ya está en la galería'
+          });
+        }
+        return;
+      } catch (error) {
+        console.error('Error procesando imagen del canvas:', error);
+      }
+    }
+
+    // Si no es una imagen del canvas, procesar como archivos normales
     const userId = user?.uid;
     if (!userId || !storage) return;
 
@@ -188,45 +227,6 @@ export default function GalleryElement(props: CommonElementProps) {
   }, []);
 
   const images = galleryContent.images || [];
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-
-  // Handle drag start within gallery
-  const handleGalleryDragStart = useCallback((e: React.DragEvent, index: number) => {
-    setDraggedIndex(index);
-    // Also set data for external drag (to canvas)
-    const image = images[index];
-    e.dataTransfer.setData('application/gallery-image', JSON.stringify(image));
-    e.dataTransfer.effectAllowed = 'move';
-  }, [images]);
-
-  // Handle drag over within gallery
-  const handleGalleryDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  // Handle drop within gallery for reordering
-  const handleGalleryDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
-    e.preventDefault();
-
-    if (draggedIndex === null || draggedIndex === dropIndex) {
-      setDraggedIndex(null);
-      return;
-    }
-
-    // Reorder images array
-    const newImages = [...images];
-    const [draggedImage] = newImages.splice(draggedIndex, 1);
-    newImages.splice(dropIndex, 0, draggedImage);
-
-    updateGalleryContent({ images: newImages });
-    setDraggedIndex(null);
-  }, [draggedIndex, images, updateGalleryContent]);
-
-  // Handle drag end
-  const handleGalleryDragEnd = useCallback(() => {
-    setDraggedIndex(null);
-  }, []);
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden rounded-lg shadow-lg border border-gray-200/50 bg-white">
@@ -285,23 +285,18 @@ export default function GalleryElement(props: CommonElementProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {images.map((image, index) => (
-              <div
-                key={image.id}
-                className="relative group"
-                draggable
-                onDragStart={(e) => handleGalleryDragStart(e, index)}
-                onDragOver={handleGalleryDragOver}
-                onDrop={(e) => handleGalleryDrop(e, index)}
-                onDragEnd={handleGalleryDragEnd}
-              >
-                <div className={`aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing transition-opacity ${
-                  draggedIndex === index ? 'opacity-50' : ''
-                }`}>
+            {images.map((image) => (
+              <div key={image.id} className="relative group">
+                <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing">
                   <img
                     src={image.url}
                     alt={image.filename}
-                    className="w-full h-full object-cover pointer-events-none"
+                    className="w-full h-full object-cover"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData('application/gallery-image', JSON.stringify(image));
+                      e.dataTransfer.effectAllowed = 'copy';
+                    }}
                     onError={(e) => {
                       e.currentTarget.src = '/placeholder-image.png';
                     }}
