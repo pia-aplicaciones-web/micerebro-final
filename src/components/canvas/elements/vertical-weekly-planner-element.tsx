@@ -100,6 +100,17 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeek, i));
   const weekStart = currentWeek;
 
+  // Título editable
+  const menuTitle = plannerContent.title || 'MENÚ SEMANAL';
+
+  const handleTitleChange = (newTitle: string) => {
+    const newContent = {
+      ...plannerContent,
+      title: newTitle
+    };
+    onUpdate(id, { content: newContent });
+  };
+
   return (
     <div
       data-element-id={id}
@@ -118,7 +129,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
           <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-[#0f172a]">MENÚ SEMANAL</span>
+            <span className="text-lg font-semibold text-[#0f172a]">{menuTitle}</span>
             <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
               Editable
             </span>
@@ -190,9 +201,16 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         <div className="grid grid-rows-2 gap-4 h-full">
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
           <div className="grid grid-rows-[auto_1fr] gap-3 h-full">
-            {/* Título arriba */}
-            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
-              <span className="text-xl font-bold text-[#6b7280] uppercase tracking-wide">MENÚ SEMANAL</span>
+            {/* Título arriba - EDITABLE */}
+            <div className="bg-white rounded-xl shadow-sm p-4 border-2 border-dashed border-[#e0dcc5]">
+              <input
+                type="text"
+                value={menuTitle}
+                onChange={(e) => handleTitleChange(e.target.value)}
+                className="w-full text-center text-xl font-bold text-[#6b7280] uppercase tracking-wide bg-transparent border-none outline-none placeholder:text-[#6b7280] placeholder:opacity-60"
+                placeholder="MENÚ SEMANAL"
+                spellCheck={false}
+              />
             </div>
             {/* Lunes, Martes, Miércoles abajo - tarjetas blancas editables */}
             <div className="grid grid-cols-3 gap-3">
