@@ -180,11 +180,11 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         </div>
       </div>
 
-      {/* Contenido principal - EXACTAMENTE como especificaste: 3 columnas × 2 filas */}
+      {/* Contenido principal - FILAS QUE LLENAN TODO EL ESPACIO CON CASILLAS IGUALES */}
       <div className="flex-1 p-3">
         <div className="grid grid-rows-2 gap-4 h-full">
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-rows-[auto_1fr] gap-3 h-full">
             {/* Título arriba */}
             <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
               <span className="text-xl font-bold text-[#6b7280] uppercase tracking-wide">MENÚ SEMANAL</span>
@@ -199,6 +199,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 onChange={(v) => handleDayChange(format(weekDays[0], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
+                className="h-full"
               />
               <DayCard
                 label={DAY_META[1].label}
@@ -208,6 +209,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 onChange={(v) => handleDayChange(format(weekDays[1], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
+                className="h-full"
               />
               <DayCard
                 label={DAY_META[2].label}
@@ -217,12 +219,13 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 onChange={(v) => handleDayChange(format(weekDays[2], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
+                className="h-full"
               />
             </div>
           </div>
 
-          {/* FILA 2: Jueves, Viernes, (Sábado arriba/Domingo abajo) */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* FILA 2: Jueves, Viernes, (Sábado arriba/Domingo abajo) - TODAS MISMA ALTURA */}
+          <div className="grid grid-cols-3 gap-3 h-full">
             <DayCard
               label={DAY_META[3].label}
               color={DAY_META[3].color}
@@ -231,6 +234,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               onChange={(v) => handleDayChange(format(weekDays[3], 'yyyy-MM-dd'), v)}
               onFocus={() => onSelectElement(id, false)}
               disabled={isPreview}
+              className="h-full"
             />
 
             <DayCard
@@ -241,10 +245,11 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
               onFocus={() => onSelectElement(id, false)}
               disabled={isPreview}
+              className="h-full"
             />
 
-            {/* Sábado arriba, Domingo abajo */}
-            <div className="flex flex-col gap-3">
+            {/* Sábado arriba, Domingo abajo - MISMA ALTURA TOTAL */}
+            <div className="grid grid-rows-2 gap-3 h-full">
               <DayCard
                 label={DAY_META[5].label}
                 color={DAY_META[5].color}
@@ -253,7 +258,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
-                className="flex-1"
+                className="h-full"
               />
               <DayCard
                 label={DAY_META[6].label}
@@ -263,7 +268,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
-                className="flex-1"
+                className="h-full"
               />
             </div>
           </div>
@@ -296,9 +301,9 @@ function DayCard({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   return (
-    <div className={cn('flex flex-col bg-white rounded-xl shadow-sm overflow-hidden', className)}>
+    <div className={cn('flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full', className)}>
       <div
-        className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase text-white"
+        className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase text-white flex-shrink-0"
         style={{ backgroundColor: color }}
       >
         <span>{label}</span>
@@ -310,7 +315,7 @@ function DayCard({
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => onFocus(textareaRef.current)}
         disabled={disabled}
-        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none"
+        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none overflow-auto"
         placeholder="Escribe el menú aquí..."
       />
     </div>
