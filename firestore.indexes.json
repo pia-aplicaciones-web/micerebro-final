@@ -1,4 +1,5 @@
 {
+  "database": "datacerebro",
   "indexes": [
     {
       "collectionGroup": "canvasElements",

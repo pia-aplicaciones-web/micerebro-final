@@ -6,7 +6,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
-    "site": "micerebroapp",
+    "site": "canvasmind-app",
     "public": "out",
     "ignore": [
       "firebase.json",

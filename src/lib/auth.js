@@ -27,8 +27,8 @@ export async function signInWithGoogle() {
 
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({
-    prompt: 'select_account',
-    client_id: '967156176052-abc123def456ghi789jkl012mno345pqr.apps.googleusercontent.com'
+    prompt: 'select_account'
+    // client_id será configurado automáticamente por Firebase
   });
   
   try {

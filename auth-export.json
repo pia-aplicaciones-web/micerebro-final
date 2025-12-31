@@ -1,0 +1,29 @@
+{"users": [
+{
+  "localId": "aplvZLTh3Qb07ZasdxAZk1dQ0M13",
+  "email": "mpiafinlay@gmail.com",
+  "emailVerified": true,
+  "displayName": "Pia Finlay",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocINl-Oy1eOxcwgXxQwn_pueYFDWW1THh4Wz6e_hBpDzs5Peqz2j=s96-c",
+  "lastSignedInAt": "1767208571949",
+  "createdAt": "1766710569785",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "104995136371513734838",
+      "email": "mpiafinlay@gmail.com",
+      "displayName": "Pia Finlay",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocINl-Oy1eOxcwgXxQwn_pueYFDWW1THh4Wz6e_hBpDzs5Peqz2j=s96-c"
+    }
+  ]
+},
+{
+  "localId": "sXsfJc9hLvXTUEgIffmM7r4Jx1S2",
+  "email": "pia@mipeque.cl",
+  "emailVerified": false,
+  "passwordHash": "IDSwH3dzeobsglbBs4bLmkIz8yBC10solk++W90k3B38uIB6ItKHPkFwnt/gZck6e3Brg01kTedhRnscjmBLoQ==",
+  "salt": "0Gfvsyv6faceQA==",
+  "lastSignedInAt": "1767167553678",
+  "createdAt": "1767146340091",
+  "providerUserInfo": []
+}]}
