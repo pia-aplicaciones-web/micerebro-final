@@ -847,17 +847,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   <span className="text-xs text-slate-500">Vista completa de lunes a domingo</span>
                 </div>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => handleAddElement('vertical-weekly-planner')}
-                className="flex items-start gap-3"
-              >
-                <CalendarRange className="h-4 w-4 mt-0.5 text-teal-600" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Menú Semanal</span>
-                  <span className="text-xs text-slate-500">Plantilla vertical tamaño carta</span>
-                </div>
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
