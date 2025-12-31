@@ -117,7 +117,12 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
-          <span className="text-lg font-semibold text-[#0f172a]">MENÚ SEMANAL</span>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold text-[#0f172a]">MENÚ SEMANAL</span>
+            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
+              Editable
+            </span>
+          </div>
           <div className="flex items-center gap-2">
             <button
               className="p-0.5 hover:bg-white/60 rounded"
@@ -299,9 +304,23 @@ function DayCard({
   className?: string;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
+  const handleFocus = () => {
+    setIsFocused(true);
+    onFocus(textareaRef.current);
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+  };
 
   return (
-    <div className={cn('flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full', className)}>
+    <div className={cn(
+      'flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full transition-all duration-200',
+      isFocused && 'ring-2 ring-blue-400 shadow-lg',
+      className
+    )}>
       <div
         className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase text-white flex-shrink-0"
         style={{ backgroundColor: color }}
@@ -313,10 +332,17 @@ function DayCard({
         ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onFocus={() => onFocus(textareaRef.current)}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         disabled={disabled}
-        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none overflow-auto"
-        placeholder="Escribe el menú aquí..."
+        className={cn(
+          "flex-1 w-full p-3 text-sm resize-none border-none overflow-auto transition-colors duration-200",
+          "focus:outline-none focus:ring-0",
+          "placeholder:text-slate-400 placeholder:italic",
+          isFocused ? "bg-blue-50" : "bg-white"
+        )}
+        placeholder={isFocused ? "Escribe aquí..." : "Haz clic para editar..."}
+        spellCheck={false}
       />
     </div>
   );
