@@ -5,7 +5,7 @@ import Image from "next/image";
 import type { CommonElementProps, ImageContent } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ArrowDownLeft } from "lucide-react";
+import { ArrowDownLeft, Trash2 } from "lucide-react";
 import { useAutoSave } from "@/hooks/use-auto-save";
 import { SaveStatusIndicator } from "@/components/canvas/save-status-indicator";
 
@@ -15,7 +15,7 @@ function isImageContent(content: unknown): content is ImageContent {
 }
 
 export default function ImageElement(props: CommonElementProps) {
-  const { isSelected, properties, id, onUpdate, onEditElement, onSelectElement, content } = props;
+  const { isSelected, properties, id, onUpdate, onEditElement, onSelectElement, content, deleteElement } = props;
   
   const imageContent: ImageContent = isImageContent(content) ? content : { url: '' };
   const imageUrl = imageContent.url; 
@@ -97,7 +97,7 @@ export default function ImageElement(props: CommonElementProps) {
         </div>
         
         <div className={cn(
-            "relative flex-grow rounded-lg overflow-hidden drag-handle",
+            "relative flex-grow rounded-lg overflow-hidden drag-handle", 
             `cursor-grab active:cursor-grabbing`
             )}
             style={{ transform: `rotate(${rotation || 0}deg)` }}
@@ -147,6 +147,24 @@ export default function ImageElement(props: CommonElementProps) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       )}
     </div>

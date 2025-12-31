@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import type { CommonElementProps } from '@/lib/types';
+import type { CommonElementProps, MiniContent } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { GripVertical, Search, Trash2, FileImage, MoreVertical, Square, Minus, X } from 'lucide-react';
+import { GripVertical, Trash2, FileImage, MoreVertical, Square, CalendarDays, Copy, X, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
@@ -17,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { MiniPasswordDialog } from '@/components/MiniPasswordDialog';
 
 export default function MiniElement(props: CommonElementProps) {
   const {
@@ -27,20 +27,20 @@ export default function MiniElement(props: CommonElementProps) {
     deleteElement,
     isSelected,
     isPreview,
-    width = 567, // 15cm
-    height = 567, // 15cm
+    width = 302, // 8cm
+    height = 362, // 12cm
   } = props;
 
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
-  const [isMinimized, setIsMinimized] = useState((properties as any)?.minimized || false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isUnlockedForEditing, setIsUnlockedForEditing] = useState(false);
 
   // Parsear contenido
-  const typedContent = (content || {}) as { text?: string; searchQuery?: string };
+  const typedContent = (content || {}) as MiniContent;
   const textContent = typedContent.text || '';
-  const initialSearchQuery = typedContent.searchQuery || '';
 
   // Refs para mantener referencias estables y evitar loops
   const typedContentRef = useRef(typedContent);
@@ -52,23 +52,6 @@ export default function MiniElement(props: CommonElementProps) {
     textContentRef.current = textContent;
   }, [typedContent, textContent]);
 
-  // Estado local para búsqueda (sincronizado con contenido)
-  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
-
-  // Ref para almacenar el searchQuery anterior y evitar loops
-  const prevSearchQueryRef = useRef<string | undefined>(undefined);
-
-  // Sincronizar searchQuery cuando cambia el contenido
-  useEffect(() => {
-    const currentSearchQuery = typedContent.searchQuery;
-    // Solo actualizar si realmente cambió
-    if (currentSearchQuery !== undefined && currentSearchQuery !== prevSearchQueryRef.current) {
-      prevSearchQueryRef.current = currentSearchQuery;
-      if (currentSearchQuery !== searchQuery) {
-        setSearchQuery(currentSearchQuery);
-      }
-    }
-  }, [typedContent.searchQuery, searchQuery]);
 
   // Hook de autoguardado
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange } = useAutoSave({
@@ -83,8 +66,7 @@ export default function MiniElement(props: CommonElementProps) {
       if (newText !== normalizedText) {
         await onUpdate(id, {
           content: {
-            text: newText,
-            searchQuery: searchQuery
+            text: newText
           }
         });
       }
@@ -104,15 +86,12 @@ export default function MiniElement(props: CommonElementProps) {
   useEffect(() => {
     if (contentRef.current) {
       const isFocused = document.activeElement === contentRef.current;
-      // Restaurar contenido si no está minimizado y no está enfocado, y el texto de la prop ha cambiado
-      if (!isMinimized && !isFocused && contentRef.current.innerText !== textContent) {
+      // Restaurar contenido si no está enfocado y el texto de la prop ha cambiado
+      if (!isFocused && contentRef.current.innerText !== textContent) {
         contentRef.current.innerText = textContent || '';
-      } else if (isMinimized && contentRef.current.innerText !== '') {
-        // Cuando se minimiza, el contenido del div puede ser vaciado temporalmente
-        // contentRef.current.innerText = '';
       }
     }
-  }, [textContent, isMinimized]);
+  }, [textContent]);
 
   // Exportar a PNG
   const handleExportToPng = useCallback(async (e: React.MouseEvent) => {
@@ -192,26 +171,7 @@ export default function MiniElement(props: CommonElementProps) {
     await handleAutoSaveBlur();
   }, [handleAutoSaveBlur]);
 
-  // Manejar búsqueda
-  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    // No guardar inmediatamente, solo actualizar localmente para filtrado
-  }, []);
 
-  // Toggle minimize - FIX CRÍTICO: Guardar estado en elemento para persistencia
-  const toggleMinimize = useCallback(() => {
-    const newMinimizedState = !isMinimized;
-    setIsMinimized(newMinimizedState);
-
-    // CRÍTICO: Guardar estado de minimización en el elemento para persistencia
-    onUpdate(id, {
-      properties: {
-        ...properties,
-        minimized: newMinimizedState
-      }
-    });
-  }, [isMinimized, onUpdate, id, properties]);
 
   // Handle delete
   const handleDelete = useCallback(() => {
@@ -219,19 +179,86 @@ export default function MiniElement(props: CommonElementProps) {
     deleteElement(id);
   }, [deleteElement, id]);
 
+  const handleInsertDate = useCallback(() => {
+    if (!contentRef.current) return;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const timeStr = now.toLocaleTimeString('es-ES');
+    const dateTimeStr = `${dateStr} ${timeStr}`;
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(dateTimeStr));
+      // Colocar cursor después del texto insertado
+      range.setStartAfter(range.endContainer);
+      range.setEndAfter(range.endContainer);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }, []);
+
+  // Función para copiar texto como .txt (solo el contenido)
+  const handleCopyAsTxt = useCallback(async () => {
+    if (!contentRef.current) return;
+
+    try {
+      // Obtener solo el texto plano sin formato HTML
+      const textContent = contentRef.current.innerText || contentRef.current.textContent || '';
+
+      await navigator.clipboard.writeText(textContent.trim());
+      toast({ title: 'Texto copiado' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error al copiar texto' });
+    }
+  }, [toast]);
+
+  // Función para manejar cambios de contraseña
+  const handlePasswordChange = useCallback(async (password: string | null) => {
+    const newContent: MiniContent = {
+      ...typedContent,
+      password: password || undefined,
+      isLocked: false // Al cambiar contraseña, desbloqueamos automáticamente
+    };
+
+    await onUpdate(id, {
+      content: newContent
+    });
+  }, [typedContent, onUpdate, id]);
+
+  // Función para manejar doble clic en elemento bloqueado
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (typedContent.password && !isUnlockedForEditing) {
+      setIsPasswordDialogOpen(true);
+    }
+  }, [typedContent.password, isUnlockedForEditing]);
+
+  // Función para manejar el desbloqueo desde el diálogo
+  const handleUnlockForEditing = useCallback(() => {
+    setIsUnlockedForEditing(true);
+    // El diálogo se cierra automáticamente en MiniPasswordDialog
+  }, []);
+
   return (
     <div
       data-element-id={id}
       className={cn(
-        'relative w-full h-full flex flex-col overflow-hidden rounded-lg shadow-md border-none',
-        isMinimized ? 'h-12' : 'h-full'
+        'relative w-full h-full flex flex-col overflow-hidden rounded-lg shadow-md border-none'
       )}
       style={{
-        backgroundColor: '#FEF3C7', // Amarillo muy claro
+        backgroundColor: '#ADD8E6', // Fondo aqua
         borderRadius: '4px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         width: width, // Usar tamaño real
-        height: isMinimized ? 48 : height, // Usar tamaño real
+        height: height, // Usar tamaño real
       }}
       onMouseDown={(e) => {
         // CRÍTICO: Solo activar drag si el clic NO es en el área de texto editable
@@ -250,7 +277,7 @@ export default function MiniElement(props: CommonElementProps) {
       <div
         className="flex items-center justify-between px-3 py-2 drag-handle"
         style={{
-          backgroundColor: '#FEF3C7', // Amarillo muy claro
+          backgroundColor: '#F3F4F6', // Gris claro
           color: '#000000',
         }}
       >
@@ -266,7 +293,7 @@ export default function MiniElement(props: CommonElementProps) {
           </Button>
           <div className="flex flex-col">
             <div
-              contentEditable={!isPreview}
+              contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
               suppressContentEditableWarning
               onInput={(e) => {
                 const newTitle = e.currentTarget.textContent || 'Mini';
@@ -280,22 +307,6 @@ export default function MiniElement(props: CommonElementProps) {
               Mini
             </div>
           </div>
-        </div>
-
-        {/* Center: Search bar */}
-        <div className="flex items-center gap-1 flex-1 max-w-xs mx-2">
-          <Search className="h-3 w-3" style={{ color: '#000000' }} />
-          <Input
-            type="text"
-            placeholder="Buscar..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="h-6 text-xs bg-transparent border-none text-black placeholder:text-gray-600 focus-visible:ring-0 focus-visible:ring-offset-0"
-            style={{
-              color: '#000000',
-            }}
-            onFocus={() => onUpdate(id, { isSelected: true })}
-          />
         </div>
 
         {/* Right: Action icons */}
@@ -316,6 +327,10 @@ export default function MiniElement(props: CommonElementProps) {
                 <FileImage className="mr-2 h-4 w-4" />
                 <span>{isExportingPng ? 'Exportando...' : 'Exportar a PNG'}</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); setIsPasswordDialogOpen(true)}}>
+                <Lock className="mr-2 h-4 w-4" />
+                <span>{typedContent.password ? 'Cambiar contraseña' : 'Configurar contraseña'}</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -323,11 +338,21 @@ export default function MiniElement(props: CommonElementProps) {
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-black/10 p-0"
-            title={isMinimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); toggleMinimize();}}
+            title="Insertar fecha"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleInsertDate(); }}
             style={{ color: '#000000' }}
           >
-            {isMinimized ? <Square className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+            <CalendarDays className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 hover:bg-black/10 p-0"
+            title="Copiar texto"
+            onClick={handleCopyAsTxt}
+            style={{ color: '#000000' }}
+          >
+            <Copy className="h-3 w-3" />
           </Button>
 
           <Button
@@ -339,23 +364,28 @@ export default function MiniElement(props: CommonElementProps) {
           >
             <Trash2 className="h-3 w-3" />
           </Button>
+
+          {/* Botón cerrar con X grande */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 hover:bg-black/10 p-0 text-gray-600 hover:bg-gray-200"
+            className="h-6 w-6 hover:bg-black/10 p-0 ml-1"
             title="Cerrar mini"
-            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); setIsMinimized(true);}}
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(id, { hidden: true });
+            }}
+            style={{ color: '#000000' }}
           >
-            <X className="h-3 w-3" />
+            <X className="h-4 w-4" />
           </Button>
         </div>
       </div>
 
-      {/* Content - Solo mostrar si no está minimizado */}
-      {!isMinimized && (
-        <div
+      {/* Content */}
+      <div
           ref={contentRef}
-          contentEditable={!isPreview}
+          contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
           onInput={handleContentInput}
           onBlur={handleContentBlur}
           onMouseDown={(e) => {
@@ -378,14 +408,30 @@ export default function MiniElement(props: CommonElementProps) {
             userSelect: 'text',
             WebkitUserSelect: 'text',
             backgroundColor: '#80DEEA', // Fondo Aqua
-            backgroundImage: 'linear-gradient(#ADD8E6 1px, transparent 1px)', // Líneas horizontales azules sutiles
-            backgroundSize: '100% 20px', // Interlineado fijo de 20px
+            // backgroundImage: 'linear-gradient(#4B5563 1px, transparent 1px)', // Líneas horizontales gris oscuro - DESACTIVADO
+            // backgroundSize: '100% 20px', // Interlineado fijo de 20px - DESACTIVADO
             fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace', // Tipografía monospace 12px
             fontSize: '12px',
             lineHeight: '1.5', // Interlineado 1.5
             whiteSpace: 'pre-wrap',
+            overflowX: 'auto', // Scroll horizontal infinito
+            paddingTop: '2px', // Ajustar texto más cerca de las líneas
           }}
         />
+
+      {/* Overlay de bloqueo */}
+      {typedContent.password && !isUnlockedForEditing && (
+        <div
+          className="absolute inset-0 bg-black/20 flex items-center justify-center z-10 cursor-pointer"
+          onDoubleClick={handleDoubleClick}
+          title="Doble clic para desbloquear"
+        >
+          <div className="bg-white/90 p-3 rounded-lg shadow-lg text-center">
+            <Lock className="h-8 w-8 text-gray-600 mx-auto mb-2" />
+            <p className="text-sm font-medium text-gray-700">Protegido con contraseña</p>
+            <p className="text-xs text-gray-500 mt-1">Doble clic para desbloquear</p>
+          </div>
+        </div>
       )}
 
       {/* Indicador de guardado */}
@@ -393,6 +439,18 @@ export default function MiniElement(props: CommonElementProps) {
         <div className="absolute top-2 right-2 z-20">
           <SaveStatusIndicator status={saveStatus} size="sm" />
         </div>
+      )}
+
+      {/* Diálogo de contraseña */}
+      {isPasswordDialogOpen && (
+        <MiniPasswordDialog
+          elementTitle="Mini"
+          currentPassword={typedContent.password}
+          isLocked={typedContent.password && !isUnlockedForEditing}
+          onPasswordChange={handlePasswordChange}
+          onUnlock={handleUnlockForEditing}
+          onClose={() => setIsPasswordDialogOpen(false)}
+        />
       )}
     </div>
   );

@@ -189,11 +189,11 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
 
       // Crear elemento de imagen
       addElement('image', {
-        url: image.url,
-        filename: image.filename,
+        content: { url: image.url },
         properties: {
           position: { x: dropX, y: dropY },
-          size: { width: 300, height: 200 }
+          size: { width: 300, height: 200 },
+          label: image.filename || 'Imagen'
         }
       });
     } catch (error) {
@@ -205,7 +205,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
   }, []);
-
+  
   // CRÍTICO: Usar refs para handlers para evitar re-suscripciones constantes
   const dragStateRef = useRef(dragState);
   const saveLastViewRef = useRef(saveLastView);

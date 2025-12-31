@@ -5,7 +5,7 @@ import type { CommonElementProps, ImageFrameContent } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GripVertical, X, RotateCw, ZoomIn, ZoomOut, Move, Minus, Maximize } from 'lucide-react';
+import { GripVertical, X, RotateCw, ZoomIn, ZoomOut, Move, Minus, Maximize, Trash2 } from 'lucide-react';
 
 function isImageFrameContent(content: unknown): content is ImageFrameContent {
   return typeof content === 'object' && content !== null;
@@ -250,7 +250,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
             onClick={(e) => { e.stopPropagation(); deleteElement(id); }}
             title="Eliminar"
           >
-            <X className="h-3 w-3" />
+            <Trash2 className="h-3 w-3" />
           </Button>
         </div>
       </div>

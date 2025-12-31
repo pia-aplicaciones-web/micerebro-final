@@ -10,7 +10,7 @@ import {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { GripVertical, X, Paintbrush, Columns2, Link as LinkIcon, Move, Minus, Maximize } from 'lucide-react';
+import { GripVertical, X, Paintbrush, Columns2, Link as LinkIcon, Move, Minus, Maximize, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAutoSave } from '@/hooks/use-auto-save';
@@ -114,6 +114,7 @@ export default function ContainerElement(
   const titleInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const prevZRef = useRef<number | null>(null);
+  const originalSizeRef = useRef<{ width: number; height: number } | null>(null); // Ref para el tamaño original
 
   // Handler para recibir elementos arrastrados
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -166,6 +167,28 @@ export default function ContainerElement(
       prevZRef.current = null;
     }
   }, [isSelected, id, onUpdate, properties, safeProperties]);
+
+  // Capturar tamaño original del elemento al montar
+  useEffect(() => {
+    if (properties?.size && !originalSizeRef.current) {
+      originalSizeRef.current = {
+        width: properties.size.width || 600, // Valores por defecto
+        height: properties.size.height || 400,
+      };
+    }
+  }, [properties?.size]);
+
+  // Función para restaurar el tamaño original
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (originalSizeRef.current) {
+      onUpdate(id, {
+        properties: {
+          ...properties,
+          size: originalSizeRef.current,
+        },
+      });
+    }
+  }, [id, onUpdate, properties]);
 
   const containedElements: ElementCard[] = containerContent.elementIds
     .map((elementId) => {
@@ -721,6 +744,16 @@ export default function ContainerElement(
           <Button
             variant="ghost"
             size="icon"
+            className="h-7 w-7"
+            title="Restaurar Tamaño Original"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
+          >
+            <Maximize className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
             className="h-7 w-7 text-gray-400 hover:text-gray-600"
             title="Cerrar contenedor"
             onClick={(e) => {
@@ -794,6 +827,24 @@ export default function ContainerElement(
           </div>
         )}
       </CardContent>
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

@@ -3,10 +3,11 @@
 import React from 'react';
 import type { CommonElementProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { MapPin } from 'lucide-react';
+import { MapPin, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function LocatorElement(props: CommonElementProps) {
-  const { id, content, isSelected, onUpdate, onEditElement } = props;
+  const { id, content, isSelected, onUpdate, onEditElement, deleteElement } = props;
 
   const label =
     typeof content === 'object' && content !== null && 'label' in content
@@ -31,6 +32,18 @@ export default function LocatorElement(props: CommonElementProps) {
       onClick={() => onEditElement(id)}
       style={{ padding: '8px' }}
     >
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-0.5 right-0.5 h-5 w-5 z-10 hover:bg-red-50 rounded-full"
+        onClick={(e) => {
+          e.stopPropagation();
+          deleteElement(id);
+        }}
+      >
+        <Trash2 className="h-2.5 w-2.5 text-red-500" />
+      </Button>
+
       <div className="absolute top-1 left-1 drag-handle bg-black/70 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
         <MapPin className="w-3 h-3 text-white" />
         <span>Arrastra</span>

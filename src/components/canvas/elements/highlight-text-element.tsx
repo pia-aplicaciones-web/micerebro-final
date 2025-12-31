@@ -5,7 +5,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { CommonElementProps } from '@/lib/types';
 import ContentEditable from 'react-contenteditable';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Paintbrush } from 'lucide-react';
+import { Paintbrush, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -60,7 +60,7 @@ const EXTENDED_PALETTES = {
   emeraldVeryLight: { bg: '#ECFDF5', text: '#064E3B', name: 'Esmeralda Muy Claro' },
 };
 
-export default function HighlightTextElement({ id, content, properties, onUpdate, onSelectElement, isSelected, isPreview }: CommonElementProps) {
+export default function HighlightTextElement({ id, content, properties, onUpdate, onSelectElement, isSelected, isPreview, deleteElement }: CommonElementProps) {
   const [text, setText] = useState((content as any)?.text || '');
   const [highlightColor, setHighlightColor] = useState(properties?.backgroundColor || EXTENDED_PALETTES.yellow.bg);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -146,6 +146,19 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
                 </div>
               </PopoverContent>
             </Popover>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteElement(id);
+              }}
+              title="Cerrar texto destacado"
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
         )}
         <ContentEditable

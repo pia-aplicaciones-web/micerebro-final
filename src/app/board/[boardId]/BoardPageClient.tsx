@@ -32,6 +32,8 @@ import EditCommentDialog from '@/components/canvas/elements/edit-comment-dialog'
 import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
+import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
+import { SafetyIndicator } from '@/components/SafetyControls';
 
 
 // Debug Menu (temporal)
@@ -89,6 +91,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     cleanupRef.current = cleanup;
   }, [loadBoard, createBoard, cleanup]);
 
+  // Estados para contraseña del tablero
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(false);
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+
   // CRÍTICO: Cleanup del listener cuando el componente se desmonta o cambia boardId
   useEffect(() => {
     return () => {
@@ -98,12 +105,60 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     };
   }, [boardId]);
 
+  // Verificar contraseña del tablero
+  useEffect(() => {
+    if (board && board.password && !isPasswordVerified) {
+      setIsPasswordDialogOpen(true);
+    } else if (board && !board.password) {
+      setIsPasswordVerified(true);
+    }
+  }, [board, isPasswordVerified]);
+
+
+  // Función para verificar contraseña del tablero
+  const handlePasswordSubmit = useCallback(async (enteredPassword: string) => {
+    if (!board?.password) {
+      setIsPasswordVerified(true);
+      setIsPasswordDialogOpen(false);
+      return;
+    }
+
+    setIsVerifyingPassword(true);
+
+    try {
+      // Verificar contraseña (por ahora comparación simple, en producción usar hash)
+      if (enteredPassword === board.password) {
+        setIsPasswordVerified(true);
+        setIsPasswordDialogOpen(false);
+        toast({
+          title: 'Acceso concedido',
+          description: 'Bienvenido al tablero protegido.'
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Contraseña incorrecta',
+          description: 'La contraseña ingresada no es correcta.'
+        });
+      }
+    } catch (error) {
+      console.error('Error al verificar contraseña:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Hubo un problema al verificar la contraseña.'
+      });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  }, [board, toast]);
+
   // Estado local
   const { boards, handleRenameBoard, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
   const canvasRef = useRef<any>(null);
   
   // Estados de UI
-  const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(true);
+  const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
   const [changeFormatDialogOpen, setChangeFormatDialogOpen] = useState(false);
   const [isPanningActive, setIsPanningActive] = useState(false);
@@ -117,9 +172,62 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isEditCommentDialogOpen, setIsEditCommentDialogOpen] = useState(false);
   const [selectedCommentForEdit, setSelectedCommentForEdit] = useState<WithId<CanvasElement> | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
-const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
-  const [infoPanelPos, setInfoPanelPos] = useState({ x: 24, y: 24 });
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+
+  // Función para eliminar todas las imágenes del usuario
+  const deleteAllUserImages = useCallback(async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Usuario no autenticado'
+      });
+      return;
+    }
+
+    // Crear un diálogo con la información copiable
+    const userId = user.uid;
+    const firebaseUrl = 'https://console.firebase.google.com/project/canvasmind-app/storage/canvasmind-app.firebasestorage.app/files';
+
+    // Copiar URL al portapapeles
+    navigator.clipboard?.writeText(firebaseUrl).then(() => {
+      toast({
+        title: 'URL copiada al portapapeles',
+        description: firebaseUrl
+      });
+    }).catch(() => {
+      toast({
+        title: 'URL (cópiala manualmente)',
+        description: firebaseUrl
+      });
+    });
+
+    // Mostrar información detallada
+    setTimeout(() => {
+      const info = `
+🔥 INSTRUCCIONES PARA ELIMINAR IMÁGENES:
+
+📋 TU INFORMACIÓN:
+• User ID: ${userId}
+• URL Firebase Console: ${firebaseUrl}
+
+📝 PASOS DETALLADOS:
+
+1. ✅ URL ya copiada - pégala en tu navegador
+2. En Firebase Console, panel izquierdo → "canvasmind-app.firebasestorage.app"
+3. Busca carpeta "users" y ábrela
+4. Busca carpeta "${userId}" y ábrela
+5. Abre carpeta "images"
+6. Selecciona todos: Ctrl+A (Windows) o Cmd+A (Mac)
+7. Botón "Eliminar" (basurero) → confirma
+
+❓ ¿Necesitas ayuda? La URL ya está copiada.
+      `;
+
+      alert(info);
+    }, 500);
+
+  }, [user, toast]);
 
   // Asegurar que todos los paneles estén cerrados al iniciar la página (solo una vez)
   // REMOVIDO: El useEffect que forzaba setIsGalleryOpen(false) estaba interfiriendo con el toggle
@@ -208,21 +316,21 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
         }, 100);
       } else {
         // No hay galleries existentes, crear directamente
-        addElement('gallery', {
-          content: { title: 'Mi galería', images: [] },
-          properties: { size: { width: 378, height: 800 } },
-          x: -400,
-          y: 100,
-          width: 378,
-          height: 800,
+      addElement('gallery', {
+        content: { title: 'Mi galería', images: [] },
+        properties: { size: { width: 378, height: 800 } },
+        x: -400,
+        y: 100,
+        width: 378,
+        height: 800,
           hidden: true, // Gallery siempre oculto en canvas
-          zIndex: -1,
-        }).then(() => {
+        zIndex: -1,
+      }).then(() => {
           console.log('Gallery único creado exitosamente');
-        }).catch((error) => {
+      }).catch((error) => {
           console.error('Error creando gallery único:', error);
           galleryCreatedRef.current = false;
-        });
+      });
       }
     }
   }, [galleryElement, addElement, user?.uid, boardId, elements, deleteElement]);
@@ -575,7 +683,19 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
 
   return (
     <>
-      <RenameBoardDialog
+      {/* Diálogo de contraseña del tablero */}
+      {isPasswordDialogOpen && board && (
+        <BoardPasswordDialog
+          boardName={board.name}
+          onPasswordSubmit={handlePasswordSubmit}
+          isLoading={isVerifyingPassword}
+        />
+      )}
+
+      {/* Solo mostrar el tablero si la contraseña está verificada */}
+      {isPasswordVerified && (
+        <>
+          <RenameBoardDialog
         isOpen={isRenameBoardDialogOpen}
         onOpenChange={setIsRenameBoardDialogOpen}
         currentBoardName={board?.name || ''}
@@ -584,7 +704,14 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
       
       <div className="h-screen w-screen relative overflow-hidden">
         {/* Nombre del tablero en esquina superior izquierda */}
-        <BoardTitleDisplay name={board?.name || ""} />
+        <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
+
+        {/* Indicador de modo seguro - Solo en desarrollo */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="absolute top-4 right-4 z-50">
+            <SafetyIndicator />
+          </div>
+        )}
 
         <Canvas
           ref={canvasRef}
@@ -631,6 +758,7 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
           onPanToggle={() => canvasRef.current?.activatePanMode()}
           onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
           onDeleteBoard={handleDeleteBoard}
+          onDeleteAllUserImages={deleteAllUserImages}
           isListening={isListening}
           onToggleDictation={toggleListening}
           onOpenNotepad={handleOpenNotepad}
@@ -720,28 +848,28 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
               border: '1px solid #e5e7eb'
             }}
           >
-            <div className="h-full flex flex-col">
-              <div className="flex-1 overflow-hidden">
-                <GalleryElement
-                  {...galleryElement}
-                  scale={1}
-                  offset={{ x: 0, y: 0 }}
-                  isSelected={false}
-                  onSelectElement={() => {}}
-                  onUpdate={updateElement}
-                  deleteElement={deleteElement}
-                  onEditElement={() => {}}
-                  allElements={elements}
-                  addElement={addElement}
-                  onUploadImage={handleUploadImage}
-                  storage={storage}
-                  userId={user?.uid}
-                  onLocateElement={() => {}}
-                  onEditComment={() => {}}
-                />
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 overflow-hidden">
+                    <GalleryElement
+                      {...galleryElement}
+                      scale={1}
+                      offset={{ x: 0, y: 0 }}
+                      isSelected={false}
+                      onSelectElement={() => {}}
+                      onUpdate={updateElement}
+                      deleteElement={deleteElement}
+                      onEditElement={() => {}}
+                      allElements={elements}
+                      addElement={addElement}
+                      onUploadImage={handleUploadImage}
+                      storage={storage}
+                      userId={user?.uid}
+                      onLocateElement={() => {}}
+                      onEditComment={() => {}}
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
         </div>
 
         {/* Pestaña con flecha - siempre visible */}
@@ -765,74 +893,10 @@ const [infoPanelMinimized, setInfoPanelMinimized] = useState(false);
           </svg>
         </button>
 
-        {/* Panel flotante de info temporal */}
-        <Rnd
-          size={{ width: 240, height: infoPanelMinimized ? 40 : 160 }}
-          position={infoPanelPos}
-          onDragStop={(e, d) => setInfoPanelPos({ x: d.x, y: d.y })}
-          enableResizing={false}
-          bounds="window"
-          disableDragging={infoPanelMinimized}
-          className="z-[12000] pointer-events-auto"
-        >
-          <div className="rounded-lg shadow-lg border border-gray-200 bg-white/95 backdrop-blur p-3 h-full flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold text-gray-800 truncate">
-                Info elemento
-              </div>
-              <div className="flex items-center gap-2">
-                {!infoPanelMinimized && (
-                  <button
-                    className="text-xs text-gray-500 hover:text-gray-800"
-                    onClick={() => {
-                      if (!selectedElement) return;
-                      const c = selectedElement.content as any;
-                      const text = c?.title || c?.label || '';
-                      if (text) {
-                        navigator.clipboard?.writeText(text).catch(() => {});
-                      }
-                    }}
-                  >
-                    Copiar
-                  </button>
-                )}
-                <button
-                  className="text-xs text-gray-500 hover:text-gray-800"
-                  onClick={() => setInfoPanelMinimized((v) => !v)}
-                >
-                  {infoPanelMinimized ? 'Max' : 'Min'}
-                </button>
-              </div>
-            </div>
-            {!infoPanelMinimized && (
-              <div className="text-xs text-gray-700 space-y-1">
-                <div className="truncate flex items-center gap-1">
-                  <span className="font-semibold">ID:</span> {selectedElement?.id || '-'}
-                  {selectedElement?.id && (
-                    <button
-                      className="text-[11px] text-blue-600 hover:underline"
-                      onClick={() => navigator.clipboard?.writeText(selectedElement.id).catch(() => {})}
-                      title="Copiar ID"
-                    >
-                      Copiar
-                    </button>
-                  )}
-                </div>
-                <div className="truncate"><span className="font-semibold">Tipo:</span> {selectedElement?.type || '-'}</div>
-                <div className="truncate">
-                  <span className="font-semibold">Título/Label:</span>{' '}
-                  {(() => {
-                    if (!selectedElement) return '-';
-                    const c = selectedElement.content as any;
-                    return c?.title || c?.label || '(sin título)';
-                  })()}
-                </div>
-              </div>
-            )}
-          </div>
-        </Rnd>
       </div>
 
+        </>
+      )}
     </>
   );
 }

@@ -112,34 +112,31 @@ export const useDictation = (
 
   // Procesar comandos especiales de dictado
   const processDictationCommand = useCallback((text: string) => {
-    // Comandos especiales del dictado
-    if (text.includes('//')) {
-      return text.replace(/\/\//g, '\n'); // Líneas: // -> nueva línea
-    }
-    if (text.includes('#')) {
-      return text.replace(/#/g, '**').replace(/$/, '** '); // Marca: # -> **texto**
-    }
-    if (text.includes('**')) {
-      return text.replace(/\*\*/g, '**'); // Resaltar: ** -> formato markdown
-    }
-    if (text.includes('niu')) {
-      return text.replace(/niu/g, '\n'); // Nueva línea: niu -> nueva línea
-    }
-    if (text.includes('.')) {
-      return text.replace(/\./g, '. '); // Punto: . -> . con espacio
-    }
-    if (text.includes(',')) {
-      return text.replace(/,/g, ', '); // Coma: , -> , con espacio
-    }
-    return text;
+    let processedText = text;
+
+    // Comandos de dictado - frases completas que se convierten en símbolos
+    // Hacer las búsquedas más flexibles para manejar variaciones del reconocimiento de voz
+    processedText = processedText.replace(/\bnew\b/gi, '\n');
+    processedText = processedText.replace(/\bpunto\b/gi, '.');
+    processedText = processedText.replace(/\bcoma\b/gi, ',');
+    processedText = processedText.replace(/agrega coma/gi, ',');
+    processedText = processedText.replace(/\bresaltar\b/gi, '-*-');
+    processedText = processedText.replace(/\blineas\b/gi, '//');
+    processedText = processedText.replace(/\bmarca\b/gi, '#');
+
+    // Añadir espacios después de puntuación (solo si no hay espacio ya)
+    processedText = processedText.replace(/\.([^ \n])/g, '. $1'); // Punto seguido de texto -> . espacio
+    processedText = processedText.replace(/,([^ \n])/g, ', $1'); // Coma seguida de texto -> , espacio
+
+    return processedText;
   }, []);
 
   // Procesar cambios en transcript (texto final)
   useEffect(() => {
     if (!isListening) return;
-    
+
     const newText = transcript.slice(lastTranscriptRef.current.length);
-    
+
     if (newText.trim()) {
       removeInterimNode();
       // Procesar comandos especiales antes de insertar

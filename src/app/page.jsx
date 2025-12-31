@@ -209,7 +209,7 @@ export default function HomePage() {
               <path d="M6 18C6 14 8 12 12 12C14 12 16 13 18 14C20 15 22 16 24 16C26 16 28 15 30 14C32 13 34 14 34 18C34 22 32 24 30 24C28 24 26 23 24 22C22 21 20 20 18 20C16 20 14 21 12 22C10 23 8 22 6 18Z" fill="url(#logoGradient)"/>
             </svg>
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 mb-2">Mi cerebro</h1>
+          <h1 className="text-6xl font-bold text-slate-900 mb-2">Mi cerebro</h1>
           <p className="text-slate-500 text-lg">Tu lienzo de ideas infinitas.</p>
         </div>
 
@@ -219,11 +219,10 @@ export default function HomePage() {
             // Vista principal con botones
             <div className="space-y-4">
               {/* Botón Google */}
-              <Button
+              <button
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                size="lg"
-                className="w-full bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 hover:border-slate-300 shadow-sm h-12"
+                className="w-full bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-200 hover:border-slate-300 shadow-sm h-12 rounded-md px-8 flex items-center justify-center font-medium text-sm disabled:opacity-50"
                 type="button"
               >
                 {isLoggingIn ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : (
@@ -235,7 +234,7 @@ export default function HomePage() {
                   </svg>
                 )}
                 Iniciar con Google
-              </Button>
+              </button>
 
               {/* Separador */}
               <div className="relative my-6">
@@ -247,28 +246,30 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* Botón Entrar (Login con email) - ACTIVO */}
-              <Button
+              {/* Botón Entrar a mi cuenta (Login con email) - ACTIVO */}
+              <button
                 onClick={() => { setShowLoginForm(true); setIsCreatingAccount(false); }}
-                size="lg"
-                className="w-full bg-[#16b5a8] hover:bg-[#139c91] text-white h-12"
+                className="w-full text-slate-900 hover:text-slate-800 h-12 rounded-md px-8 flex items-center justify-center font-medium text-sm border-2 border-slate-300 hover:border-slate-400 shadow-sm"
                 type="button"
+                style={{
+                  backgroundColor: '#96e4e6',
+                  zIndex: 10,
+                  position: 'relative'
+                }}
               >
                 <LogIn className="h-5 w-5 mr-2" />
-                Entrar
-              </Button>
+                Entrar a mi cuenta
+              </button>
 
               {/* Botón Crear cuenta */}
-              <Button
+              <button
                 onClick={() => { setShowLoginForm(true); setIsCreatingAccount(true); }}
-                variant="outline"
-                size="lg"
-                className="w-full h-12"
+                className="w-full h-12 border border-slate-200 bg-white hover:bg-slate-50 text-slate-900 rounded-md px-8 flex items-center justify-center font-medium text-sm"
                 type="button"
               >
                 <UserPlus className="h-4 w-4 mr-2" />
                 Crear cuenta
-              </Button>
+              </button>
 
               {/* Opción Entrar como invitado */}
               <button
@@ -323,11 +324,10 @@ export default function HomePage() {
                 />
               </div>
 
-              <Button
+              <button
                 type="submit"
                 disabled={isLoggingIn}
-                size="lg"
-                className="w-full bg-[#16b5a8] hover:bg-[#139c91] text-white h-12"
+                className="w-full bg-[#16b5a8] hover:bg-[#139c91] text-white h-12 rounded-md px-8 flex items-center justify-center font-medium text-sm disabled:opacity-50"
               >
                 {isLoggingIn ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -337,7 +337,7 @@ export default function HomePage() {
                   <LogIn className="h-5 w-5 mr-2" />
                 )}
                 {isLoggingIn ? 'Cargando...' : isCreatingAccount ? 'Crear cuenta' : 'Iniciar sesión'}
-              </Button>
+              </button>
 
               <div className="flex items-center justify-between text-sm">
                 <button

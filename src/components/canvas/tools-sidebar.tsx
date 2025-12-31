@@ -38,7 +38,9 @@ import { BookCopy,
   Maximize,
   Mic,
   MicOff,
-  Highlighter
+  Highlighter,
+  Menu,
+  X as CloseIcon
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -72,8 +74,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
-import { useAuthContext } from '@/context/AuthContext';
+import type { ElementType, CanvasElement, Board, WithId, NotepadContent, PhotoGridContent, PhotoGridFreeContent, LibretaContent, TodoContent } from '@/lib/types';
 
 type AuthUser = {
   uid?: string;
@@ -106,23 +107,23 @@ const SidebarButton = forwardRef<
       ref={ref}
       variant="ghost"
       className={cn(
-        'flex flex-col items-center justify-center h-auto py-[7px] px-[7px] min-w-[78px] text-[12px] gap-1.2',
-        'hover:bg-gray-700 focus-visible:bg-gray-700',
-        'text-white border border-gray-600 rounded-md',
-        'bg-black',
-        isActive && 'bg-gray-800 border-gray-500',
-        !isDictationActive && 'text-white',
+        'flex flex-col items-center justify-center h-auto py-[5px] px-[6px] w-[75px] text-[11px] gap-1',
+        'hover:bg-[#ADD8E6] focus-visible:bg-[#ADD8E6] active:bg-white',
+        'text-black border border-border rounded-md',
+        'bg-white',
+        isActive && 'bg-white border-accent-foreground',
+        !isDictationActive && 'text-black',
         className
       )}
       style={{
-        backgroundColor: isDictationActive ? '#ef4444' : (isActive ? '#374151' : '#000000'),
-        color: '#ffffff',
-        border: `1px solid ${isDictationActive ? '#ef4444' : (isActive ? '#6b7280' : '#4b5563')}`,
+        backgroundColor: isDictationActive ? '#ef4444' : (isActive ? '#ffffff' : '#ffffff'),
+        color: '#000000',
+        border: `1px solid ${isDictationActive ? '#ef4444' : (isActive ? 'hsl(var(--border))' : 'hsl(var(--border))')}`,
       }}
       {...props}
     >
-      {children || (Icon && <Icon className={cn('size-[19px] flex-shrink-0', isDictationActive ? 'text-white' : 'text-white')} style={isDictationActive ? undefined : { color: '#ffffff' }} />)}
-      <span className={cn('text-center leading-tight text-[11px] truncate text-white', isDictationActive ? 'text-white' : 'text-white')} style={{ color: '#ffffff', fontSize: '11px' }}>
+      {children || (Icon && <Icon className={cn('size-[19px] flex-shrink-0', isDictationActive ? 'text-white' : 'text-black')} style={isDictationActive ? undefined : { color: '#000000' }} />)}
+      <span className={cn('text-center leading-tight text-[10px] truncate text-black', isDictationActive ? 'text-white' : 'text-black')} style={{ color: '#000000', fontSize: '10px' }}>
         {label}
       </span>
     </Button>
@@ -141,6 +142,7 @@ interface ToolsSidebarProps {
   onPanToggle: () => void;
   onRenameBoard: () => void;
   onDeleteBoard: () => void;
+  onDeleteAllUserImages: () => void;
   isListening: boolean;
   onToggleDictation: () => void;
   onOpenNotepad: (id: string) => void;
@@ -171,6 +173,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   onPanToggle,
   onRenameBoard,
   onDeleteBoard,
+  onDeleteAllUserImages,
   isListening,
   onToggleDictation,
   onOpenNotepad,
@@ -194,25 +197,85 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   const router = useRouter();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
+  const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
   const [savedGuides, setSavedGuides] = useState<any[]>([]);
   const [rndPosition, setRndPosition] = useState(() => {
-    // Posición inicial centrada en la parte superior
+    // Posición inicial fija: 5px del tablero arriba en el centro visual del usuario
     if (typeof window !== 'undefined') {
-      const centerX = (window.innerWidth - 750) / 2; // 750 es el ancho del menú
-      return { x: Math.max(0, centerX), y: 20 };
+      const centerX = (window.innerWidth - 988) / 2; // 988 es el ancho del menú
+      const topY = 5; // 5px de distancia del borde superior (del tablero)
+      return { x: Math.max(0, centerX), y: topY };
     }
-    return { x: 20, y: 20 };
+    return { x: 20, y: 5 };
   });
+
+  // Efecto para actualizar posición basada en localizador (solo si no hay posición guardada)
+  useEffect(() => {
+    // Solo usar localizador si no hay posición guardada en localStorage
+    const savedPosition = localStorage.getItem('toolsSidebarPosition');
+    if (savedPosition) {
+      return; // Mantener la posición guardada
+    }
+
+    const menuLocator = elements.find((el) =>
+      el.type === 'locator' &&
+      typeof el.content === 'object' &&
+      el.content !== null &&
+      'label' in el.content &&
+      el.content.label === 'inicio menu principal'
+    );
+
+    if (menuLocator && menuLocator.x !== undefined && menuLocator.y !== undefined) {
+      // Copiar coordenadas del localizador y fijar como posición inicial del menú
+      const newPosition = { x: menuLocator.x, y: menuLocator.y };
+
+      // Guardar en localStorage para que sea persistente
+      localStorage.setItem('toolsSidebarPosition', JSON.stringify(newPosition));
+
+      // Actualizar la posición del menú
+      setRndPosition(newPosition);
+
+      console.log('✅ Menú principal fijado en posición del localizador:', newPosition);
+    }
+  }, [elements]);
   useEffect(() => {
     try {
       const savedPosition = localStorage.getItem('toolsSidebarPosition');
       if (savedPosition) {
-        setRndPosition(JSON.parse(savedPosition));
+        const parsedPosition = JSON.parse(savedPosition);
+        // Si la posición guardada no es la posición fija deseada (5px del borde superior),
+        // usar la posición fija por defecto
+        if (parsedPosition.y !== 5) {
+          const defaultPosition = {
+            x: typeof window !== 'undefined' ? Math.max(0, (window.innerWidth - 988) / 2) : 20,
+            y: 5
+          };
+          setRndPosition(defaultPosition);
+          localStorage.setItem('toolsSidebarPosition', JSON.stringify(defaultPosition));
+        } else {
+          setRndPosition(parsedPosition);
+        }
+      } else {
+        // No hay posición guardada, usar posición fija por defecto
+        const defaultPosition = {
+          x: typeof window !== 'undefined' ? Math.max(0, (window.innerWidth - 988) / 2) : 20,
+          y: 5
+        };
+        setRndPosition(defaultPosition);
+        localStorage.setItem('toolsSidebarPosition', JSON.stringify(defaultPosition));
       }
     } catch (e) {
       console.error('Failed to load sidebar position from localStorage', e);
+      // En caso de error, usar posición fija por defecto
+      const defaultPosition = {
+        x: typeof window !== 'undefined' ? Math.max(0, (window.innerWidth - 988) / 2) : 20,
+        y: 5
+      };
+      setRndPosition(defaultPosition);
     }
-  }, []);
+
+    // El localizador "inicio menu principal" debe ser creado manualmente por el usuario
+  }, [elements, addElement]);
 
   const onDragStop = (e: any, d: { x: number; y: number }) => {
     const newPosition = { x: d.x, y: d.y };
@@ -225,7 +288,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
@@ -235,8 +298,8 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   );
 
 
-  const hiddenNotepads = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'mini-notes', 'mini'].includes(el.type) && el.hidden === true),
+  const hiddenElements = useMemo(
+    () => (Array.isArray(elements) ? elements : []).filter((el) => el.hidden === true),
     [elements]
   );
 
@@ -351,8 +414,8 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
       if (auth) {
         await firebaseSignOut(auth);
         toast({ title: 'Sesión cerrada correctamente' });
-        // Redirigir a la página de login
-        router.push('/login');
+        // Redirigir a la página de inicio
+        router.push('/');
       } else {
         toast({ variant: 'destructive', title: 'Error al cerrar sesión: autenticación no disponible' });
       }
@@ -362,6 +425,136 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
     }
   };
 
+  // Si es móvil/tablet, mostrar menú hamburguesa centrado
+  if (isMobile) {
+    return (
+      <>
+        <CreateBoardDialog isOpen={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen} />
+
+        {/* Botón hamburguesa centrado */}
+        <div
+          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50"
+          style={{ zIndex: 10000 }}
+        >
+          <button
+            onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
+            className="bg-background text-black border border-border p-2 rounded-full shadow-lg hover:bg-[#ADD8E6] active:bg-white transition-colors"
+            title="Abrir menú"
+          >
+            {isHamburgerMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Menú hamburguesa desplegable */}
+        {isHamburgerMenuOpen && (
+          <div
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background text-black border border-border rounded-lg shadow-xl z-40 max-w-sm w-full mx-4"
+            style={{ zIndex: 9999 }}
+          >
+            <div className="p-4 max-h-96 overflow-y-auto">
+              {/* Aquí irá el contenido del menú hamburguesa */}
+              <div className="space-y-2">
+                {/* Botón Dictar */}
+                <SidebarButton
+                  icon={isListening ? MicOff : Mic}
+                  label={isListening ? 'Detener' : 'Dictar'}
+                  title={isListening ? 'Detener dictado por voz' : 'Iniciar dictado por voz'}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (onToggleDictation) {
+                      onToggleDictation();
+                    }
+                  }}
+                  onMouseDown={(e) => e.preventDefault()}
+                  className={cn(
+                    'w-full justify-start hover:bg-[#ADD8E6] active:bg-white',
+                    isListening && 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse'
+                  )}
+                />
+
+                {/* Cuaderno */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left">
+                      <BookCopy className="w-4 h-4" />
+                      <span>Cuaderno</span>
+                      <ChevronDown className="w-4 h-4 ml-auto" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="center" className="w-56">
+                    <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Agregar Cuaderno</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('yellow-notepad')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Nuevo Block</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('notes')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Agregar Apuntes</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Fotos */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Fotos</span>
+                      <ChevronDown className="w-4 h-4 ml-auto" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="top" align="center" className="w-56">
+                    <DropdownMenuItem onClick={() => handleAddElement('image')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Imagen</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('gallery')}>
+                      <Images className="mr-2 h-4 w-4" />
+                      <span>Galería</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Tareas */}
+                <button
+                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
+                  onClick={() => handleAddElement('todo')}
+                >
+                  <List className="w-4 h-4" />
+                  <span>Lista de Tareas</span>
+                </button>
+
+                {/* Sticky Note */}
+                <button
+                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
+                  onClick={() => handleAddElement('sticky')}
+                >
+                  <StickyNote className="w-4 h-4" />
+                  <span>Nota Adhesiva</span>
+                </button>
+
+                {/* Contenedor */}
+                <button
+                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
+                  onClick={() => handleAddElement('container')}
+                >
+                  <Frame className="w-4 h-4" />
+                  <span>Contenedor</span>
+                </button>
+
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
+  // Menú normal para desktop
   return (
     <>
       <CreateBoardDialog isOpen={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen} />
@@ -369,19 +562,19 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
         default={{
           x: rndPosition.x,
           y: rndPosition.y,
-          width: 750,
-          height: 80,
+          width: 988,
+          height: 110,
         }}
-        minWidth={750}
-        maxWidth={900}
+        minWidth={988}
+        maxWidth={1214}
         bounds="window"
         dragHandleClassName="drag-handle"
         onDragStop={onDragStop}
         className="z-[10001]"
       >
-        <div className="flex flex-row gap-[3.5px] flex-nowrap justify-start p-2">
-          <div className="drag-handle cursor-grab active:cursor-grabbing py-1 px-2 mr-2 rounded-md bg-black border border-gray-600 flex justify-center" title="Arrastrar menú">
-            <GripVertical className="size-4 rotate-90 text-white" />
+        <div className="flex flex-row gap-[2px] flex-nowrap justify-start p-2">
+          <div className="drag-handle cursor-grab active:cursor-grabbing py-1 px-1 mr-1 rounded-md bg-background border border-border flex justify-center" title="Arrastrar menú">
+            <GripVertical className="size-3 rotate-90 text-black" />
           </div>
 
           {/* Tableros */}
@@ -432,7 +625,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
           {/* Cuaderno */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarButton icon={BookCopy} label="Cuaderno" title="Gestionar cuadernos y notas" />
+              <SidebarButton icon={BookCopy} label="Cuadernos" title="Gestionar cuadernos y notas" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
               <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
@@ -441,7 +634,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('yellow-notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
-                <span>Nuevo Cuaderno Amarillo</span>
+                <span>Nuevo Block</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('notes')}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -450,10 +643,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <DropdownMenuItem onClick={() => handleAddElement('libreta')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Libreta</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('mini-notes')}>
-                <Plus className="mr-2 h-4 w-4" />
-                <span>Mini Notes</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('mini')}>
                 <Plus className="mr-2 h-4 w-4" />
@@ -477,11 +666,22 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                           case 'yellow-notepad':
                             title = 'Cuaderno Amarillo';
                             break;
+                          case 'photo-grid':
+                          case 'photo-grid-horizontal':
+                          case 'photo-grid-adaptive':
+                            const photoGridContent = element.content as PhotoGridContent;
+                            title = photoGridContent?.title || 'Guía de Fotos';
+                            break;
+                          case 'photo-grid-free':
+                            const photoGridFreeContent = element.content as PhotoGridFreeContent;
+                            title = photoGridFreeContent?.title || 'Guía de Fotos Libre';
+                            break;
                           case 'notes':
                             title = 'Apuntes';
                             break;
-                          case 'mini-notes':
-                            title = 'Mini Notas';
+                          case 'libreta':
+                            const libretaContent = element.content as LibretaContent;
+                            title = libretaContent?.title || 'Libreta';
                             break;
                           case 'mini':
                             title = 'Mini';
@@ -499,19 +699,51 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   </DropdownMenuSub>
                 </>
               )}
-              {hiddenNotepads.length > 0 && (
+              {hiddenElements.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <span>Cerrados ({hiddenNotepads.length})</span>
+                      <span>Cerrados ({hiddenElements.length})</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      {hiddenNotepads.map((notepad) => {
-                        const content = notepad.content as NotepadContent;
-                        const title = content?.title || 'Sin título';
+                      {hiddenElements.map((element) => {
+                        let title = 'Sin título';
+                        switch (element.type) {
+                          case 'notepad':
+                          case 'yellow-notepad':
+                            const notepadContent = element.content as NotepadContent;
+                            title = notepadContent?.title || 'Cuaderno';
+                            break;
+                          case 'photo-grid':
+                          case 'photo-grid-horizontal':
+                          case 'photo-grid-adaptive':
+                            const photoGridContent = element.content as PhotoGridContent;
+                            title = photoGridContent?.title || 'Guía de Fotos';
+                            break;
+                          case 'photo-grid-free':
+                            const photoGridFreeContent = element.content as PhotoGridFreeContent;
+                            title = photoGridFreeContent?.title || 'Guía de Fotos Libre';
+                            break;
+                          case 'libreta':
+                            const libretaContent = element.content as LibretaContent;
+                            title = libretaContent?.title || 'Libreta';
+                            break;
+                          case 'notes':
+                            title = 'Apuntes';
+                            break;
+                          case 'mini':
+                            title = 'Mini';
+                            break;
+                          case 'todo':
+                            const todoContent = element.content as TodoContent;
+                            title = todoContent?.title || 'Lista de tareas';
+                            break;
+                          default:
+                            title = 'Elemento';
+                        }
                         return (
-                          <DropdownMenuItem key={notepad.id} onClick={() => onOpenNotepad(notepad.id)}>
+                          <DropdownMenuItem key={element.id} onClick={() => onOpenNotepad(element.id)}>
                             <EyeOff className="mr-2 h-4 w-4" />
                             <span>{title}</span>
                           </DropdownMenuItem>
@@ -545,7 +777,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
           {/* Contenedor */}
           <SidebarButton
             icon={Columns2}
-            label="Contenedor"
+            label="Columna"
             title="Crear contenedor para elementos"
             onClick={() => handleAddElement('container')}
           />
@@ -553,7 +785,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
           {/* Localizador */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarButton icon={MapPin} label="Localizador" title="Gestionar localizadores" />
+              <SidebarButton icon={MapPin} label="Localizar" title="Gestionar localizadores" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5} className="w-56">
               <DropdownMenuItem onClick={() => handleAddElement('locator')}>
@@ -635,7 +867,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             <DropdownMenuTrigger asChild>
               <SidebarButton
                 icon={Grid3X3}
-                label="Guía Fotos"
+                label="Guia Fotos"
                 title="Herramientas para organizar fotos"
               />
             </DropdownMenuTrigger>
@@ -654,6 +886,9 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('image-frame')}>
                 Marco de fotos
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('moodboard')}>
+                Moodboard
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>
@@ -687,7 +922,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
           {/* Comentario */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarButton icon={MessageCircle} label="Comentario" title="Agregar comentarios y texto" />
+              <SidebarButton icon={MessageCircle} label="Texto" title="Agregar comentarios y texto" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
               <DropdownMenuLabel>Insertar</DropdownMenuLabel>
@@ -710,26 +945,25 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Moodboard */}
-          <SidebarButton 
-            icon={Images} 
-            label="Moodboard" 
-            title="Crear tablero de inspiración"
-            onClick={() => handleAddElement('moodboard')} 
-          />
 
           {/* Tools */}
           <SidebarButton icon={Wrench} label="Tools" title="Herramientas de formato" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
 
+
           {/* Más */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarButton icon={MoreHorizontal} label="Más" title="Más opciones" />
+              <SidebarButton icon={MoreHorizontal} label="Más" title="Más opciones" className="!w-[62px]" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
-              <DropdownMenuItem onClick={onExportBoardToPng}>
+              <DropdownMenuItem onClick={onExportBoardToPng} className={isFormatToolbarOpen ? "bg-[#ADD8E6]/20" : ""}>
                 <FileImage className="mr-2 h-4 w-4" />
                 <span>Exportar a PNG: alta resolución</span>
+                {isFormatToolbarOpen && <span className="ml-auto text-xs text-blue-600">●</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onDeleteAllUserImages}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Eliminar todas mis imágenes</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <AlertDialog>

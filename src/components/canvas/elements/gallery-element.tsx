@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import AddImageFromUrlDialog from './add-image-from-url-dialog';
 import ImageElement from './image-element';
 import type { CommonElementProps, GalleryContent, GalleryImage } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Type guard para GalleryContent
 function isGalleryContent(content: unknown): content is GalleryContent {
@@ -19,17 +20,19 @@ function isGalleryContent(content: unknown): content is GalleryContent {
 }
 
 export default function GalleryElement(props: CommonElementProps) {
-  const { id, content, onUpdate, allElements = [], addElement } = props;
+  const { id, content, onUpdate, allElements = [], addElement, isSelected, isPreview } = props;
 
   const { user } = useAuthContext();
   const storage = getFirebaseStorage();
   const { toast } = useToast();
 
   const galleryContent: GalleryContent = isGalleryContent(content)
-    ? content
+    ? { ...content, images: Array.isArray(content.images) ? content.images : [] }
     : { title: 'Galería', images: [] };
 
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Actualizar el contenido de la galería
   const updateGalleryContent = useCallback((updates: Partial<GalleryContent>) => {
@@ -37,7 +40,16 @@ export default function GalleryElement(props: CommonElementProps) {
       ...galleryContent,
       ...updates
     };
-    onUpdate(id, { content: newContent });
+    // Verificar que onUpdate esté disponible antes de llamar
+    if (onUpdate && id) {
+      try {
+        onUpdate(id, { content: newContent });
+      } catch (error) {
+        console.error("Error al actualizar contenido de galería:", error);
+      }
+    } else {
+      console.warn("onUpdate o id no disponible para actualizar galería");
+    }
   }, [galleryContent, onUpdate, id]);
 
   // Handler para subir imágenes desde archivo
@@ -82,7 +94,7 @@ export default function GalleryElement(props: CommonElementProps) {
       }
 
       if (uploadedImages.length > 0) {
-        const currentImages = galleryContent.images || [];
+        const currentImages = Array.isArray(galleryContent.images) ? galleryContent.images : [];
         updateGalleryContent({
           images: [...currentImages, ...uploadedImages]
         });
@@ -138,14 +150,110 @@ export default function GalleryElement(props: CommonElementProps) {
     });
   }, [updateGalleryContent, toast]);
 
-  // Drag and Drop: Recibir imágenes del canvas
+  // Drag and Drop handlers para reordenar imágenes dentro de la galería
+  const handleDragStart = useCallback((e: React.DragEvent, imageId: string) => {
+    setDraggedImageId(imageId);
+
+    // Encontrar la imagen correspondiente
+    const image = galleryContent.images.find(img => img.id === imageId);
+    if (image) {
+      // Configurar dataTransfer para crear elemento image en el canvas
+      const imageData = {
+        id: imageId,
+        url: image.url,
+        filename: image.filename,
+        type: 'image'
+      };
+
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('application/gallery-image', JSON.stringify(imageData));
+
+      // También mantener compatibilidad con drag interno
+      e.dataTransfer.setData('text/html', imageId);
+    }
+  }, [galleryContent.images]);
+
+  const handleReorderDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOverIndex(null);
+  }, []);
+
+  const handleReorderDrop = useCallback((e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (!draggedImageId) return;
+
+    const draggedIndex = galleryContent.images.findIndex(img => img.id === draggedImageId);
+    if (draggedIndex === -1 || draggedIndex === dropIndex) {
+      setDraggedImageId(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newImages = [...galleryContent.images];
+    const [removed] = newImages.splice(draggedIndex, 1);
+    newImages.splice(dropIndex, 0, removed);
+
+    const updatedContent: GalleryContent = {
+      ...galleryContent,
+      images: newImages,
+    };
+    onUpdate(id, { content: updatedContent });
+
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+  }, [id, galleryContent, draggedImageId, onUpdate]);
+
+  // Drag and Drop: Recibir imágenes del canvas o archivos del sistema
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
 
-    // Primero intentar recibir elementos de imagen desde el canvas
+    // Primero intentar recibir elementos de imagen desde el canvas (por ID de elemento)
+    const elementId = e.dataTransfer.getData('application/element-id');
+    if (elementId) {
+      const draggedElement = allElements.find(el => el.id === elementId);
+      if (draggedElement && draggedElement.type === 'image') {
+        const imageContent = draggedElement.content as { url: string };
+        if (imageContent && imageContent.url) {
+          // Verificar si la imagen ya existe en la galería
+          const currentImages = galleryContent.images || [];
+          const exists = currentImages.some(img => img.url === imageContent.url);
+
+          if (!exists) {
+            const newImage: GalleryImage = {
+              id: `img_${Date.now()}`,
+              url: imageContent.url,
+              filename: `imagen_${Date.now()}`,
+              uploadedAt: new Date().toISOString()
+            };
+
+            updateGalleryContent({
+              images: [...currentImages, newImage]
+            });
+
+            toast({
+              title: 'Imagen agregada',
+              description: 'Imagen movida desde el canvas a la galería'
+            });
+          } else {
+            toast({
+              title: 'Imagen ya existe',
+              description: 'Esta imagen ya está en la galería'
+            });
+          }
+          return;
+        }
+      }
+    }
+
+    // Intentar el formato antiguo por compatibilidad
     const canvasImageData = e.dataTransfer.getData('application/canvas-image');
     if (canvasImageData) {
-      try {
+        try {
         const canvasImage = JSON.parse(canvasImageData) as { id: string; url: string; filename?: string };
 
         // Verificar si la imagen ya existe en la galería
@@ -175,7 +283,7 @@ export default function GalleryElement(props: CommonElementProps) {
           });
         }
         return;
-      } catch (error) {
+            } catch (error) {
         console.error('Error procesando imagen del canvas:', error);
       }
     }
@@ -237,14 +345,14 @@ export default function GalleryElement(props: CommonElementProps) {
             {galleryContent.title || 'Mi galería'}
           </span>
         </div>
-
+        
         {/* Dropdown con opciones */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-green-600">
                 <ImageIcon className="h-4 w-4" />
-              </Button>
+          </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
               <DropdownMenuItem onClick={() => setIsImageUrlDialogOpen(true)}>
@@ -269,10 +377,10 @@ export default function GalleryElement(props: CommonElementProps) {
       </CardHeader>
 
       {/* CONTENT */}
-      <CardContent
+      <CardContent 
         className="flex-1 p-3 overflow-auto bg-white relative"
         style={{ minHeight: 0 }}
-        onDrop={handleDrop}
+        onDrop={handleDrop} // This is for dropping images from canvas or files into the gallery
         onDragOver={handleDragOver}
       >
         {images.length === 0 ? (
@@ -285,24 +393,36 @@ export default function GalleryElement(props: CommonElementProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
-            {images.map((image) => (
-              <div key={image.id} className="relative group">
+            {images.map((image, index) => (
+                <div
+                  key={image.id}
+                  className={cn(
+                  'relative group cursor-move',
+                  draggedImageId === image.id && 'opacity-50',
+                  dragOverIndex === index && 'ring-2 ring-blue-500'
+                )}
+                draggable
+                onDragStart={(e) => handleDragStart(e, image.id)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleReorderDrop(e, index)}
+                >
                 <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing">
-                  <img
-                    src={image.url}
+                    <img
+                      src={image.url}
                     alt={image.filename}
-                    className="w-full h-full object-cover"
-                    draggable
+                      className="w-full h-full object-cover"
                     onDragStart={(e) => {
                       e.dataTransfer.setData('application/gallery-image', JSON.stringify(image));
                       e.dataTransfer.effectAllowed = 'copy';
                     }}
-                    onError={(e) => {
-                      e.currentTarget.src = '/placeholder-image.png';
+                      onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                      e.currentTarget.parentElement!.innerHTML = '<div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">Error</div>';
                     }}
-                  />
-                </div>
-
+                    />
+                  </div>
+                  
                 {/* Overlay con opciones */}
                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
                   <Button

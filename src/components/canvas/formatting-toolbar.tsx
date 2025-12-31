@@ -6,6 +6,7 @@ import { Rnd } from 'react-rnd';
 import type { WithId, CanvasElement } from '@/lib/types';
 import {
   MoreVertical,
+  MoreHorizontal,
   Type,
   Bold,
   Italic,
@@ -113,7 +114,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       try {
         const parsed = JSON.parse(savedPosition);
         // Validar que la posición sea válida
-        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number' && 
+        if (parsed && typeof parsed.x === 'number' && typeof parsed.y === 'number' &&
             !isNaN(parsed.x) && !isNaN(parsed.y)) {
           setRndPosition(parsed);
           return;
@@ -123,14 +124,18 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       }
     }
 
-    // Si no hay posición guardada o es inválida, usar posición centrada sobre menú principal
+    // Si no hay posición guardada o es inválida, posicionar al lado izquierdo del tablero debajo del título
     if (typeof window !== 'undefined') {
-      // Posicionar centrado sobre el menú principal (asumiendo menú de ~60px ancho en la izquierda)
-      const menuWidth = 60; // Ancho aproximado del menú principal
-      const toolbarWidth = 600; // Ancho del formatting toolbar
-      const centerX = menuWidth + (toolbarWidth / 2); // Centrado sobre el menú
-      const centerY = 100; // Un poco más abajo del borde superior
-      setRndPosition({ x: centerX, y: centerY });
+      // Posicionar el menú format a 100px del borde izquierdo del tablero
+      const formatMenuX = 100;
+
+      // Posicionar debajo del título del tablero (que está en top-4 = 16px, con ~20px de altura)
+      const titleTop = 16; // top-4 en Tailwind = 16px
+      const titleHeight = 20; // Altura aproximada del título
+      const spacing = 4; // Espacio adicional
+      const formatMenuY = titleTop + titleHeight + spacing;
+
+      setRndPosition({ x: formatMenuX, y: formatMenuY });
     }
   }, [isOpen, isMobileSheet]); // Dependencias correctas: solo se ejecuta cuando cambian estos valores
 
@@ -378,30 +383,30 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     return null;
   }
 
-  // Clases Tailwind para el toolbar - COMPACTO sin espacios excesivos
+  // Clases Tailwind para el toolbar - SIN FONDO
   const toolbarClassName = cn(
-    "bg-black text-white py-1 px-1.5",
-    "flex items-center justify-center w-full min-h-[32px] gap-0.5",
+    "text-black py-0.5 px-1",
+    "flex flex-col items-center justify-center w-full min-w-[62px] gap-0.5",
     "text-xs"
   );
 
-  // Botones blancos compactos
+  // Botones con efectos hover calipso como menú principal
   const whiteButtonClassName = cn(
-    "bg-white border-none rounded px-1.5 py-1",
+    "bg-white border border-border rounded px-1 py-0.5",
     "cursor-pointer flex items-center justify-center",
-    "min-w-[24px] h-6 transition-colors",
-    "hover:bg-gray-100"
+    "min-w-[25px] h-6 transition-colors",
+    "hover:bg-[#ADD8E6] active:bg-white text-black"
   );
 
   // Iconos compactos
-  const iconClassName = "w-3.5 h-3.5 text-black";
+  const iconClassName = "w-4 h-4 text-black";
 
-  // Cuadrados gris oscuro compactos
+  // Cuadrados con mismo estilo que menú principal
   const darkSquareClassName = cn(
-    "bg-[#2a2a2a] border-none rounded",
+    "bg-white border border-border rounded",
     "cursor-pointer flex items-center justify-center",
-    "w-6 h-6 p-1 transition-colors",
-    "hover:bg-[#3a3a3a]"
+    "w-6 h-6 p-0.5 transition-colors",
+    "hover:bg-[#ADD8E6] active:bg-white text-black"
   );
 
   const toolbarContent = (
@@ -413,7 +418,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
             className={`${darkSquareClassName} cursor-grab active:cursor-grabbing drag-handle`}
             // onMouseDown ya no es necesario aquí, la clase drag-handle gestiona el arrastre
           >
-            <MoreVertical className="w-[14px] h-[14px] text-white" />
+            <MoreHorizontal className="w-[15px] h-[15px] text-black" />
           </button>
         </TooltipTrigger>
         <TooltipContent>
@@ -460,6 +465,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       </Tooltip>
 
 
+
       {/* 3. T (Tamaño de Fuente) - Botón blanco con Popover */}
       <Popover open={popoverOpen === 'fontSize'} onOpenChange={(open) => setPopoverOpen(open ? 'fontSize' : null)}>
         <Tooltip>
@@ -477,12 +483,12 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
             <p>Tamaño de fuente</p>
           </TooltipContent>
         </Tooltip>
-        <PopoverContent className="w-auto p-2 bg-white" onMouseDown={(e) => e.preventDefault()}>
+        <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
           <div className="space-y-1">
             {['12px', '14px', '16px', '18px', '20px', '24px', '32px'].map((size) => (
               <button
                 key={size}
-                className="w-full text-left px-2 py-1 text-sm hover:bg-gray-100 rounded"
+                className="w-full text-left px-2 py-1 text-sm hover:bg-[#ADD8E6] rounded"
                   onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -654,7 +660,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
             <Underline className={iconClassName} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2 bg-white" onMouseDown={(e) => e.preventDefault()}>
+        <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
           <div className="grid grid-cols-4 gap-1.5">
             {[
               '#14b8a6',
@@ -674,7 +680,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
               '#f4f647',
               '#016d77',
             ].map((color, idx) => (
-              <button key={idx} className="w-6 h-6 rounded border hover:scale-110" style={{ backgroundColor: color }} onMouseDown={(e) => applyColoredUnderline(e, color)} />
+              <button key={idx} className="w-7 h-7 rounded border hover:scale-110" style={{ backgroundColor: color }} onMouseDown={(e) => applyColoredUnderline(e, color)} />
             ))}
           </div>
         </PopoverContent>
@@ -707,12 +713,12 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
             <Highlighter className={iconClassName} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2 bg-white" onMouseDown={(e) => e.preventDefault()}>
+        <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
           <div className="grid grid-cols-4 gap-1.5">
             {['#fef08a', '#fde68a', '#fed7aa', '#d1fae5', '#a5f3fc', '#e9d5ff', '#ddd6fe', '#c7d2fe'].map((color, idx) => (
               <button
                 key={idx}
-                className="w-6 h-6 rounded border hover:scale-110"
+                className="w-7 h-7 rounded border hover:scale-110"
                 style={{ backgroundColor: color }}
                 onMouseDown={(e) => {
                   e.preventDefault();
@@ -748,17 +754,17 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
             <Paintbrush className={iconClassName} />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-2 bg-white" onMouseDown={(e) => e.preventDefault()}>
+        <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
           <div className="grid grid-cols-4 gap-1.5">
             {['#14b8a6', '#f97316', '#84cc16', '#eab308', '#f59e0b', '#3b82f6', '#1f2937', '#475569'].map((color, idx) => (
-              <button key={idx} className="w-6 h-6 rounded border hover:scale-110" style={{ backgroundColor: color }} onMouseDown={(e) => applyTextColor(e, color)} />
+              <button key={idx} className="w-7 h-7 rounded border hover:scale-110" style={{ backgroundColor: color }} onMouseDown={(e) => applyTextColor(e, color)} />
             ))}
           </div>
         </PopoverContent>
       </Popover>
 
       {/* Separador */}
-      <div className="w-px h-5 bg-white/30 mx-0.5" />
+      <div className="w-px h-6 bg-border mx-0.5" />
 
       {/* 7. B (Bold) - Botón blanco */}
       <Tooltip>
@@ -806,7 +812,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       </Tooltip>
 
       {/* Separador */}
-      <div className="w-px h-5 bg-white/30 mx-0.5" />
+      <div className="w-px h-6 bg-border mx-0.5" />
 
       {/* 10-13. Alinear - Botón único con desplegable */}
       <Tooltip>
@@ -870,7 +876,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       </Tooltip>
 
       {/* Separador */}
-      <div className="w-px h-5 bg-white/30 mx-0.5" />
+      <div className="w-px h-6 bg-border mx-0.5" />
 
       {/* 14. Calendario - Botón blanco */}
       <Tooltip>
@@ -904,13 +910,13 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       </Tooltip>
 
       {/* Separador */}
-      <div className="w-px h-5 bg-white/30 mx-0.5" />
+      <div className="w-px h-6 bg-border mx-0.5" />
 
       {/* 12. Mover - Botón blanco (trasladado del menú principal) */}
       <Tooltip>
         <TooltipTrigger asChild>
           <button
-            className={cn(whiteButtonClassName, isPanningActive && 'bg-gray-200')}
+            className={cn(whiteButtonClassName, isPanningActive && 'bg-white')}
             onClick={onPanToggle}
           >
             <Move className={iconClassName} />
@@ -921,20 +927,6 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         </TooltipContent>
       </Tooltip>
 
-      {/* 13. X - Cuadrado gris oscuro */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            className={darkSquareClassName}
-            onClick={onClose}
-          >
-            <X className="w-[14px] h-[14px] text-white" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Cerrar</p>
-        </TooltipContent>
-      </Tooltip>
     </div>
   );
 
@@ -942,20 +934,26 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     return toolbarContent;
   }
 
-  // Menú format siempre abierto arriba, arrastrable con Rnd
+  // Menú format siempre abierto a la derecha del menú principal, arrastrable con Rnd
   return (
     <Rnd
-      size={{ width: 'auto', height: 'auto' }}
+      default={{
+        x: rndPosition.x,
+        y: rndPosition.y,
+        width: 103,
+        height: 605,
+      }}
+      minWidth={86}
+      maxWidth={138}
+      minHeight={432}
+      maxHeight={864}
       position={rndPosition}
       onDragStop={onDragStop}
       dragHandleClassName="drag-handle"
       bounds="window"
-      enableResizing={false}
+      enableResizing={true}
       className="z-[60000] pointer-events-auto"
     >
-      <div className="drag-handle cursor-grab active:cursor-grabbing py-1 text-slate-800 flex justify-center mb-1">
-        <GripVertical className="size-4" />
-      </div>
       {toolbarContent}
     </Rnd>
   );

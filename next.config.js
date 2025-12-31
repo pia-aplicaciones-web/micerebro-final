@@ -19,7 +19,7 @@ const nextConfig = {
   
   // Configuración experimental para chunks
   experimental: {
-    outputFileTracingRoot: undefined,
+    // outputFileTracingRoot removido por ser inválido en Next.js 15
   },
 
   // Webpack config mejorado para evitar problemas de chunks

@@ -1,26 +1,29 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { CommonElementProps, PhotoGridContent, PhotoGridCell } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { useAutoSave } from '@/hooks/use-auto-save';
 import {
   GripVertical,
   X,
   Upload,
   Trash2,
-  Minus,
   Plus,
   FileImage,
-  Maximize,
+  Maximize, // Usaremos Maximize para "Restaurar Tamaño Original"
   Grid3X3,
   MessageSquare,
   Tag,
   Eye,
   EyeOff,
+  Minus,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+
 
 function isPhotoGridContent(content: unknown): content is PhotoGridContent {
   return typeof content === 'object' && content !== null && 'rows' in content && 'columns' in content;
@@ -80,8 +83,19 @@ export default function PhotoGridElement(props: CommonElementProps) {
     onUpdate,
     deleteElement,
     isPreview,
-    minimized,
+    // Eliminamos 'minimized' de las props
   } = props;
+
+  const { toast } = useToast();
+
+  // Sistema de auto-guardado
+  const { handleChange } = useAutoSave({
+    getContent: () => ({ ...gridContent }),
+    onSave: (newContent) => {
+      onUpdate(id, { content: newContent });
+    },
+    debounceMs: 1000, // Auto-guardar cada segundo
+  });
 
   const safeProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const gridContent: PhotoGridContent = isPhotoGridContent(content)
@@ -94,16 +108,10 @@ export default function PhotoGridElement(props: CommonElementProps) {
 
   const [draggedCellIndex, setDraggedCellIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // const { bindDictationTarget } = useDictationBinding({
-  //   isListening,
-  //   finalTranscript,
-  //   interimTranscript,
-  //   isSelected,
-  // });
+  const originalSizeRef = useRef<{ width: number; height: number } | null>(null); // Ref para el tamaño original
 
   const { rows, columns, cells, title } = gridContent;
   const totalCells = rows * columns;
@@ -112,6 +120,28 @@ export default function PhotoGridElement(props: CommonElementProps) {
   while (paddedCells.length < totalCells) {
     paddedCells.push({ id: `cell-${paddedCells.length}`, url: '', caption: '', showCaption: false });
   }
+
+  // Capturar tamaño original del elemento al montar
+  useEffect(() => {
+    if (properties?.size && !originalSizeRef.current) {
+      originalSizeRef.current = {
+        width: typeof properties.size.width === 'number' ? properties.size.width : parseFloat(String(properties.size.width)) || 600,
+        height: typeof properties.size.height === 'number' ? properties.size.height : parseFloat(String(properties.size.height)) || 400,
+      };
+    }
+  }, [properties?.size]);
+
+  // Función para restaurar el tamaño original
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (originalSizeRef.current) {
+      onUpdate(id, {
+        properties: {
+          ...properties,
+          size: originalSizeRef.current,
+        },
+      });
+    }
+  }, [id, onUpdate, properties]);
 
   const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files) return;
@@ -218,59 +248,25 @@ export default function PhotoGridElement(props: CommonElementProps) {
       link.download = `${gridContent.title || 'guia-fotos'}-${Date.now()}.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
+      toast({
+        title: 'Exportado',
+        description: 'La guía se ha exportado como PNG de alta resolución.',
+      });
     } catch (error) {
       console.error('Error exporting:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al exportar',
+        description: 'No se pudo exportar la guía.',
+      });
     }
-  }, [gridContent.title]);
+  }, [gridContent.title, toast]);
 
   const gapSize = layoutMode === 'adaptive' ? 16 : 12;
   const aspectClass = layoutMode === 'horizontal' ? 'aspect-[4/3]' : layoutMode === 'adaptive' ? '' : 'aspect-square';
   const gridTemplateRows = layoutMode === 'adaptive' ? undefined : `repeat(${rows}, 1fr)`;
   const gridTemplateColumns = layoutMode === 'adaptive' ? undefined : `repeat(${columns}, 1fr)`;
   const gridAutoRows = layoutMode === 'adaptive' ? 'minmax(120px, auto)' : undefined;
-
-  // Toggle minimize (copiado del notepad)
-  const toggleMinimize = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (isPreview) return;
-
-    const isCurrentlyMinimized = !!minimized;
-    const currentSize = (properties as any)?.size || { width: 400, height: 400 };
-
-    const currentSizeNumeric = {
-      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400,
-      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 400,
-    };
-
-    if (isCurrentlyMinimized) {
-      const { originalSize, ...restProps } = (properties || {}) as any;
-      const restoredSize = originalSize || { width: 400, height: 400 };
-      const newProperties = {
-        ...restProps,
-        size: restoredSize
-      };
-
-      onUpdate(id, {
-        minimized: false,
-        properties: newProperties,
-        content: gridContent, // Asegurar que el contenido se preserve
-      });
-    } else {
-      // Guardar el contenido actual antes de minimizar
-      const updatedContent = { ...gridContent }; // No hay texto directo, pero se pasa el objeto completo
-      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400;
-      onUpdate(id, {
-        minimized: true,
-        properties: {
-          ...properties,
-          size: { width: currentWidth, height: 48 },
-          originalSize: currentSizeNumeric
-        },
-        content: updatedContent, // Guardar el contenido actualizado
-      });
-    }
-  }, [isPreview, minimized, properties, onUpdate, id, gridContent]);
 
   return (
     <Card
@@ -294,81 +290,86 @@ export default function PhotoGridElement(props: CommonElementProps) {
       }}
     >
       {!isHeaderHidden && (
-      <div className="drag-handle flex items-center justify-between px-3 py-2 bg-white border-b border-gray-200 cursor-grab active:cursor-grabbing">
-        <div className="flex items-center gap-2">
+      <div className="drag-handle flex items-center justify-between px-2 py-2 bg-white border-b border-gray-200 cursor-grab active:cursor-grabbing">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
           <GripVertical className="h-4 w-4 text-gray-400" />
-          <Grid3X3 className="h-4 w-4 text-gray-600" />
-          <div
-            contentEditable={!isPreview}
-            suppressContentEditableWarning
-            onInput={(e) => {
-              const newTitle = e.currentTarget.textContent || title;
-              onUpdate(id, { content: { ...gridContent, title: newTitle } });
-            }}
-            onFocus={() => onSelectElement(id, false)}
-            className="text-[10px] font-medium text-gray-700 outline-none cursor-text"
-            style={{ fontFamily: 'Poppins' }}
-            data-placeholder="Título"
-          >
-            {title}
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="flex items-center gap-1 px-2 border-r border-gray-300">
-            <span className="text-[10px] text-gray-500" style={{ fontFamily: 'Poppins' }}>Filas</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRowsChange(-1)}>
-              <Minus className="h-3 w-3" />
-            </Button>
-            <span className="text-[10px] font-medium w-4 text-center" style={{ fontFamily: 'Poppins' }}>{rows}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRowsChange(1)}>
-              <Plus className="h-3 w-3" />
-            </Button>
-          </div>
-          <div className="flex items-center gap-1 px-2 border-r border-gray-300">
-            <span className="text-[10px] text-gray-500" style={{ fontFamily: 'Poppins' }}>Cols</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleColumnsChange(-1)}>
-              <Minus className="h-3 w-3" />
-            </Button>
-            <span className="text-[10px] font-medium w-4 text-center" style={{ fontFamily: 'Poppins' }}>{columns}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleColumnsChange(1)}>
-              <Plus className="h-3 w-3" />
-            </Button>
-          </div>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => fileInputRef.current?.click()} title="Cargar imágenes">
-            <Upload className="h-3 w-3" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleDeleteAll} title="Eliminar todas">
-            <Trash2 className="h-3 w-3 text-red-500" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleExportPng} title="Exportar PNG">
-            <FileImage className="h-3 w-3" />
-          </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
-            title={minimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
-          >
-            {minimized ? <Maximize className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 text-gray-400 hover:text-gray-600"
-            onClick={(e) => { e.stopPropagation(); onUpdate(id, { properties: { ...properties, minimized: true } }); }}
-            title="Cerrar"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
+            className="h-5 w-5"
             onClick={() => setIsHeaderHidden(true)}
             title="Focus (ocultar header)"
           >
             <EyeOff className="h-3 w-3" />
+          </Button>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => {
+              const newTitle = e.target.value;
+              onUpdate(id, { content: { ...gridContent, title: newTitle } });
+            }}
+            onFocus={() => onSelectElement(id, false)}
+            className="flex-1 min-w-0 bg-transparent outline-none cursor-text font-headline text-sm font-semibold p-1"
+            onClick={(e) => e.stopPropagation()}
+            placeholder=""
+            disabled={isPreview}
+          />
+        </div>
+        <div className="flex items-center gap-1 flex-wrap">
+          {/* Controles de filas y columnas más compactos */}
+          <div className="flex items-center gap-1 px-1.5 border-r border-gray-300">
+            <span className="text-[9px] text-gray-500 font-medium" style={{ fontFamily: 'Space_Grotesk' }}>F</span>
+            <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleRowsChange(-1)}>
+              <Minus className="h-2.5 w-2.5" />
+            </Button>
+            <span className="text-[9px] font-medium w-3 text-center" style={{ fontFamily: 'Poppins' }}>{rows}</span>
+            <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleRowsChange(1)}>
+              <Plus className="h-2.5 w-2.5" />
+            </Button>
+          </div>
+          <div className="flex items-center gap-1 px-1.5 border-r border-gray-300">
+            <span className="text-[9px] text-gray-500 font-medium" style={{ fontFamily: 'Space_Grotesk' }}>C</span>
+            <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleColumnsChange(-1)}>
+              <Minus className="h-2.5 w-2.5" />
+            </Button>
+            <span className="text-[9px] font-medium w-3 text-center" style={{ fontFamily: 'Poppins' }}>{columns}</span>
+            <Button variant="ghost" size="icon" className="h-4 w-4" onClick={() => handleColumnsChange(1)}>
+              <Plus className="h-2.5 w-2.5" />
+            </Button>
+          </div>
+
+          {/* Grupo de acciones principales */}
+          <div className="flex items-center gap-0.5 border-r border-gray-300 pr-1.5">
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => fileInputRef.current?.click()} title="Cargar imágenes">
+              <Upload className="h-3 w-3" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={handleExportPng} title="Exportar PNG">
+              <FileImage className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5"
+              title="Restaurar Tamaño Original"
+              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
+            >
+              <Maximize className="h-3 w-3" />
+            </Button>
+          </div>
+
+          {/* Botón cerrar */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-6 w-6 ml-1"
+            title="Cerrar"
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(id, { hidden: true });
+            }}
+          >
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -396,7 +397,7 @@ export default function PhotoGridElement(props: CommonElementProps) {
         onChange={(e) => handleFileUpload(e.target.files)}
       />
 
-      {!isCollapsed && (
+      {
         <div
           className="flex-1 p-2 overflow-auto"
           style={{
@@ -462,7 +463,7 @@ export default function PhotoGridElement(props: CommonElementProps) {
               <div className="px-2 py-1 flex items-center justify-between border-t bg-white">
                 <button
                   className="flex items-center gap-1 text-[10px] text-gray-600"
-                  style={{ fontFamily: 'Poppins' }}
+                  style={{ fontFamily: 'Space_Grotesk' }}
                   onClick={(e) => { e.stopPropagation(); toggleCaption(index); }}
                   title="Mostrar/Ocultar label"
                 >
@@ -485,6 +486,24 @@ export default function PhotoGridElement(props: CommonElementProps) {
               )}
             </div>
           ))}
+        </div>
+      }
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       )}
     </Card>

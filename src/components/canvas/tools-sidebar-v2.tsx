@@ -624,10 +624,7 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
                 <Plus className="mr-2 h-4 w-4" /> Cuaderno clásico
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAdd('yellow-notepad')} className="hover:bg-white/10">
-                <Plus className="mr-2 h-4 w-4" /> Bloc amarillo
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAdd('mini-notes')} className="hover:bg-white/10">
-                <Plus className="mr-2 h-4 w-4" /> Mini Notas
+                <Plus className="mr-2 h-4 w-4" /> Block
               </DropdownMenuItem>
               {hiddenNotepads.length > 0 && (
                 <>

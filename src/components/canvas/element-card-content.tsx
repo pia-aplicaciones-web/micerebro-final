@@ -1,6 +1,6 @@
 // src/components/canvas/element-card-content.tsx
 import React from 'react';
-import type { WithId, CanvasElement, CommentContent, NotepadContent, TodoContent, ImageContent } from '@/lib/types';
+import type { WithId, CanvasElement, CommentContent, NotepadContent, TodoContent, ImageContent, PhotoGridContent, PhotoGridFreeContent } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface ElementCardContentProps {
@@ -30,6 +30,14 @@ const ElementCardContent: React.FC<ElementCardContentProps> = ({
       case 'todo':
         const todoContent = element.content as TodoContent;
         return todoContent?.title || 'Lista de tareas';
+      case 'photo-grid':
+      case 'photo-grid-horizontal':
+      case 'photo-grid-adaptive':
+        const photoGridContent = element.content as PhotoGridContent;
+        return photoGridContent?.title || 'Guía de Fotos';
+      case 'photo-grid-free':
+        const photoGridFreeContent = element.content as PhotoGridFreeContent;
+        return photoGridFreeContent?.title || 'Guía de Fotos Libre';
       case 'text':
         // Para texto, mostrar una preview del contenido HTML
         const textContent = typeof element.content === 'string' ? element.content : '';

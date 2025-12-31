@@ -4,6 +4,7 @@
 import React, { useState, useRef } from 'react';
 import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import {
   GripVertical,
   CalendarRange,
@@ -228,6 +229,24 @@ export default function WeeklyMenuElement(props: CommonElementProps) {
           </div>
         </div>
       </div>
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

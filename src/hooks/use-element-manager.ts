@@ -130,7 +130,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
     switch (type) {
       case 'notepad':
         // Dimensiones dependen del formato, por defecto 20x15 (20cm x 15cm)
-        const notepadFormat = (props?.properties as any)?.format || '20x15';
+        const notepadFormat = (props?.properties as any)?.format || 'letter';
         let notepadSize;
         if (notepadFormat === '10x15') {
           notepadSize = { width: 378, height: 567 }; // 10cm x 15cm
@@ -148,7 +148,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: notepadSize.height,
           userId,
           properties: { ...baseProperties, position: notepadPos, size: notepadSize, format: notepadFormat, zIndex: -1 },
-          content: { title: 'Nuevo Cuaderno', pages: Array(5).fill('<div><br></div>'), currentPage: 0 },
+          content: { title: 'Nuevo Cuaderno', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
           zIndex: -1,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -178,11 +178,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         newElementData = { type, x: todoPos.x, y: todoPos.y, width: todoSize.width, height: todoSize.height, userId, properties: { ...baseProperties, position: todoPos, size: todoSize }, content: props?.content || { title: 'Lista de Tareas', items: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'image':
         const imagePos = getCenteredPosition(sizeWidth, sizeHeight);
-        newElementData = { type, x: imagePos.x, y: imagePos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: imagePos, size: { width: sizeWidth, height: sizeHeight } }, content: props?.content, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: imagePos.x, y: imagePos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: imagePos, size: { width: sizeWidth, height: sizeHeight } }, content: props?.content || { url: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'text':
         const textPos = getCenteredPosition(sizeWidth, sizeHeight);
         const textBgColor = (props?.properties as CanvasElementProperties)?.backgroundColor || '#ffffff';
-        newElementData = { type, x: textPos.x, y: textPos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: textPos, size: { width: sizeWidth, height: sizeHeight }, backgroundColor: textBgColor }, content: props?.content || '<div style="font-size: 18px;">Escribe algo...</div>', color: props?.color || 'white', zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: textPos.x, y: textPos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: textPos, size: { width: sizeWidth, height: sizeHeight }, backgroundColor: textBgColor }, content: props?.content || '<div style="font-size: 15px;">Escribe algo...</div>', color: props?.color || 'white', zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'comment':
         const commentSize = { width: 32, height: 32 };
         const commentPos = getCenteredPosition(commentSize.width, commentSize.height);
@@ -212,11 +212,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         // Tamaño basado en las imágenes: aproximadamente 400x600px (portrait)
         const yellowNotepadSize = { width: 400, height: 600 };
         const yellowNotepadPos = getCenteredPosition(yellowNotepadSize.width, yellowNotepadSize.height);
-        newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { text: '', searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { pages: Array(2).fill(''), currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'notes':
         const notesSize = { width: 794, height: 567 }; // 21cm x 15cm (horizontal)
         const notesPos = getCenteredPosition(notesSize.width, notesSize.height);
-        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { text: '', searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { pages: Array(2).fill('<div><br></div>'), currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'mini-notes':
         const miniNotesSize = { width: 227, height: 378 }; // 6cm x 10cm
         const miniNotesPos = getCenteredPosition(miniNotesSize.width, miniNotesSize.height);
@@ -365,7 +365,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           userId,
           properties: { ...baseProperties, position: gridPos, size: gridSize },
           content: {
-            title: 'Guía de Fotos',
+            title: 'guia',
             rows: 2,
             columns: 2,
             cells: [],
@@ -388,7 +388,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           userId,
           properties: { ...baseProperties, position: gridHPos, size: gridHSize },
           content: {
-            title: 'Guía Fotos Horizontal',
+            title: 'guia',
             rows: 2,
             columns: 3,
             cells: [],
@@ -411,7 +411,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           userId,
           properties: { ...baseProperties, position: gridAPos, size: gridASize },
           content: {
-            title: 'Guía Fotos Adaptable',
+            title: 'guia',
             rows: 2,
             columns: 2,
             cells: [],
@@ -433,7 +433,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: freeSize.height,
           userId,
           properties: { ...baseProperties, position: freePos, size: freeSize },
-          content: { title: 'Guía de Fotos Libre', imageIds: [] },
+          content: { title: 'guia', imageIds: [] },
           zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -450,14 +450,14 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: libretaSize.height,
           userId,
           properties: { ...baseProperties, position: libretaPos, size: libretaSize },
-          content: { title: 'Libreta', text: '' },
+          content: { title: 'Libreta', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
           zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         break;
       case 'mini':
-        const miniSize = { width: 567, height: 567 }; // 15cm x 15cm
+        const miniSize = { width: 302, height: 529 }; // 8cm x 14cm
         const miniPos = getCenteredPosition(miniSize.width, miniSize.height);
         newElementData = {
           type,
@@ -466,7 +466,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           width: miniSize.width,
           height: miniSize.height,
           userId,
-          properties: { ...baseProperties, position: miniPos, size: miniSize, backgroundColor: '#80DEEA' }, // Fondo Aqua
+          properties: { ...baseProperties, position: miniPos, size: miniSize },
           content: { text: '', searchQuery: '' },
           zIndex,
           createdAt: serverTimestamp(),
@@ -483,7 +483,13 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         newElementData = { type, x: galleryPos.x, y: galleryPos.y, width: gallerySize.width, height: gallerySize.height, userId, properties: { ...baseProperties, position: galleryPos, size: gallerySize, backgroundColor: '#ffffff' }, content: (props === null || props === void 0 ? void 0 : props.content) || { title: 'Galería', images: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       default: return Promise.reject(new Error(`Tipo de elemento inválido: ${type}`));
     }
-  
+
+    // Validación final: asegurar que content nunca sea undefined
+    if (newElementData.content === undefined) {
+      console.error(`Elemento ${type} creado sin content válido. Asignando valor por defecto.`);
+      newElementData.content = { title: 'Elemento sin contenido' };
+    }
+
     const docRef = await addDoc(elementsRef, newElementData);
     return docRef.id;
   }, [firestore, user, boardId]); // ✅ Removido getNextZIndex y getViewportCenter - usar directamente sin dependencias

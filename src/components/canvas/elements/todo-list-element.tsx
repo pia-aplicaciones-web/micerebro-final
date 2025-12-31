@@ -22,7 +22,6 @@ import {
 import {
   GripVertical,
   Plus,
-  Trash2,
   Paintbrush,
   MoreVertical,
   Download,
@@ -50,7 +49,6 @@ const EXTENDED_PALETTES = {
   // Tierra
   sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
   terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-  sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
   coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
 
   // Océano
@@ -96,12 +94,8 @@ export default function TodoListElement(props: CommonElementProps) {
     onUpdate,
     onEditElement,
     isSelected,
-    deleteElement,
     onLocateElement,
     onEditComment,
-    isListening,
-    finalTranscript,
-    interimTranscript,
   } = props;
 
   const { toast } = useToast();
@@ -110,18 +104,18 @@ export default function TodoListElement(props: CommonElementProps) {
 
   // Dictation binding
   const { bindDictationTarget } = useDictationBinding({
-    isListening: isListening || false,
-    finalTranscript: finalTranscript || '',
-    interimTranscript: interimTranscript || '',
+    isListening: false,
+    finalTranscript: '',
+    interimTranscript: '',
     isSelected: isSelected || false,
   });
 
   // Conectar dictation a los inputs cuando están enfocados
   const handleInputFocus = useCallback((element: HTMLElement) => {
-    if (isSelected && isListening) {
+    if (isSelected) {
       bindDictationTarget(element);
     }
-  }, [isSelected, isListening, bindDictationTarget]);
+  }, [isSelected, bindDictationTarget]);
   const [newItemText, setNewItemText] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
   const newItemRef = useRef<HTMLTextAreaElement>(null);
@@ -345,11 +339,10 @@ export default function TodoListElement(props: CommonElementProps) {
     }
   };
 
-  const handleDeleteList = () => {
-    if (deleteElement) {
-      deleteElement(id);
-    }
-  };
+
+  const handleClose = useCallback(() => {
+    onUpdate(id, { hidden: true });
+  }, [onUpdate, id]);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -474,22 +467,29 @@ export default function TodoListElement(props: CommonElementProps) {
                   <Download className="mr-2 h-3 w-3" />
                   <span>Exportar a PNG: alta resolución</span>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={handleDeleteList}
-                  className="text-sm text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="mr-2 h-3 w-3" />
-                  <span>Eliminar Lista</span>
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* Botón Cerrar */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                handleClose();
+              }}
+              title="Cerrar lista de tareas"
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
         </div>
       </CardHeader>
 
       {/* CONTENIDO: Lista de Items */}
-      <CardContent className="flex-1 overflow-y-auto p-3 min-h-0">
+      <CardContent className="flex-1 p-3">
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId={`droppable-${id}`}>
             {(provided) => (
@@ -527,17 +527,41 @@ export default function TodoListElement(props: CommonElementProps) {
                             onClick={(e) => e.stopPropagation()}
                           />
 
-                          {/* Input de Texto (Compatible con Dictado) - CRÍTICO: Sin onMouseDown para permitir foco */}
-                          <input
-                            type="text"
+                          {/* Textarea de Texto (Compatible con Dictado) - Auto-expandible sin scroll */}
+                          <textarea
+                            ref={(el) => {
+                              if (el) {
+                                // Auto-expandir textarea
+                                el.style.height = 'auto';
+                                el.style.height = el.scrollHeight + 'px';
+                              }
+                            }}
                             value={item.text}
-                            onChange={(e) => handleItemTextChange(index, e.target.value)}
+                            onChange={(e) => {
+                              handleItemTextChange(index, e.target.value);
+                              // Auto-expandir cuando cambie el contenido
+                              const target = e.target as HTMLTextAreaElement;
+                              target.style.height = 'auto';
+                              target.style.height = target.scrollHeight + 'px';
+                            }}
+                            onInput={(e) => {
+                              // Auto-expandir cuando cambie por dictado
+                              const target = e.currentTarget as HTMLTextAreaElement;
+                              target.style.height = 'auto';
+                              target.style.height = target.scrollHeight + 'px';
+                            }}
                             className={cn(
-                              'flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent',
+                              'flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden',
                               item.completed ? 'line-through text-gray-500' : 'text-gray-900'
                             )}
-                            style={{ fontSize }}
+                            style={{
+                              fontSize,
+                              whiteSpace: 'pre-wrap',
+                              wordBreak: 'break-word',
+                              minHeight: '24px'
+                            }}
                             placeholder="Tarea..."
+                            rows={1}
                             onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
                             onFocus={(e) => {
                               onEditElement(id);
@@ -579,15 +603,28 @@ export default function TodoListElement(props: CommonElementProps) {
               if (el) {
                 newItemRef.current = el;
                 handleInputFocus(el);
+                // Auto-expandir textarea
+                el.style.height = 'auto';
+                el.style.height = el.scrollHeight + 'px';
               }
             }}
             rows={1}
             defaultValue={newItemText}
-            onChange={(e) => setNewItemText(e.target.value)}
+            onChange={(e) => {
+              setNewItemText(e.target.value);
+              // Auto-expandir cuando cambie el contenido
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = target.scrollHeight + 'px';
+            }}
             onInput={(e) => {
               // Sincronizar estado con el valor actual cuando cambie (incluyendo dictado)
               const currentValue = e.currentTarget.value;
               setNewItemText(currentValue);
+              // Auto-expandir cuando cambie por dictado
+              const target = e.currentTarget as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = target.scrollHeight + 'px';
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -596,9 +633,8 @@ export default function TodoListElement(props: CommonElementProps) {
               }
             }}
             placeholder="Agregar tarea..."
-            className="flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug"
-            style={{ fontSize }}
-            style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '28px' }}
+            className="flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden"
+            style={{ fontSize, whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '28px' }}
             onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
             onFocusCapture={() => onEditElement(id)}
           />

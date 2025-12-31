@@ -5,7 +5,8 @@ import type { CommonElementProps, NotepadContent, CanvasElementProperties } from
 import {
   MoreVertical, X, Minus, Maximize, GripVertical,
   FileImage, Settings,
-  Info, Eraser, CalendarDays, FileSignature
+  Info, Eraser, CalendarDays, FileSignature, Calendar,
+  ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,7 @@ import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import ExportPdfDialog from './export-pdf-dialog';
+import { MiniPasswordDialog } from '@/components/MiniPasswordDialog';
 import './notepad-element.css';
 
 
@@ -63,6 +65,10 @@ export default function NotepadElement(props: CommonElementProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
+  // Obtener el contenido de la página actual
+  const currentPageIndex = typedContent.currentPage || 0;
+  const currentPageContent = typedContent.pages?.[currentPageIndex] || '';
+
 
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -70,6 +76,8 @@ export default function NotepadElement(props: CommonElementProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isUnlockedForEditing, setIsUnlockedForEditing] = useState(false);
   
   // Hook de autoguardado robusto para el contenido del cuaderno
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
@@ -81,18 +89,20 @@ export default function NotepadElement(props: CommonElementProps) {
     },
     onSave: async (newHtml) => {
       if (isPreview || !contentRef.current) return;
-      const currentContent = typedContent.text || '';
+      const currentContent = currentPageContent || '';
       // Comparar contenido normalizado
       const normalizedNew = newHtml.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
       const normalizedCurrent = currentContent.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
       if (normalizedNew !== normalizedCurrent) {
-        await onUpdate(id, { content: { ...typedContent, text: newHtml } });
+        // Actualizar la página actual en el array de páginas
+        const updatedPages = [...(typedContent.pages || [])];
+        updatedPages[currentPageIndex] = newHtml;
+        await onUpdate(id, { content: { ...typedContent, pages: updatedPages } });
       }
     },
     debounceMs: 2000,
     disabled: isPreview,
     compareContent: (oldContent, newContent) => {
-      const currentContent = typedContent.text || '';
       // Normalizar ambos para comparación
       const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
       const normalizedNew = (newContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
@@ -104,6 +114,34 @@ export default function NotepadElement(props: CommonElementProps) {
   const saveContent = useCallback(async () => {
     await forceSave();
   }, [forceSave]);
+
+  // Función para manejar cambios de contraseña
+  const handlePasswordChange = useCallback(async (password: string | null) => {
+    const newContent: NotepadContent = {
+      ...typedContent,
+      password: password || undefined,
+      isLocked: false // Al cambiar contraseña, desbloqueamos automáticamente
+    };
+
+    await onUpdate(id, {
+      content: newContent
+    });
+  }, [typedContent, onUpdate, id]);
+
+  // Función para manejar doble clic en elemento bloqueado
+  const handleNotepadDoubleClick = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (typedContent.password && !isUnlockedForEditing) {
+      setIsPasswordDialogOpen(true);
+    }
+  }, [typedContent.password, isUnlockedForEditing]);
+
+  // Función para manejar el desbloqueo desde el diálogo
+  const handleUnlockForEditing = useCallback(() => {
+    setIsUnlockedForEditing(true);
+  }, []);
 
   // Función para copiar texto como .txt ordenado
   const handleCopyAsTxt = useCallback(async () => {
@@ -128,7 +166,7 @@ export default function NotepadElement(props: CommonElementProps) {
     if (contentRef.current) {
         const isFocused = document.activeElement === contentRef.current;
         if (!isFocused) {
-            const content = typedContent.text || '';
+            const content = currentPageContent || '';
             // Limpiar contenido vacío o con solo <div><br></div>
             const cleanContent = content === '<div><br></div>' || content === '<div></div>' || content.trim() === '' ? '' : content;
             // CRÍTICO: Solo actualizar si NO está enfocado (preservar cursor)
@@ -137,7 +175,7 @@ export default function NotepadElement(props: CommonElementProps) {
             }
         }
     }
-  }, [typedContent.text]);
+  }, [currentPageContent]);
 
   
   const handleTitleFocus = useCallback(() => {
@@ -193,6 +231,30 @@ export default function NotepadElement(props: CommonElementProps) {
       });
     }
   }, [isPreview, typedContent, onUpdate, id, saveContent]);
+
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (isPreview) return;
+
+    // Calcular tamaño original basado en el formato
+    const notepadFormat = (properties as any)?.format || 'letter';
+    let originalSize;
+
+    if (notepadFormat === '10x15') {
+      originalSize = { width: 378, height: 567 }; // 10cm x 15cm
+    } else if (notepadFormat === '20x15') {
+      originalSize = { width: 756, height: 567 }; // 20cm x 15cm
+    } else {
+      originalSize = { width: 794, height: 978 }; // letter (8.5" x 11")
+    }
+
+    // Restaurar tamaño original
+    onUpdate(id, {
+      properties: {
+        ...properties,
+        size: originalSize,
+      },
+    });
+  }, [isPreview, properties, onUpdate, id]);
 
   const toggleMinimize = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -464,7 +526,7 @@ export default function NotepadElement(props: CommonElementProps) {
   }, []);
 
   const handleRemoveFormat = useCallback((e: React.MouseEvent) => execCommand(e, 'removeFormat'), [execCommand]);
-  const handleInsertDate = useCallback((e: React.MouseEvent) => execCommand(e, 'insertHTML', `<span style="color: #a0a1a6;">-- ${format(new Date(), 'dd/MM/yy')} </span>`), [execCommand]);
+  const handleInsertShortDate = useCallback((e: React.MouseEvent) => execCommand(e, 'insertHTML', `<span style="color: #a0a1a6;">-- ${format(new Date(), 'dd/MM/yy')} </span>`), [execCommand]);
   
   const handleSelectAllText = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -481,10 +543,38 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, []);
 
+  const handleDelete = useCallback(() => {
+    setIsDeleteDialogOpen(true);
+  }, []);
+
   const handleDeleteConfirmed = useCallback(() => {
     deleteElement(id);
     setIsDeleteDialogOpen(false);
   }, [deleteElement, id]);
+
+  const handleInsertDate = useCallback(() => {
+    if (!contentRef.current) return;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('es-ES', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    const timeStr = now.toLocaleTimeString('es-ES');
+    const dateTimeStr = `${dateStr} ${timeStr}`;
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(document.createTextNode(dateTimeStr));
+      // Colocar cursor después del texto insertado
+      range.setStartAfter(range.endContainer);
+      range.setEndAfter(range.endContainer);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }, []);
 
   const safeProperties = (typeof properties === 'object' && properties !== null) ? properties : {};
   const formatType = (safeProperties as CanvasElementProperties)?.format || 'letter';
@@ -543,7 +633,7 @@ export default function NotepadElement(props: CommonElementProps) {
             <div className="p-1 drag-handle cursor-grab active:cursor-grabbing"><GripVertical className="size-5 text-muted-foreground" /></div>
             <div
                 ref={titleRef}
-                contentEditable={!isPreview}
+                contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
                 spellCheck="true"
                 suppressContentEditableWarning
                 onFocus={handleTitleFocus}
@@ -552,11 +642,13 @@ export default function NotepadElement(props: CommonElementProps) {
                 data-placeholder='Título'
                 onMouseDown={(e) => e.stopPropagation()}
             />
-            {!isPreview && (
+            {!isPreview && (!typedContent.password || isUnlockedForEditing) && (
                 <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center">
                     <Button variant="ghost" size="icon" className="size-7" title="Info" onClick={() => setIsInfoOpen(!isInfoOpen)}><Info className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Limpiar Formato" onClick={handleRemoveFormat}><Eraser className="size-4"/></Button>
-                    <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha" onClick={handleInsertDate}><CalendarDays className="size-4"/></Button>
+                    <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
+                    <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Completa" onClick={handleInsertDate}><Calendar className="size-4"/></Button>
+                    <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7" title="Más opciones"><MoreVertical className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>
@@ -584,9 +676,22 @@ export default function NotepadElement(props: CommonElementProps) {
                                 <Settings className="mr-2 h-4 w-4" /><span>Cambiar formato...</span>
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); setIsPasswordDialogOpen(true)}}>
+                            <Lock className="mr-2 h-4 w-4" />
+                            <span>{typedContent.password ? 'Cambiar contraseña' : 'Configurar contraseña'}</span>
+                          </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
 
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-red-600 hover:bg-red-50"
+                      title="Eliminar cuaderno"
+                      onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDelete();}}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
 
                     <Button variant="ghost" size="icon" className="size-7" title="Cerrar" onMouseDown={handleCloseNotepad}><X className="size-4" /></Button>
                 </div>
@@ -629,7 +734,7 @@ export default function NotepadElement(props: CommonElementProps) {
                         {/* Área de contenido editable con alineación perfecta */}
                         <div
                             ref={contentRef}
-                            contentEditable={!isPreview}
+                            contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
                             spellCheck="true"
                             suppressContentEditableWarning
                             onPaste={handlePaste}
@@ -651,9 +756,63 @@ export default function NotepadElement(props: CommonElementProps) {
                                 <SaveStatusIndicator status={saveStatus} size="sm" />
                             </div>
                         )}
+
+                        {/* Overlay de bloqueo */}
+                        {typedContent.password && !isUnlockedForEditing && (
+                          <div
+                            className="absolute inset-0 bg-black/20 flex items-center justify-center z-30 cursor-pointer"
+                            onDoubleClick={handleNotepadDoubleClick}
+                            title="Doble clic para desbloquear"
+                          >
+                            <div className="bg-white/90 p-4 rounded-lg shadow-lg text-center">
+                              <Lock className="h-10 w-10 text-gray-600 mx-auto mb-2" />
+                              <p className="text-sm font-medium text-gray-700">Cuaderno protegido</p>
+                              <p className="text-xs text-gray-500 mt-1">Doble clic para desbloquear</p>
+                            </div>
+                          </div>
+                        )}
                     </div>
                 </CardContent>
             </>
+        )}
+
+        {/* FOOTER DE PAGINACIÓN */}
+        {!isPreview && (
+            <div className="p-2 border-t flex items-center justify-between bg-gray-50">
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    title="Página Anterior"
+                    onClick={() => handlePageChange((typedContent.currentPage || 0) - 1)}
+                    disabled={(typedContent.currentPage || 0) === 0}
+                >
+                    <ArrowLeft className="size-4" />
+                </Button>
+                <span className="text-xs text-gray-700">
+                    Página {(typedContent.currentPage || 0) + 1} de {typedContent.pages?.length || 1}
+                </span>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    title="Página Siguiente"
+                    onClick={() => handlePageChange((typedContent.currentPage || 0) + 1)}
+                    disabled={(typedContent.currentPage || 0) === (typedContent.pages?.length || 1) - 1}
+                >
+                    <ArrowRight className="size-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 ml-2"
+                    title="Agregar Página"
+                    onClick={handleAddPage}
+                    disabled={(typedContent.pages?.length || 0) >= 20}
+                >
+                    <Plus className="size-4" />
+                </Button>
+            </div>
         )}
         <DeleteNotepadDialog
             isOpen={isDeleteDialogOpen}
@@ -666,6 +825,18 @@ export default function NotepadElement(props: CommonElementProps) {
           totalPages={typedContent.pages?.length || 1}
           onExport={handleExportNotepadToPdf}
         />
+
+        {/* Diálogo de contraseña */}
+        {isPasswordDialogOpen && (
+          <MiniPasswordDialog
+            elementTitle={typedContent.title || 'Cuaderno'}
+            currentPassword={typedContent.password}
+            isLocked={typedContent.password && !isUnlockedForEditing}
+            onPasswordChange={handlePasswordChange}
+            onUnlock={handleUnlockForEditing}
+            onClose={() => setIsPasswordDialogOpen(false)}
+          />
+        )}
     </Card>
   );
 }

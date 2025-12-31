@@ -4,10 +4,9 @@
 import React, { useRef } from 'react';
 import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { GripVertical, Quote, Paintbrush } from 'lucide-react';
+import { GripVertical, Quote, Paintbrush, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAutoSave } from '@/hooks/use-auto-save';
-import { useDictationInput } from '@/hooks/use-dictation-input';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
 const EXTENDED_PALETTES = {
@@ -136,6 +135,24 @@ export default function QuoteElement(props: CommonElementProps) {
           dangerouslySetInnerHTML={{ __html: textContent || 'Cita destacada...' }}
         />
       </div>
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

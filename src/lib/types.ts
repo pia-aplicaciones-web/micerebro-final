@@ -88,12 +88,15 @@ export interface NotepadContent {
   content?: string;
   currentPage?: number;
   pages?: string[];
+  password?: string;
+  isLocked?: boolean;
 }
 
 export interface YellowNotepadContent {
-  text?: string;
-  searchQuery?: string;
   title?: string;
+  currentPage?: number;
+  pages?: string[];
+  searchQuery?: string;
 }
 
 export interface WeeklyPlannerContent {
@@ -161,6 +164,12 @@ export interface PhotoIdeasGuideContent {
 export interface LibretaContent {
   title?: string;
   text?: string;
+}
+
+export interface MiniContent {
+  text?: string;
+  password?: string;
+  isLocked?: boolean;
 }
 
 export interface CommentSmallContent {
@@ -280,6 +289,30 @@ export interface WeeklyPlannerCanvasElement extends BaseVisualProperties {
   properties?: CanvasElementProperties & { weekStart?: string };
 }
 
+export interface PhotoGridCanvasElement extends BaseVisualProperties {
+  type: 'photo-grid';
+  hidden?: boolean;
+  content: PhotoGridContent;
+}
+
+export interface PhotoGridHorizontalCanvasElement extends BaseVisualProperties {
+  type: 'photo-grid-horizontal';
+  hidden?: boolean;
+  content: PhotoGridContent;
+}
+
+export interface PhotoGridAdaptiveCanvasElement extends BaseVisualProperties {
+  type: 'photo-grid-adaptive';
+  hidden?: boolean;
+  content: PhotoGridContent;
+}
+
+export interface PhotoGridFreeCanvasElement extends BaseVisualProperties {
+  type: 'photo-grid-free';
+  hidden?: boolean;
+  content: PhotoGridFreeContent;
+}
+
 export type CanvasElement =
   | ImageCanvasElement
   | TextCanvasElement
@@ -290,7 +323,11 @@ export type CanvasElement =
   | MoodboardCanvasElement
   | GalleryCanvasElement
   | YellowNotepadCanvasElement
-  | WeeklyPlannerCanvasElement;
+  | WeeklyPlannerCanvasElement
+  | PhotoGridCanvasElement
+  | PhotoGridHorizontalCanvasElement
+  | PhotoGridAdaptiveCanvasElement
+  | PhotoGridFreeCanvasElement;
 
 export type WithId<T> = T & { id: string };
 
@@ -301,6 +338,7 @@ export interface Board {
   createdAt?: Timestamp | Date | FieldValue | null;
   updatedAt?: Timestamp | Date | FieldValue | null;
   description?: string;
+  password?: string; // Contraseña opcional para proteger el tablero
 }
 
 // Alias para compatibilidad
@@ -324,7 +362,7 @@ export const THEME_COLORS = {
 };
 
 // Union type para content según el tipo de elemento
-export type ElementContent = 
+export type ElementContent =
   | string // Para text y sticky
   | ImageContent
   | NotepadContent
@@ -340,8 +378,10 @@ export type ElementContent =
   | ImageFrameContent
   | PhotoGridContent
   | PhotoGridFreeContent
+  | PhotoGridFreeContent
   | PhotoIdeasGuideContent
   | LibretaContent
+  | MiniContent
   | Record<string, unknown>;
 
 // --- INTERFAZ UNIVERSAL DE PROPS -- CORRECTED ---

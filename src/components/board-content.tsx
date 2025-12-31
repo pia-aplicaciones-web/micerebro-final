@@ -19,6 +19,13 @@ import TodoListElement from '@/components/canvas/elements/todo-list-element';
 import CommentElement from '@/components/canvas/elements/comment-element';
 import MoodboardElement from '@/components/canvas/elements/moodboard-element';
 import YellowNotepadElement from '@/components/canvas/elements/yellow-notepad-element';
+import GalleryElement from '@/components/canvas/elements/gallery-element';
+import WeeklyPlannerElement from '@/components/canvas/elements/weekly-planner-element';
+import PhotoGridElement from '@/components/canvas/elements/photo-grid-element';
+import PhotoGridHorizontalElement from '@/components/canvas/elements/photo-grid-horizontal-element';
+import PhotoGridAdaptiveElement from '@/components/canvas/elements/photo-grid-adaptive-element';
+import PhotoGridFreeElement from '@/components/canvas/elements/photo-grid-free-element';
+import LibretaElement from '@/components/canvas/elements/libreta-element';
 
 import { useCanvasDragAndDrop } from '@/lib/hooks/useCanvasDragAndDrop';
 import { useSelection } from '@/lib/hooks/useSelection';
@@ -38,7 +45,7 @@ interface BoardContentProps {
   selectedElementIds: string[];
 }
 
-const ELEMENT_COMPONENTS: { [key in CanvasElement['type']]: React.FC<CommonElementProps> } = {
+const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<CommonElementProps> }> = {
     text: TextElement,
     sticky: StickyNoteElement,
     image: ImageElement,
@@ -46,7 +53,13 @@ const ELEMENT_COMPONENTS: { [key in CanvasElement['type']]: React.FC<CommonEleme
     todo: TodoListElement,
     comment: CommentElement,
     moodboard: MoodboardElement,
+    gallery: GalleryElement,
     'yellow-notepad': YellowNotepadElement,
+    'weekly-planner': WeeklyPlannerElement,
+    'photo-grid': PhotoGridElement,
+    'photo-grid-horizontal': PhotoGridHorizontalElement,
+    'photo-grid-adaptive': PhotoGridAdaptiveElement,
+    'photo-grid-free': PhotoGridFreeElement,
 };
 
 

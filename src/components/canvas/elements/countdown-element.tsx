@@ -1,13 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RotateCcw, GripVertical, Bell } from 'lucide-react';
+import { Play, Pause, RotateCcw, Trash2 } from 'lucide-react';
 import type { CommonElementProps } from '@/lib/types';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const PRESET_TIMES = [1, 5, 10, 15, 20, 25, 30, 45, 60]; // minutos
-const beepAudio = typeof Audio !== 'undefined'
-  ? new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YRAAAAAA//8AAP//AAD//wAA//8AAP//AAD//wAA')
-  : null;
 
 /**
  * Temporizador - Diseño moderno y compacto
@@ -19,7 +20,6 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
   const [timeLeft, setTimeLeft] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [selectedMinutes, setSelectedMinutes] = useState(5);
-  const [isFinished, setIsFinished] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -28,15 +28,6 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
         setTimeLeft(prev => {
           if (prev <= 1000) {
             setIsRunning(false);
-            setIsFinished(true);
-            if (beepAudio) {
-              try {
-                beepAudio.currentTime = 0;
-                beepAudio.play();
-              } catch {}
-            }
-            // Auto-reset después de 5 segundos
-            setTimeout(() => setIsFinished(false), 5000);
             return 0;
           }
           return prev - 1000;
@@ -65,7 +56,6 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
     if (timeLeft === 0) {
       setTimeLeft(selectedMinutes * 60 * 1000);
     }
-    setIsFinished(false);
     setIsRunning(true);
   }, [timeLeft, selectedMinutes]);
 
@@ -78,7 +68,6 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
     e.stopPropagation();
     setIsRunning(false);
     setTimeLeft(0);
-    setIsFinished(false);
   }, []);
 
   const handleSelectTime = useCallback((minutes: number, e: React.MouseEvent) => {
@@ -93,89 +82,69 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
   const showSelector = timeLeft === 0 && !isRunning;
 
   return (
-    <div
-      className={`
-        w-full h-full flex flex-col rounded-xl overflow-hidden shadow-lg transition-all
-        ${isFinished ? 'animate-pulse ring-2 ring-red-500' : ''}
-      `}
-      style={{ 
-        background: isFinished 
-          ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)'
-          : 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-        minWidth: '160px',
-        minHeight: showSelector ? '120px' : '80px'
+    <Card
+      className={cn(
+        'w-full h-full p-3 flex flex-col gap-2 shadow-lg border relative',
+        isSelected && 'ring-2 ring-primary ring-offset-2'
+      )}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelectElement(id, false);
       }}
-      onClick={() => onSelectElement(id, false)}
     >
-      {/* Header con grip para arrastrar */}
-      <div className="drag-handle flex items-center justify-center py-1 cursor-grab active:cursor-grabbing bg-black/20">
-        <GripVertical className="w-4 h-4 text-white/40" />
-        {isFinished && <Bell className="w-3.5 h-3.5 text-red-300 ml-1 animate-bounce" />}
+      <div className="flex items-center justify-between text-sm text-slate-700">
+        <span className="font-semibold text-[11px]">
+          Cronómetro
+        </span>
+        <span className="text-xs text-slate-500">{isRunning ? 'En curso' : 'Pausado'}</span>
       </div>
       
-      {/* Contenido principal */}
-      <div className="flex-1 flex flex-col items-center justify-center px-3 py-2">
-        {showSelector ? (
-          /* Selector de tiempo */
-          <div className="flex flex-col items-center gap-2 w-full">
-            <span className="text-xs text-white/50 uppercase tracking-wide">Seleccionar</span>
-            <div className="flex flex-wrap justify-center gap-1">
-              {PRESET_TIMES.map(min => (
-                <button
-                  key={min}
-                  onClick={(e) => handleSelectTime(min, e)}
-                  className={`
-                    px-2 py-1 rounded text-xs font-medium transition-all
-                    ${selectedMinutes === min 
-                      ? 'bg-cyan-500 text-white' 
-                      : 'bg-white/10 text-white/70 hover:bg-white/20'
-                    }
-                  `}
-                >
-                  {min}m
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* Display del tiempo */
-          <div className="flex items-baseline gap-1 font-mono">
-            <span className={`text-3xl font-bold ${isFinished ? 'text-red-200' : 'text-white'}`}>
-              {minutes.toString().padStart(2, '0')}
-            </span>
-            <span className={`text-xl ${isFinished ? 'text-red-300/60' : 'text-white/60'}`}>:</span>
-            <span className={`text-3xl font-bold ${isFinished ? 'text-red-200' : 'text-white'}`}>
-              {seconds.toString().padStart(2, '0')}
-            </span>
-          </div>
-        )}
+      <div className="text-3xl font-mono text-center tracking-wide">
+        {minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
       </div>
-      
-      {/* Controles */}
-      <div className="flex items-center justify-center gap-2 py-2 px-3 bg-black/20">
-        {!isRunning ? (
-          <button
-            onClick={handleStart}
-            className="w-8 h-8 rounded-full bg-cyan-500 hover:bg-cyan-600 flex items-center justify-center transition-all"
-          >
-            <Play className="w-4 h-4 text-white ml-0.5" />
-          </button>
-        ) : (
-          <button
-            onClick={handlePause}
-            className="w-8 h-8 rounded-full bg-amber-500 hover:bg-amber-600 flex items-center justify-center transition-all"
-          >
-            <Pause className="w-4 h-4 text-white" />
-          </button>
-        )}
-        
-        <button
-          onClick={handleReset}
-          className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"
-        >
-          <RotateCcw className="w-3.5 h-3.5 text-white/70" />
-        </button>
+
+      <div className="flex items-center gap-2 text-xs">
+        <span>Duración (min)</span>
+        <Input
+          type="number"
+          className="h-8"
+          min={1}
+          max={90}
+          value={selectedMinutes}
+          onChange={(e) => setSelectedMinutes(Number(e.target.value))}
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
-    </div>
+
+      <div className="flex items-center gap-2">
+        <Button size="sm" onClick={handleStart} disabled={isRunning} className="flex-1">
+          <Play className="h-3 w-3" />
+        </Button>
+        <Button size="sm" variant="secondary" onClick={handlePause} disabled={!isRunning} className="flex-1">
+          <Pause className="h-3 w-3" />
+        </Button>
+        <Button size="sm" variant="outline" onClick={handleReset} className="flex-1">
+          <RotateCcw className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+    </Card>
   );
 }

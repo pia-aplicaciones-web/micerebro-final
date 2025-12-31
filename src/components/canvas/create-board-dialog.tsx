@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuthContext } from "@/context/AuthContext";
 import { getFirebaseFirestore } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -29,6 +30,8 @@ type CreateBoardDialogProps = {
 export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardDialogProps) {
   const [boardName, setBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isPasswordProtected, setIsPasswordProtected] = useState(false);
+  const [password, setPassword] = useState("");
   const firestore = getFirebaseFirestore();
   const { user } = useAuthContext();
   const router = useRouter();
@@ -44,14 +47,28 @@ export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardD
         return;
     }
 
+    if (isPasswordProtected && !password.trim()) {
+        toast({
+            variant: "destructive",
+            title: "Contraseña requerida",
+            description: "Debes ingresar una contraseña para proteger el tablero."
+        });
+        return;
+    }
+
     setIsCreating(true);
     const boardsCollection = collection(firestore, 'users', user.uid, 'canvasBoards');
-    const dataToSend = {
+    const dataToSend: any = {
         name: boardName,
         userId: user.uid,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
     };
+
+    // Agregar contraseña si está protegido
+    if (isPasswordProtected && password.trim()) {
+        dataToSend.password = password.trim();
+    }
 
     try {
         const newBoardRef = await addDoc(boardsCollection, dataToSend);
@@ -62,6 +79,8 @@ export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardD
 
         onOpenChange(false);
         setBoardName("");
+        setIsPasswordProtected(false);
+        setPassword("");
         // The redirection is now handled by the main home page logic
         // router.push(`/board/${newBoardRef.id}`);
     } catch (error) {
@@ -105,6 +124,43 @@ export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardD
               onKeyDown={(e) => e.key === 'Enter' && handleCreateBoard()}
             />
           </div>
+
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label className="text-right">Proteger</Label>
+            <div className="col-span-3 flex items-center space-x-2">
+              <Checkbox
+                id="passwordProtected"
+                checked={isPasswordProtected}
+                onCheckedChange={(checked) => {
+                  setIsPasswordProtected(!!checked);
+                  if (!checked) {
+                    setPassword("");
+                  }
+                }}
+              />
+              <Label htmlFor="passwordProtected" className="text-sm">
+                Proteger con contraseña
+              </Label>
+            </div>
+          </div>
+
+          {isPasswordProtected && (
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="password" className="text-right">
+                Contraseña
+              </Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="col-span-3"
+                placeholder="Ingresa una contraseña"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateBoard()}
+              />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>

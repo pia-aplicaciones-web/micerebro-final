@@ -9,7 +9,7 @@ service cloud.firestore {
       // Permitir crear si no existe (para ensureUserDocument)
       // IMPORTANTE: request.auth != null incluye usuarios anónimos
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId && 
+      allow create: if request.auth != null && request.auth.uid == userId &&
                        request.resource.data.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId;
       allow delete: if request.auth != null && request.auth.uid == userId;

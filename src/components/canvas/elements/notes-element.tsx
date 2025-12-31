@@ -5,7 +5,7 @@ import type { CommonElementProps } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { GripVertical, Search, Trash2, FileImage, MoreVertical, Grid3x3, CalendarDays, Minus, X, Paintbrush, Edit, Plus, FileText, Copy } from 'lucide-react';
+import { GripVertical, Search, Trash2, FileImage, MoreVertical, Grid3x3, CalendarDays, Minus, X, Paintbrush, Edit, Plus, FileText, Copy, ArrowLeft, ArrowRight, Maximize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
@@ -238,48 +238,6 @@ export default function NotesElement(props: CommonElementProps) {
     }
   }, [toast, id]);
 
-  // Copiar texto como .txt ordenado
-  const handleCopyAsTxt = useCallback(async () => {
-    try {
-      const notesContent = content;
-      const title = notesContent?.title || 'Apuntes';
-
-      let text = `${title}\n${'='.repeat(title.length)}\n\n`;
-
-      // Agregar el contenido de texto
-      if (notesContent?.text && notesContent.text.trim()) {
-        text += notesContent.text.trim() + '\n\n';
-      }
-
-      // Agregar búsqueda si existe
-      if (notesContent?.searchQuery && notesContent.searchQuery.trim()) {
-        text += `Búsqueda: ${notesContent.searchQuery}\n\n`;
-      }
-
-      if (!text.trim() || text === `${title}\n${'='.repeat(title.length)}\n\n`) {
-        toast({
-          variant: 'destructive',
-          title: 'Sin contenido',
-          description: 'Los apuntes no tienen contenido para copiar.',
-        });
-        return;
-      }
-
-      await navigator.clipboard.writeText(text);
-      toast({
-        title: 'Copiado',
-        description: 'El contenido de los apuntes se ha copiado como texto ordenado.',
-      });
-    } catch (error: any) {
-      console.error('Error al copiar:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error al copiar',
-        description: 'No se pudo copiar el contenido.',
-      });
-    }
-  }, [content, toast]);
-
   // Manejar cambios en el contenido
   const handleContentInput = useCallback(() => {
     handleChange();
@@ -325,6 +283,61 @@ export default function NotesElement(props: CommonElementProps) {
     // Trigger save
     handleChange();
   }, [handleChange]);
+
+  // Función de guardado manual (para compatibilidad con código existente)
+  const saveContent = useCallback(async () => {
+    handleChange();
+  }, [handleChange]);
+
+  // Función para copiar texto como .txt ordenado
+  const handleCopyAsTxt = useCallback(async () => {
+    if (!contentRef.current) return;
+
+    try {
+      // Obtener el texto plano sin formato HTML
+      const textContent = contentRef.current.innerText || contentRef.current.textContent || '';
+
+      // Crear contenido ordenado con título
+      const notesTitle = typedContent.title || 'Apuntes sin título';
+      const orderedText = `${notesTitle}\n${'='.repeat(notesTitle.length)}\n\n${textContent.trim()}\n\n---\nExportado desde CanvasMind\n${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+
+      await navigator.clipboard.writeText(orderedText);
+      toast({ title: 'Texto copiado como .txt ordenado' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'Error al copiar texto' });
+    }
+  }, [typedContent.title, toast]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    if (isPreview) return;
+    handleChange();
+    onUpdate(id, { content: { ...typedContent, currentPage: newPage } });
+  }, [isPreview, handleChange, onUpdate, id, typedContent]);
+
+  const handleAddPage = useCallback(() => {
+    if (isPreview) return;
+    if ((typedContent.pages?.length || 0) < 20) {
+      handleChange();
+      const newPages = [...(typedContent.pages || []), '<div><br></div>'];
+      onUpdate(id, {
+        content: { ...typedContent, pages: newPages, currentPage: newPages.length - 1 },
+      });
+    }
+  }, [isPreview, typedContent, onUpdate, id, handleChange]);
+
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (isPreview) return;
+
+    // Restaurar tamaño original de notes (21cm x 15cm horizontal)
+    const originalSize = { width: 794, height: 567 };
+
+    onUpdate(id, {
+      properties: {
+        ...properties,
+        size: originalSize,
+      },
+    });
+  }, [isPreview, properties, onUpdate, id]);
 
   // Cambiar color de fondo
   const handleChangeColor = useCallback((colorKey: { hex: string }) => {
@@ -450,6 +463,16 @@ export default function NotesElement(props: CommonElementProps) {
           >
             <CalendarDays className="h-4 w-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-black/10 p-0"
+            title="Copiar texto"
+            onClick={handleCopyAsTxt}
+            style={{ color: '#000000' }}
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
 
           <Popover>
             <PopoverTrigger asChild>
@@ -521,6 +544,17 @@ export default function NotesElement(props: CommonElementProps) {
             variant="ghost"
             size="icon"
             className="h-6 w-6 hover:bg-black/10 p-0"
+            title="Restaurar tamaño original"
+            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize();}}
+            style={{ color: '#000000' }}
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-black/10 p-0"
             title={isMinimized ? "Maximizar" : "Minimizar"}
             onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); toggleMinimize();}}
             style={{ color: '#000000' }}
@@ -542,7 +576,10 @@ export default function NotesElement(props: CommonElementProps) {
             size="icon"
             className="h-6 w-6 hover:bg-black/10 p-0 text-gray-600 hover:bg-gray-200"
             title="Cerrar apuntes"
-            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); setIsMinimized(true);}}
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate(id, { hidden: true });
+            }}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -587,12 +624,44 @@ export default function NotesElement(props: CommonElementProps) {
         />
       )}
 
-      {/* Numeración de páginas - Abajo centrada */}
-      <div className="flex justify-center items-center py-2 border-t border-gray-200 bg-gray-50">
-        <span className="text-xs text-gray-600 font-medium">
-          Página 1 de 1
-        </span>
-      </div>
+      {/* FOOTER DE PAGINACIÓN */}
+      {!isPreview && (
+          <div className="p-2 border-t flex items-center justify-between bg-gray-50">
+              <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  title="Página Anterior"
+                  onClick={() => handlePageChange((typedContent.currentPage || 0) - 1)}
+                  disabled={(typedContent.currentPage || 0) === 0}
+              >
+                  <ArrowLeft className="size-4" />
+              </Button>
+              <span className="text-xs text-gray-700">
+                  Página {(typedContent.currentPage || 0) + 1} de {typedContent.pages?.length || 1}
+              </span>
+              <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  title="Página Siguiente"
+                  onClick={() => handlePageChange((typedContent.currentPage || 0) + 1)}
+                  disabled={(typedContent.currentPage || 0) === (typedContent.pages?.length || 1) - 1}
+              >
+                  <ArrowRight className="size-4" />
+              </Button>
+              <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 ml-2"
+                  title="Agregar Página"
+                  onClick={handleAddPage}
+                  disabled={(typedContent.pages?.length || 0) >= 20}
+              >
+                  <Plus className="size-4" />
+              </Button>
+          </div>
+      )}
 
       {/* Indicador de guardado */}
       {isSelected && (

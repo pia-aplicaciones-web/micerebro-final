@@ -4,7 +4,6 @@
 import React, { useCallback, useState } from 'react';
 import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement, NotepadSimpleCanvasElement } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { Trash2 } from 'lucide-react';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
 import { Button } from '@/components/ui/button';
 import DeleteElementDialog from './elements/delete-element-dialog';
@@ -22,7 +21,6 @@ import MoodboardElement from './elements/moodboard-element';
 import GalleryElement from './elements/gallery-element';
 import YellowNotepadElement from './elements/yellow-notepad-element';
 import StopwatchElement from './elements/stopwatch-element';
-import CountdownElement from './elements/countdown-element';
 import HighlightTextElement from './elements/highlight-text-element';
 import PomodoroTimerElement from './elements/pomodoro-timer-element';
 import WeeklyPlannerElement from './elements/weekly-planner-element';
@@ -38,8 +36,8 @@ import PhotoGridAdaptiveElement from './elements/photo-grid-adaptive-element';
 import PhotoGridFreeElement from './elements/photo-grid-free-element';
 import LibretaElement from './elements/libreta-element';
 import NotesElement from './elements/notes-element';
-import MiniNotesElement from './elements/mini-notes-element';
 import MiniElement from './elements/mini-element';
+import CountdownElement from './elements/countdown-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -55,7 +53,6 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   gallery: GalleryElement,
   'yellow-notepad': YellowNotepadElement,
   stopwatch: StopwatchElement,
-  countdown: CountdownElement,
   'highlight-text': HighlightTextElement,
   'pomodoro-timer': PomodoroTimerElement,
   'weekly-planner': WeeklyPlannerElement,
@@ -71,8 +68,8 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'libreta': LibretaElement,
   'comment-small': CommentSmallElement,
   'notes': NotesElement,
-  'mini-notes': MiniNotesElement,
   'mini': MiniElement,
+  'countdown': CountdownElement,
 };
 
 type TransformableElementProps = {
@@ -184,13 +181,14 @@ export default function TransformableElement({
   const size = elementProps.size || { width: element.width || 200, height: element.height || 150 };
   const rotation = elementProps.rotation ?? element.rotation ?? 0;
   // REGLA GENERAL: Elementos de cuadernos inician con zIndex -1, pasan al frente cuando se seleccionan
-  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns', 'libreta'].includes(element.type);
+  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini', 'container', 'two-columns', 'libreta'].includes(element.type);
   const baseZIndex = isNotebookElement ? -1 : (elementProps.zIndex ?? element.zIndex ?? 1);
   const zIndex = isSelected ? 999 : baseZIndex;
   
   // Asegurar que size tenga valores numéricos válidos
+  // Para pomodoro-timer usar ancho fijo de 180px
   const safeSize = {
-    width: typeof size.width === 'number' && size.width > 0 ? size.width : 200,
+    width: element.type === 'pomodoro-timer' ? 180 : (typeof size.width === 'number' && size.width > 0 ? size.width : 200),
     height: typeof size.height === 'number' && size.height > 0 ? size.height : 150
   };
   
@@ -316,16 +314,25 @@ export default function TransformableElement({
 
   const isGroupedFrame = false;
 
+  const handleDragStart = useCallback((e: RndDragEvent) => {
+    // Configurar dataTransfer para drag and drop hacia otros elementos (como galería)
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('application/element-id', element.id);
+      e.dataTransfer.effectAllowed = 'copy';
+    }
+  }, [element.id]);
+
   const rndProps = {
       style: {
         zIndex: zIndex,
-        border: isSelected ? '2px solid hsl(var(--primary))' : 'none',
+        border: isSelected && element.type !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
         boxSizing: 'border-box' as 'border-box',
         transform: `rotate(${rotation}deg)`,
         transformOrigin: 'center center',
       },
       size: { width: safeSize.width, height: safeSize.height },
       position: position,
+      onDragStart: handleDragStart,
       onDragStop: onDragStop,
       onResizeStop: onResizeStop,
       minWidth: 50,
@@ -335,7 +342,19 @@ export default function TransformableElement({
       onMouseDown: handleMouseDown,
       enableResizing: !isGroupedFrame,
       scale: scale,
-      bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined
+      bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined,
+      resizeHandleStyles: {
+        bottomRight: {
+          width: 12,
+          height: 12,
+          right: -6,
+          bottom: -6,
+          backgroundColor: 'hsl(var(--primary))',
+          border: '2px solid white',
+          borderRadius: '2px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        }
+      }
   };
   
   return (
@@ -346,19 +365,7 @@ export default function TransformableElement({
           data-element-type={element.type}
           className="w-full h-full relative group"
         >
-          {/* REGLA #2: Icono de basurero flotante */}
-          {isSelected && (
-            <Button
-              variant="destructive"
-              size="icon"
-              className="absolute -top-3 -right-3 z-50 h-8 w-8 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={handleDeleteClick}
-              onMouseDown={(e) => e.stopPropagation()}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          )}
-          
+
           <ElementComponent
               id={element.id}
               type={element.type}

@@ -28,7 +28,7 @@ export async function signInWithGoogle() {
   const provider = new GoogleAuthProvider();
   provider.setCustomParameters({
     prompt: 'select_account',
-    client_id: '917199598510-14h0c930cobfvnig8kdfj5i42untd7rg.apps.googleusercontent.com'
+    client_id: '967156176052-abc123def456ghi789jkl012mno345pqr.apps.googleusercontent.com'
   });
   
   try {

@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
+import { updateInnerHTMLPreservingCursor } from '@/lib/cursor-helper';
 
 // Acepta CommonElementProps
 export default function TextElement(props: CommonElementProps) {
@@ -18,6 +21,7 @@ export default function TextElement(props: CommonElementProps) {
     onUpdate,
     onEditElement,
     isSelected,
+    deleteElement,
   } = props;
 
   const editorRef = useRef<HTMLDivElement>(null);
@@ -62,35 +66,16 @@ export default function TextElement(props: CommonElementProps) {
   const prevContentRef = useRef<string>('');
   
   useEffect(() => {
-    // CRÍTICO: Solo actualizar si NO está enfocado (preservar cursor y formato)
-    // Si textContent es HTML (contiene tags), usarlo directamente
-    // Si es texto plano, solo actualizar si no hay formato existente
-    if (editorRef.current) {
-      const isFocused = document.activeElement === editorRef.current;
+    // Solo actualizar si NO está enfocado para preservar cursor
+    if (editorRef.current && document.activeElement !== editorRef.current) {
       const currentHTML = editorRef.current.innerHTML || '';
-      
-      // Solo actualizar si realmente cambió y no está enfocado
-      if (prevContentRef.current === textContent) {
-        return;
-      }
-      prevContentRef.current = textContent;
-      
-      if (!isFocused) {
-        // Si textContent contiene HTML (tiene tags), usarlo directamente
-        // Esto preserva el formato de color aplicado
-        const hasHTML = /<[^>]+>/.test(textContent);
-        if (hasHTML && currentHTML !== textContent) {
-          // Usar helper para preservar cursor
-          const { updateInnerHTMLPreservingCursor } = require('@/lib/cursor-helper');
-          updateInnerHTMLPreservingCursor(editorRef.current, textContent);
-        } else if (!hasHTML && currentHTML !== textContent) {
-          // Solo texto plano, actualizar solo si no hay formato
-          const hasFormatting = currentHTML.includes('<span') || currentHTML.includes('<div');
-          if (!hasFormatting) {
-            const { updateInnerHTMLPreservingCursor } = require('@/lib/cursor-helper');
-            updateInnerHTMLPreservingCursor(editorRef.current, textContent || '');
-          }
-        }
+
+      // Solo actualizar si realmente cambió
+      if (prevContentRef.current !== textContent) {
+        prevContentRef.current = textContent;
+
+        // Usar helper para actualizar contenido preservando cursor
+        updateInnerHTMLPreservingCursor(editorRef.current, textContent || '');
       }
     }
   }, [textContent]);
@@ -139,7 +124,7 @@ export default function TextElement(props: CommonElementProps) {
           (isEditing || isSelected) ? 'cursor-text' : 'cursor-grab drag-handle active:cursor-grabbing'
         )}
         style={{
-          fontSize: `${fontSize || 24}px`,
+          fontSize: `${fontSize || 15}px`,
           fontWeight: fontWeight || 'normal',
           textAlign: textAlign || 'left',
           fontStyle: fontStyle || 'normal',
@@ -151,6 +136,24 @@ export default function TextElement(props: CommonElementProps) {
       {isEditing && (
         <div className="absolute top-2 right-2 z-10">
           <SaveStatusIndicator status={saveStatus} size="sm" />
+        </div>
+      )}
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
         </div>
       )}
     </div>

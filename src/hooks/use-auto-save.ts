@@ -84,6 +84,25 @@ export function useAutoSave({
   disabled = false,
   compareContent,
 }: UseAutoSaveOptions): UseAutoSaveReturn {
+  // REGLA DE SEGURIDAD: Si el modo seguro está activado,
+  // el auto-guardado se deshabilita automáticamente
+  const isSafeModeEnabled = (() => {
+    try {
+      if (typeof window !== 'undefined') {
+        const safetyConfig = localStorage.getItem('canvasmind-safety-config');
+        if (safetyConfig) {
+          const config = JSON.parse(safetyConfig);
+          return config.safeMode || config.readOnlyMode;
+        }
+      }
+    } catch {
+      // En caso de error, asumir modo inseguro
+    }
+    return false;
+  })();
+
+  // Aplicar regla de seguridad: forzar disabled si el modo seguro está activado
+  const effectiveDisabled = disabled || isSafeModeEnabled;
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedContentRef = useRef<any>(null);
@@ -112,6 +131,7 @@ export function useAutoSave({
   /**
    * Función interna para guardar el contenido
    * Previene múltiples guardados simultáneos y guardados infinitos
+   * Usa refs para evitar stale closures
    */
   const performSave = useCallback(async () => {
     // Si ya está guardando, esperar a que termine
@@ -121,8 +141,10 @@ export function useAutoSave({
 
     try {
       isSavingRef.current = true;
-      const currentContent = getContent();
-      
+      // Usar refs para obtener el contenido más reciente y evitar stale closures
+      const currentContent = getContentRef.current();
+      const currentOnSave = onSaveRef.current;
+
       // CRÍTICO: Normalizar contenido para comparación (especialmente HTML)
       const normalizeContent = (content: any): any => {
         if (typeof content === 'string') {
@@ -133,21 +155,32 @@ export function useAutoSave({
             .trim();
         }
         if (typeof content === 'object' && content !== null) {
-          // Para objetos, serializar y normalizar
+          // Para objetos, intentar comparación profunda segura
           try {
-            return JSON.stringify(content);
+            // Comparación superficial de propiedades principales para objetos
+            const keys = Object.keys(content);
+            const sortedKeys = keys.sort();
+            let normalized = '{';
+            for (const key of sortedKeys) {
+              if (typeof content[key] !== 'function' && typeof content[key] !== 'object') {
+                normalized += `"${key}":${JSON.stringify(content[key])},`;
+              }
+            }
+            normalized = normalized.slice(0, -1) + '}';
+            return normalized;
           } catch {
-            return content;
+            // Fallback a stringify básico
+            return JSON.stringify(content);
           }
         }
         return content;
       };
-      
+
       const normalizedCurrent = normalizeContent(currentContent);
-      const normalizedLast = lastSavedContentRef.current !== null 
-        ? normalizeContent(lastSavedContentRef.current) 
+      const normalizedLast = lastSavedContentRef.current !== null
+        ? normalizeContent(lastSavedContentRef.current)
         : null;
-      
+
       // Verificar si el contenido realmente cambió
       if (normalizedLast !== null && normalizedCurrent === normalizedLast) {
         isSavingRef.current = false;
@@ -155,30 +188,30 @@ export function useAutoSave({
       }
 
       setSaveStatus('saving');
-      
-      // Ejecutar el guardado
-      await onSave(currentContent);
-      
+
+      // Ejecutar el guardado con la función más reciente
+      await currentOnSave(currentContent);
+
       // Actualizar referencia del último contenido guardado (guardar el original, no el normalizado)
       lastSavedContentRef.current = currentContent;
-      
+
       // Mostrar estado "guardado" por 2 segundos
       setSaveStatus('saved');
-      
+
       // Limpiar timeout anterior si existe
       if (saveStatusTimeoutRef.current) {
         clearTimeout(saveStatusTimeoutRef.current);
       }
-      
+
       // Volver a "idle" después de 2 segundos
       saveStatusTimeoutRef.current = setTimeout(() => {
         setSaveStatus('idle');
       }, 2000);
-      
+
     } catch (error) {
       console.error('Error al guardar:', error);
       setSaveStatus('error');
-      
+
       // Volver a "idle" después de 3 segundos en caso de error
       if (saveStatusTimeoutRef.current) {
         clearTimeout(saveStatusTimeoutRef.current);
@@ -189,7 +222,21 @@ export function useAutoSave({
     } finally {
       isSavingRef.current = false;
     }
-  }, [getContent, onSave, compare]);
+  }, []); // Remover dependencias que causan stale closures
+
+  // Refs para evitar stale closures en callbacks
+  const getContentRef = useRef(getContent);
+  const onSaveRef = useRef(onSave);
+  const disabledRef = useRef(disabled);
+  const debounceMsRef = useRef(debounceMs);
+
+  // Actualizar refs cuando cambian las props
+  useEffect(() => {
+    getContentRef.current = getContent;
+    onSaveRef.current = onSave;
+    disabledRef.current = disabled;
+    debounceMsRef.current = debounceMs;
+  }, [getContent, onSave, disabled, debounceMs]);
 
   /**
    * Cancela el guardado pendiente programado
@@ -221,16 +268,16 @@ export function useAutoSave({
    * Handler para onChange - programa auto-save con debounce
    */
   const handleChange = useCallback(() => {
-    if (disabled) return;
-    
+    if (disabledRef.current) return;
+
     // Cancelar guardado anterior si existe
     cancelPendingSave();
-    
+
     // Programar nuevo guardado con debounce
     debounceTimeoutRef.current = setTimeout(() => {
       performSave();
-    }, debounceMs);
-  }, [disabled, cancelPendingSave, performSave, debounceMs]);
+    }, debounceMsRef.current);
+  }, [cancelPendingSave, performSave]);
 
   return {
     saveStatus,

@@ -4,7 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { CommonElementProps, MoodboardContent, MoodboardAnnotation } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { GripVertical, X, Plus, ImageIcon, Type, FileImage, Paintbrush, Minus, Maximize } from 'lucide-react';
+import { GripVertical, X, Plus, ImageIcon, Type, FileImage, Paintbrush, Maximize2, Trash2 } from 'lucide-react'; // Eliminado Minus y Maximize
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAutoSave } from '@/hooks/use-auto-save';
@@ -79,7 +79,7 @@ export default function MoodboardElement(props: CommonElementProps) {
     onUpdate,
     deleteElement,
     isPreview,
-    minimized,
+    // Eliminado: minimized,
   } = props;
 
   const safeProperties = typeof properties === 'object' && properties !== null ? properties : {};
@@ -94,6 +94,29 @@ export default function MoodboardElement(props: CommonElementProps) {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const originalSizeRef = useRef<{ width: number; height: number } | null>(null); // Ref para el tamaño original
+
+  // Capturar tamaño original del elemento al montar
+  useEffect(() => {
+    if (properties?.size && !originalSizeRef.current) {
+      originalSizeRef.current = {
+        width: properties.size.width || 600, // Valores por defecto para MoodboardElement
+        height: properties.size.height || 500,
+      };
+    }
+  }, [properties?.size]);
+
+  // Función para restaurar el tamaño original
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (originalSizeRef.current) {
+      onUpdate(id, {
+        properties: {
+          ...properties,
+          size: originalSizeRef.current,
+        },
+      });
+    }
+  }, [id, onUpdate, properties]);
 
   // Export to PNG
   const handleExportPng = useCallback(async () => {
@@ -270,49 +293,6 @@ export default function MoodboardElement(props: CommonElementProps) {
   const backgroundColor = safeProperties?.backgroundColor || '#ffffff';
   const layout = moodboardContent.layout || 'grid';
 
-  // Toggle minimize - FIX CRÍTICO: Guardar estado en elemento para persistencia
-  const toggleMinimize = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (isPreview) return;
-
-    const isCurrentlyMinimized = !!minimized;
-    const currentSize = (properties as any)?.size || { width: 600, height: 500 };
-
-    const currentSizeNumeric = {
-      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 600,
-      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 500,
-    };
-
-    if (isCurrentlyMinimized) {
-      const { originalSize, ...restProps } = (properties || {}) as any;
-      const restoredSize = originalSize || { width: 600, height: 500 };
-      const newProperties = {
-        ...restProps,
-        size: restoredSize
-      };
-
-      onUpdate(id, {
-        minimized: false,
-        properties: newProperties,
-        content: moodboardContent, // Asegurar que el contenido se preserve
-      });
-    } else {
-      // Guardar el contenido actual antes de minimizar
-      const updatedContent = { ...moodboardContent }; // No hay texto directo, pero se pasa el objeto completo
-      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 600;
-      onUpdate(id, {
-        minimized: true,
-        properties: {
-          ...properties,
-          size: { width: currentWidth, height: 48 },
-          originalSize: currentSizeNumeric
-        },
-        content: updatedContent, // Guardar el contenido actualizado
-      });
-    }
-  }, [isPreview, minimized, properties, onUpdate, id, moodboardContent]);
-
   return (
     <Card
       id={id}
@@ -436,15 +416,15 @@ export default function MoodboardElement(props: CommonElementProps) {
             </PopoverContent>
           </Popover>
 
-          {/* Botón minimizar */}
+          {/* Botón Restaurar Tamaño Original */}
           <Button
             variant="ghost"
             size="icon"
             className="h-7 w-7"
-            title={minimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
+            title="Restaurar Tamaño Original"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
           >
-            {minimized ? <Maximize className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+            <Maximize2 className="h-4 w-4" />
           </Button>
 
           <Button
@@ -619,6 +599,24 @@ export default function MoodboardElement(props: CommonElementProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }

@@ -2,9 +2,8 @@
 'use client';
 
 import React, { useEffect, useRef, useCallback, useState } from 'react';
-import type { CommonElementProps, YellowNotepadContent } from '@/lib/types';
+import type { CommonElementProps, YellowNotepadContent, NotepadContent } from '@/lib/types';
 import {
-  Grid3x3,
   Search,
   Trash2,
   X,
@@ -15,6 +14,13 @@ import {
   Maximize,
   FileText,
   Copy,
+  GripVertical,
+  Info,
+  Eraser,
+  Settings,
+  ArrowLeft,
+  ArrowRight,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +29,7 @@ import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
+import { format } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,28 +51,35 @@ export default function YellowNotepadElement(props: CommonElementProps) {
 
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isInfoOpen, setIsInfoOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isExportPdfDialogOpen, setIsExportPdfDialogOpen] = useState(false);
 
   // Parsear contenido
   const typedContent = (content || {}) as YellowNotepadContent;
-  const textContent = typedContent.text || '';
+  const currentPageIndex = typedContent.currentPage || 0;
+  const currentPageContent = typedContent.pages?.[currentPageIndex] || '';
   const initialSearchQuery = typedContent.searchQuery || '';
-  const initialTitle = typedContent.title || 'Nuevo Notepad';
+  const initialTitle = typedContent.title || 'Nuevo Block';
   
   // Refs para mantener referencias estables y evitar loops
   const typedContentRef = useRef(typedContent);
-  const textContentRef = useRef(textContent);
+  const currentPageContentRef = useRef(currentPageContent);
   
   // Sincronizar refs cuando cambian
   useEffect(() => {
     typedContentRef.current = typedContent;
-    textContentRef.current = textContent;
-  }, [typedContent, textContent]);
+    currentPageContentRef.current = currentPageContent;
+  }, [typedContent, currentPageContent]);
   
   // Estado local para búsqueda (sincronizado con contenido)
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+
+  // Estado local para título editable
   const [title, setTitle] = useState(initialTitle);
   
   // Ref para almacenar el searchQuery anterior y evitar loops
@@ -83,29 +97,46 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     }
   }, [typedContent.searchQuery, searchQuery]);
 
+  // Sincronizar título cuando cambia el contenido
+  useEffect(() => {
+    const currentTitle = typedContent.title || 'Nuevo Block';
+    if (currentTitle !== title) {
+      setTitle(currentTitle);
+      // Actualizar el DOM si el ref existe
+      if (titleRef.current && titleRef.current.innerText !== currentTitle) {
+        titleRef.current.innerText = currentTitle;
+      }
+    }
+  }, [typedContent.title, title]);
+
   // Hook de autoguardado
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange } = useAutoSave({
     getContent: () => {
-      const html = contentRef.current?.innerText || '';
+      const html = contentRef.current?.innerHTML || '';
       return html;
     },
-    onSave: async (newText) => {
+    onSave: async (newHtml) => {
       // Usar refs para evitar dependencias circulares
-      const currentText = textContentRef.current;
-      const normalizedText = (currentText || '').trim();
-      if (newText !== normalizedText) {
-        await onUpdate(id, { 
-          content: { 
-            text: newText,
-            searchQuery: searchQuery 
-          } 
+      const currentContent = currentPageContentRef.current;
+      const normalizedCurrent = (currentContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+      const normalizedNew = (newHtml || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+
+      if (normalizedNew !== normalizedCurrent) {
+        const updatedPages = [...(typedContent.pages || [])];
+        updatedPages[currentPageIndex] = newHtml;
+
+        await onUpdate(id, {
+          content: {
+            ...typedContent,
+            pages: updatedPages
+          }
         });
       }
     },
     debounceMs: 2000,
     compareContent: (oldContent, newContent) => {
-      const normalizedOld = (oldContent || '').trim();
-      const normalizedNew = (newContent || '').trim();
+      const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+      const normalizedNew = (newContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
       return normalizedOld === normalizedNew;
     },
   });
@@ -118,14 +149,14 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     if (contentRef.current) {
       const isFocused = document.activeElement === contentRef.current;
       // Restaurar contenido si no está minimizado y no está enfocado, y el texto de la prop ha cambiado
-      if (!minimized && !isFocused && contentRef.current.innerText !== textContent) {
-        contentRef.current.innerText = textContent || '';
-      } else if (minimized && contentRef.current.innerText !== '') {
+      if (!minimized && !isFocused && contentRef.current.innerHTML !== currentPageContent) {
+        contentRef.current.innerHTML = currentPageContent || '';
+      } else if (minimized && contentRef.current.innerHTML !== '') {
         // Cuando se minimiza, el contenido del div puede ser vaciado temporalmente
-        // contentRef.current.innerText = '';
+        // contentRef.current.innerHTML = '';
       }
     }
-  }, [textContent, minimized]);
+  }, [currentPageContent, minimized]);
 
 
   // Exportar a PNG
@@ -200,13 +231,22 @@ export default function YellowNotepadElement(props: CommonElementProps) {
   // Copiar texto como .txt ordenado
   const handleCopyAsTxt = useCallback(async () => {
     try {
-      const notepadContent = isYellowNotepadContent(content) ? content : { title: 'Cuaderno Amarillo', pages: Array(5).fill('<div><br></div>') };
-      const title = notepadContent.title || 'Cuaderno Amarillo';
+      const title = typedContent.title || 'Nuevo Block';
+      const pages = typedContent.pages || [];
+
+      if (!pages.length || !pages.some(page => page && page.trim())) {
+        toast({
+          variant: 'destructive',
+          title: 'Sin contenido',
+          description: 'El block no tiene contenido para copiar.',
+        });
+        return;
+      }
 
       let text = `${title}\n${'='.repeat(title.length)}\n\n`;
 
       // Agregar cada página
-      notepadContent.pages?.forEach((pageContent: string, index: number) => {
+      pages.forEach((pageContent: string, index: number) => {
         if (pageContent && pageContent.trim()) {
           // Convertir HTML a texto plano
           const tempDiv = document.createElement('div');
@@ -223,7 +263,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
         toast({
           variant: 'destructive',
           title: 'Sin contenido',
-          description: 'El cuaderno no tiene contenido para copiar.',
+          description: 'El block no tiene contenido para copiar.',
         });
         return;
       }
@@ -231,7 +271,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
       await navigator.clipboard.writeText(text);
       toast({
         title: 'Copiado',
-        description: 'El contenido del cuaderno se ha copiado como texto ordenado.',
+        description: 'El contenido del block se ha copiado como texto ordenado.',
       });
     } catch (error: any) {
       console.error('Error al copiar:', error);
@@ -241,21 +281,63 @@ export default function YellowNotepadElement(props: CommonElementProps) {
         description: 'No se pudo copiar el contenido.',
       });
     }
-  }, [content, toast]);
+  }, [typedContent, toast]);
 
-  const handleInsertDate = () => {
-    if (!contentRef.current) return;
-    const formatter = new Intl.DateTimeFormat('es-ES', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-    const dateStr = formatter.format(new Date());
-    const current = contentRef.current.innerText || '';
-    contentRef.current.innerText = current ? `${current}\n${dateStr}` : dateStr;
-    handleContentInput();
-  };
+  const handlePageChange = useCallback((newPage: number) => {
+    if (isPreview) return;
+    const totalPages = typedContent.pages?.length || 1;
+    if (newPage >= 0 && newPage < totalPages) {
+      onUpdate(id, {
+        content: { ...typedContent, currentPage: newPage },
+      });
+    }
+  }, [isPreview, typedContent, onUpdate, id]);
+
+  const handleAddPage = useCallback(() => {
+    if (isPreview) return;
+    if ((typedContent.pages?.length || 0) < 20) {
+      const newPages = [...(typedContent.pages || []), '']; // Página vacía
+      onUpdate(id, {
+        content: { ...typedContent, pages: newPages, currentPage: newPages.length - 1 },
+      });
+    }
+  }, [isPreview, typedContent, onUpdate, id]);
+
+  const execCommand = useCallback((e: React.MouseEvent, command: string, value?: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (contentRef.current) {
+      contentRef.current.focus();
+      document.execCommand(command, false, value ?? undefined);
+    }
+  }, []);
+
+  const handleRemoveFormat = useCallback((e: React.MouseEvent) => execCommand(e, 'removeFormat'), [execCommand]);
+
+  const handleInsertDate = useCallback((e: React.MouseEvent) => execCommand(e, 'insertHTML', `<span style="color: #a0a1a6;">-- ${format(new Date(), 'dd/MM/yy')} </span>`), [execCommand]);
+
+  // Hook de autoguardado para el título
+  const { handleBlur: handleTitleBlurAutoSave } = useAutoSave({
+    getContent: () => titleRef.current?.innerText || '',
+    onSave: async (newTitle) => {
+      if (isPreview || !titleRef.current) return;
+      if (typedContent.title !== newTitle) {
+        await onUpdate(id, { content: { ...typedContent, title: newTitle } });
+      }
+    },
+    debounceMs: 1000, // Título se guarda más rápido
+    disabled: isPreview,
+  });
+
+  const handleTitleFocus = useCallback(() => {
+    if (isPreview) return;
+    onUpdate(id, { isSelected: true });
+  }, [isPreview, onUpdate, id]);
+
+  const handleTitleBlur = useCallback(async () => {
+    if (isPreview || !titleRef.current) return;
+    await handleTitleBlurAutoSave();
+  }, [isPreview, handleTitleBlurAutoSave]);
 
 
   // Manejar cambios en el contenido
@@ -281,19 +363,6 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     });
   }, [id, onUpdate]); // Eliminar typedContent de dependencias
 
-  // Manejar cambio de título
-  const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTitle = e.target.value;
-    setTitle(newTitle);
-    // Guardar inmediatamente
-    onUpdate(id, {
-      content: {
-        text: textContent,
-        searchQuery: searchQuery,
-        title: newTitle
-      }
-    });
-  }, [id, textContent, searchQuery, onUpdate]);
 
   // Manejar eliminar
   const handleDelete = useCallback(() => {
@@ -379,34 +448,31 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     >
       {/* Header - Color amarillo claro */}
       <div
-        className="flex items-center justify-between px-4 py-3 drag-handle"
+        className="flex items-center justify-between px-4 py-3"
         style={{
           backgroundColor: '#FFF9C4',
           color: '#000000',
         }}
       >
-        {/* Left: Menu icon and title */}
+        {/* Left: Drag handler and editable title */}
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0"
+          <div className="p-1 drag-handle cursor-grab active:cursor-grabbing">
+            <GripVertical className="h-4 w-4" style={{ color: '#000000' }} />
+          </div>
+          <div
+            ref={titleRef}
+            contentEditable={!isPreview}
+            spellCheck="true"
+            suppressContentEditableWarning
+            onFocus={handleTitleFocus}
+            onBlur={handleTitleBlur}
+            className="bg-transparent flex-grow outline-none cursor-text font-semibold text-sm p-1"
+            data-placeholder='Título'
+            onMouseDown={(e) => e.stopPropagation()}
             style={{ color: '#000000' }}
           >
-            <Grid3x3 className="h-4 w-4" />
-          </Button>
-          <Input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            className="text-sm font-bold border-none shadow-none focus-visible:ring-0 p-0 bg-transparent h-8 w-32"
-            style={{ color: '#000000' }}
-            placeholder="Título..."
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onFocus={() => onUpdate(id, { isSelected: true })}
-            contentEditable={!isPreview}
-          />
+            {title}
+          </div>
         </div>
 
         {/* Center: Search bar */}
@@ -430,8 +496,28 @@ export default function YellowNotepadElement(props: CommonElementProps) {
             variant="ghost"
             size="icon"
             className="h-6 w-6 hover:bg-black/10 p-0"
+            title="Info"
+            onClick={() => setIsInfoOpen(!isInfoOpen)}
+            style={{ color: '#000000' }}
+          >
+            <Info className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-black/10 p-0"
+            title="Limpiar Formato"
+            onClick={handleRemoveFormat}
+            style={{ color: '#000000' }}
+          >
+            <Eraser className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-black/10 p-0"
             title="Insertar fecha"
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleInsertDate(); }}
+            onMouseDown={handleInsertDate}
             style={{ color: '#000000' }}
           >
             <CalendarDays className="h-4 w-4" />
@@ -455,6 +541,21 @@ export default function YellowNotepadElement(props: CommonElementProps) {
               <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleExportToPng(e)}} disabled={isExportingPng}>
                 <FileImage className="mr-2 h-4 w-4" />
                 <span>{isExportingPng ? 'Exportando...' : 'Exportar a PNG: alta resolución'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsExportPdfDialogOpen(true);
+                }}
+                disabled={isExportingPdf}
+              >
+                <FileImage className="mr-2 h-4 w-4" />
+                <span>{isExportingPdf ? 'Exportando PDF...' : 'Exportar páginas a PDF'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation();}}>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Cambiar formato...</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -532,7 +633,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           style={{
             paddingLeft: '20px', // Espacio después de la línea vertical (15px línea + 5px espacio)
             paddingRight: '15px',
-            paddingTop: '12px', // Padding superior para alinear con la primera línea
+            paddingTop: '0px', // Comenzar desde la línea horizontal
             paddingBottom: '12px',
             fontFamily: "'Poppins', sans-serif",
             fontSize: '14px',
@@ -551,6 +652,57 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           </div>
         )}
       </div>
+
+      {/* Controles de página */}
+      {!isPreview && (
+        <div className="p-2 border-t flex items-center justify-between" style={{ backgroundColor: '#FFF9C4', borderTop: '1px solid #ADD8E6' }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            title="Página Anterior"
+            onClick={() => handlePageChange((typedContent.currentPage || 0) - 1)}
+            disabled={(typedContent.currentPage || 0) === 0}
+            style={{ color: '#000000' }}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <span className="text-xs" style={{ color: '#000000' }}>
+            Página {(typedContent.currentPage || 0) + 1} de {typedContent.pages?.length || 1}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            title="Página Siguiente"
+            onClick={() => handlePageChange((typedContent.currentPage || 0) + 1)}
+            disabled={(typedContent.currentPage || 0) === (typedContent.pages?.length || 1) - 1}
+            style={{ color: '#000000' }}
+          >
+            <ArrowRight className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-7 ml-2"
+            title="Agregar Página"
+            onClick={handleAddPage}
+            disabled={(typedContent.pages?.length || 0) >= 20}
+            style={{ color: '#000000' }}
+          >
+            <Plus className="size-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Panel de información */}
+      {isInfoOpen && (
+        <div className='absolute inset-0 bg-white/95 z-20 p-4 text-xs overflow-y-auto' onClick={() => setIsInfoOpen(false)} style={{ backgroundColor: 'rgba(255, 255, 224, 0.95)' }}>
+          <h3 className='font-bold mb-2 text-base' style={{ color: '#000000' }}>Comandos de Dictado por Voz</h3>
+          <p style={{ color: '#000000' }}>WIP</p>
+          <p className="text-center mt-4 text-gray-500">Haz clic en cualquier lugar para cerrar</p>
+        </div>
+      )}
     </div>
   );
 }
