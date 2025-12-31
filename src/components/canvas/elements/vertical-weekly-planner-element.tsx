@@ -128,8 +128,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
-          <span className="text-lg font-semibold text-[#0f172a]">{menuTitle}</span>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center gap-3">
             <button
               className="p-1 hover:bg-white/60 rounded"
               title="Semana anterior"
