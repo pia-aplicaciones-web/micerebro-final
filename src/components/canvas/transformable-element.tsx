@@ -24,6 +24,7 @@ import StopwatchElement from './elements/stopwatch-element';
 import HighlightTextElement from './elements/highlight-text-element';
 import PomodoroTimerElement from './elements/pomodoro-timer-element';
 import WeeklyPlannerElement from './elements/weekly-planner-element';
+import VerticalWeeklyPlannerElement from './elements/vertical-weekly-planner-element';
 import WeeklyMenuElement from './elements/weekly-menu-element';
 import ContainerElement from './elements/container-element';
 import LocatorElement from './elements/locator-element';
@@ -56,6 +57,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'highlight-text': HighlightTextElement,
   'pomodoro-timer': PomodoroTimerElement,
   'weekly-planner': WeeklyPlannerElement,
+  'vertical-weekly-planner': VerticalWeeklyPlannerElement,
   'weekly-menu': WeeklyMenuElement,
   container: ContainerElement,
   'two-columns': ContainerElement,

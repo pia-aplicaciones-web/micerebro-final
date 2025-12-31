@@ -21,6 +21,7 @@ import MoodboardElement from '@/components/canvas/elements/moodboard-element';
 import YellowNotepadElement from '@/components/canvas/elements/yellow-notepad-element';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
 import WeeklyPlannerElement from '@/components/canvas/elements/weekly-planner-element';
+import VerticalWeeklyPlannerElement from '@/components/canvas/elements/vertical-weekly-planner-element';
 import PhotoGridElement from '@/components/canvas/elements/photo-grid-element';
 import PhotoGridHorizontalElement from '@/components/canvas/elements/photo-grid-horizontal-element';
 import PhotoGridAdaptiveElement from '@/components/canvas/elements/photo-grid-adaptive-element';
@@ -56,6 +57,7 @@ const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<Com
     gallery: GalleryElement,
     'yellow-notepad': YellowNotepadElement,
     'weekly-planner': WeeklyPlannerElement,
+    'vertical-weekly-planner': VerticalWeeklyPlannerElement,
     'photo-grid': PhotoGridElement,
     'photo-grid-horizontal': PhotoGridHorizontalElement,
     'photo-grid-adaptive': PhotoGridAdaptiveElement,

@@ -20,6 +20,7 @@ const ALL_ELEMENTS: { type: ElementType; label: string; visible: boolean }[] = [
   { type: 'image', label: 'Imagen', visible: true },
   { type: 'moodboard', label: 'Moodboard', visible: true },
   { type: 'weekly-planner', label: 'Plan Semanal', visible: true },
+  { type: 'vertical-weekly-planner', label: 'Menú Semanal Vertical', visible: true },
   { type: 'comment', label: 'Comentario/Localizador', visible: true },
   
   // Ocultos / Sin botón visible

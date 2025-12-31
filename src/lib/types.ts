@@ -20,6 +20,7 @@ export type ElementType =
   'countdown' |
   'highlight-text' |
   'weekly-planner' |
+  'vertical-weekly-planner' |
   'weekly-menu' |
   'container' |
   'two-columns' |
@@ -284,6 +285,8 @@ export interface YellowNotepadCanvasElement extends BaseVisualProperties {
 
 export interface WeeklyPlannerCanvasElement extends BaseVisualProperties {
   type: 'weekly-planner';
+} | {
+  type: 'vertical-weekly-planner';
   hidden?: boolean;
   content: WeeklyPlannerContent;
   properties?: CanvasElementProperties & { weekStart?: string };

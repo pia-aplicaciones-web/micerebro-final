@@ -11,7 +11,7 @@ const VALID_ELEMENT_TYPES: ElementType[] = [
   'comment', 'comment-small', 'comment-r',
   'todo', 'moodboard', 'gallery', 'yellow-notepad',
   'stopwatch', 'countdown', 'highlight-text',
-  'weekly-planner', 'weekly-menu',
+  'weekly-planner', 'vertical-weekly-planner', 'weekly-menu',
   'container', 'two-columns',
   'locator', 'image-frame',
   'photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free', 'libreta'
