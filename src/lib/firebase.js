@@ -4,12 +4,12 @@ import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/aut
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Configuración de Firebase - Proyecto CanvasMind (como la app que funciona)
+// Configuración de Firebase - Proyecto datacerebro
 export const firebaseConfig = {
   apiKey: "AIzaSyDnDsbb2jVLZmgpfkrpdzA6yTFRpPo2f9c",
-  authDomain: "canvasmind-app.firebaseapp.com",
-  projectId: "canvasmind-app",
-  storageBucket: "canvasmind-app.firebasestorage.app",
+  authDomain: "datacerebro.firebaseapp.com",
+  projectId: "datacerebro",
+  storageBucket: "datacerebro.firebasestorage.app",
   messagingSenderId: "917199598510",
   appId: "1:917199598510:web:73840729e1333a07804e3f"
 };
