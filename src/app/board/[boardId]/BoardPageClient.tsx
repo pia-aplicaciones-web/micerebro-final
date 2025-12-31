@@ -397,7 +397,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     // Permitir acceso a usuarios invitados (boards que empiezan con 'guest_')
     const isGuestBoard = boardId.startsWith('guest_');
     if (!user?.uid && !isGuestBoard) {
-      router.replace('/login');
+      router.replace('/');
       return;
     }
     
@@ -674,7 +674,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     return (
       <div className="flex h-screen w-full flex-col items-center justify-center" style={{ backgroundColor: '#96e4e6' }}>
         <p className="text-red-600 text-lg">Error: {error}</p>
-        <button onClick={() => router.push('/login')} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+        <button onClick={() => router.push('/')} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
           Volver al inicio
         </button>
       </div>

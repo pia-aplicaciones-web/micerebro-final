@@ -29,7 +29,7 @@ export default function GlobalError({
           </p>
           <div className="flex gap-2">
             <Button onClick={reset}>Intentar de nuevo</Button>
-            <Button variant="outline" onClick={() => router.push('/login')}>
+            <Button variant="outline" onClick={() => router.push('/')}>
               Volver al inicio
             </Button>
           </div>
