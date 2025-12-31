@@ -1,6 +1,6 @@
 {
   "firestore": {
-    "database": "(default)",
+    "database": "datacerebro",
     "location": "nam5",
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

@@ -53,8 +53,8 @@ export const initFirebase = async () => {
       await setPersistence(auth, browserSessionPersistence);
       console.log('✅ Firebase Auth inicializado con persistencia de sesión');
 
-      // Inicializar Firestore (base de datos por defecto)
-      firestore = getFirestore(app);
+      // Inicializar Firestore (base de datos datacerebro)
+      firestore = getFirestore(app, 'datacerebro');
       storage = getStorage(app);
       console.log('✅ Firebase Firestore y Storage inicializados');
 
