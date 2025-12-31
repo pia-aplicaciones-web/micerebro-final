@@ -329,7 +329,7 @@ function DayCard({
 
   return (
     <div className={cn(
-      'flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full border border-gray-300 transition-all duration-200',
+      'flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full border-2 border-dashed border-gray-300 transition-all duration-200',
       isFocused && 'ring-2 ring-blue-400 shadow-lg',
       className
     )}>
