@@ -1,61 +1,59 @@
 # 🔐 AUTORIZAR DOMINIO GOOGLE OAUTH EN FIREBASE
 
+## ✅ CONFIGURACIÓN ACTUALIZADA:
+- ✅ Proyecto Vercel: `micerebroapp`
+- ✅ Proyecto Firebase: `micerebroapp`
+- ✅ URL: `https://micerebroapp.vercel.app`
+
 ## ❌ ERROR ACTUAL:
 ```
 Firebase: Error (auth/requests-from-referer-https://micerebroapp.vercel.app-are-blocked.).
 ```
 
-El dominio `micerebroapp.vercel.app` no está autorizado para operaciones OAuth de Google.
-
-## ✅ SOLUCIÓN - PASOS A SEGUIR:
+## ✅ SOLUCIÓN FINAL - PASOS A SEGUIR:
 
 ### 1. Ir a Firebase Console
 Ve a: https://console.firebase.google.com/
 
 ### 2. Seleccionar Proyecto
-Elige el proyecto: **micerebroapp**
+Elige el proyecto: **`micerebroapp`**
 
 ### 3. Ir a Authentication
 En el menú lateral izquierdo, haz clic en **Authentication**
 
 ### 4. Ir a Settings
-Haz clic en la pestaña **Settings** (engranaje)
+Haz clic en la pestaña **Settings** (⚙️)
 
 ### 5. Ir a Authorized Domains
 Haz clic en la pestaña **Authorized domains**
 
 ### 6. Agregar Dominio
 - Haz clic en **Add domain**
-- Escribe: `micerebroapp.vercel.app`
+- Escribe exactamente: `micerebroapp.vercel.app`
 - Haz clic en **Add**
 
-### 7. Verificar
-Deberías ver `micerebroapp.vercel.app` en la lista de dominios autorizados.
+### 7. Verificar Lista
+Deberías ver estos dominios autorizados:
+- `localhost`
+- `micerebroapp.vercel.app` ← **Este es el que acabas de agregar**
 
 ## 🔍 VERIFICACIÓN:
 
 Después de agregar el dominio:
 
 1. Ve a: https://micerebroapp.vercel.app/
-2. Haz clic en "Iniciar con Google"
-3. Debería funcionar sin errores
-
-## 📋 DOMINIOS QUE DEBEN ESTAR AUTORIZADOS:
-
-- `localhost` (para desarrollo local)
-- `micerebroapp.vercel.app` (para producción)
-- Cualquier otro dominio donde uses la app
+2. Haz clic en **"Iniciar con Google"**
+3. ¡Debería funcionar sin errores!
 
 ## 🚨 IMPORTANTE:
 
 - El dominio debe ser **exactamente** `micerebroapp.vercel.app`
-- Asegúrate de que no haya espacios ni caracteres extra
-- Firebase puede tardar unos minutos en aplicar los cambios
+- Sin espacios, sin www, sin https://
+- Firebase puede tardar 1-2 minutos en aplicar los cambios
+- Si no funciona inmediatamente, refresca la página y prueba de nuevo
 
 ---
 
-## 🔥 DESPUÉS DE AUTORIZAR EL DOMINIO:
+## 🎯 ¿LISTO PARA PROBAR?
 
-Una vez que hayas agregado el dominio, el login con Google debería funcionar correctamente.
-
-¿Necesitas ayuda con algún paso específico?
+Una vez que autorices el dominio en Firebase Console, el login con Google funcionará perfectamente. ¿Vas a hacerlo ahora?
