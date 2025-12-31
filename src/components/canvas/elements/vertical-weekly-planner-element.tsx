@@ -108,7 +108,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
           isSelected && 'ring-2 ring-primary/40'
         )}
       style={{
-        backgroundColor: '#f5f1d6',
+        backgroundColor: '#FFFFF0', // Blanco marfil
         minWidth: 794, // Tamaño carta A4
         minHeight: 1123, // Tamaño carta A4
       }}
