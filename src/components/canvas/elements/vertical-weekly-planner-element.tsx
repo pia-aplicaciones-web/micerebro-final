@@ -23,7 +23,7 @@ const DAY_META = [
   { key: 'tue', label: 'MARTES', color: '#c8491d' },
   { key: 'wed', label: 'MIÉRCOLES', color: '#7cab0b' },
   { key: 'thu', label: 'JUEVES', color: '#f3a009' },
-  { key: 'fri', label: 'VIERNES', color: '#dd8c0d' },
+  { key: 'fri', label: 'VIERNES', color: '#e91e63' },
   { key: 'sat', label: 'SÁBADO', color: '#1496d4' },
   { key: 'sun', label: 'DOMINGO', color: '#7be4ee' },
 ];
@@ -115,7 +115,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     <div
       data-element-id={id}
         className={cn(
-          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-dashed border-black shadow-md',
+          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-black shadow-md',
           isSelected && 'ring-2 ring-primary/40'
         )}
       style={{
