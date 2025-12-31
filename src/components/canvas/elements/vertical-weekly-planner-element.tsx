@@ -39,6 +39,50 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     return saved ? new Date(saved) : startOfWeek(new Date(), { weekStartsOn: 1 });
   });
 
+  // Función para manejar cambios en días
+  const handleDayChange = (dateKey: string, value: string) => {
+    const newContent = {
+      ...plannerContent,
+      days: {
+        ...plannerContent.days,
+        [dateKey]: value
+      }
+    };
+    onUpdate(id, { content: newContent });
+  };
+
+  // Función para cambiar fecha
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = new Date(e.target.value);
+    const newWeek = startOfWeek(newDate, { weekStartsOn: 1 });
+    setCurrentWeek(newWeek);
+    onUpdate(id, { properties: { ...safeProperties, weekStart: newWeek.toISOString() } });
+    setShowDatePicker(false);
+  };
+
+  // Función para exportar PNG
+  const handleExportPng = async () => {
+    if (!onSelectElement) return;
+
+    try {
+      const element = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!element) return;
+
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#f5f1d6',
+        scale: 2,
+        useCORS: true,
+      });
+
+      const link = document.createElement('a');
+      link.download = `menu-semanal-${format(currentWeek, 'yyyy-MM-dd')}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+    } catch (error) {
+      console.error('Error exporting PNG:', error);
+    }
+  };
+
   // Navegar semanas
   const handlePrevWeek = () => {
     const newWeek = subWeeks(currentWeek, 1);
@@ -52,52 +96,9 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     onUpdate(id, { properties: { ...safeProperties, weekStart: newWeek.toISOString() } });
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = new Date(e.target.value);
-    const weekStart = startOfWeek(newDate, { weekStartsOn: 1 });
-    setCurrentWeek(weekStart);
-    onUpdate(id, { properties: { ...safeProperties, weekStart: weekStart.toISOString() } });
-    setShowDatePicker(false);
-  };
-
-  // Exportar PNG
-  const handleExportPng = async () => {
-    const element = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
-    if (!element) return;
-
-    try {
-      const canvas = await html2canvas(element, {
-        backgroundColor: '#f5f1d6',
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-      });
-
-      const link = document.createElement('a');
-      link.download = `planner-vertical-${format(currentWeek, 'yyyy-MM-dd')}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
-    } catch (error) {
-      console.error('Error exportando PNG:', error);
-    }
-  };
-
-  // Datos del planner
   const plannerContent = typeof content === 'object' && content !== null ? content : { days: {} };
+  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeek, i));
   const weekStart = currentWeek;
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-  // Función para manejar cambios en días
-  const handleDayChange = (dateKey: string, value: string) => {
-    const newContent = {
-      ...plannerContent,
-      days: {
-        ...plannerContent.days,
-        [dateKey]: value
-      }
-    };
-    onUpdate(id, { content: newContent });
-  };
 
   return (
     <div
@@ -108,15 +109,15 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       )}
       style={{
         backgroundColor: '#f5f1d6',
-        minWidth: 756, // ~20cm
-        minHeight: 567, // ~15cm
+        minWidth: 794, // Tamaño carta A4
+        minHeight: 1123, // Tamaño carta A4
       }}
     >
       {/* Header */}
       <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
-          <span className="text-lg font-semibold text-[#0f172a]">PLANNER SEMANAL</span>
+          <span className="text-lg font-semibold text-[#0f172a]">MENÚ SEMANAL</span>
           <div className="flex items-center gap-2">
             <button
               className="p-0.5 hover:bg-white/60 rounded"
@@ -179,16 +180,17 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         </div>
       </div>
 
-      {/* Contenido principal - 3 columnas, 2 filas */}
-      <div className="flex-1 p-3">
-        <div className="grid grid-cols-3 gap-3 h-full">
-          {/* Fila 1: Título vacío, Lunes, Martes, Miércoles */}
-          <div className="flex flex-col gap-3">
-            {/* Celda vacía para el título */}
-            <div className="bg-white rounded-xl shadow-sm p-3 text-center font-semibold text-[#6b7280] border-2 border-dashed border-[#e0dcc5]">
-              SEMANA
+      {/* Contenido principal - EXACTAMENTE 3 columnas × 2 filas como pediste */}
+      <div className="flex-1 p-4">
+        <div className="grid grid-rows-2 gap-4 h-full">
+          {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
+          <div className="grid grid-cols-3 gap-4 h-1/2">
+            {/* Celda del título - arriba a la izquierda */}
+            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
+              <span className="text-xl font-bold text-[#6b7280] uppercase tracking-wide">MENÚ SEMANAL</span>
             </div>
-            {/* Lunes */}
+
+            {/* Lunes - abajo del título */}
             <DayCard
               label={DAY_META[0].label}
               color={DAY_META[0].color}
@@ -198,10 +200,8 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               onFocus={() => onSelectElement(id, false)}
               disabled={isPreview}
             />
-          </div>
 
-          <div className="flex flex-col gap-3">
-            {/* Martes */}
+            {/* Martes - abajo del título */}
             <DayCard
               label={DAY_META[1].label}
               color={DAY_META[1].color}
@@ -211,6 +211,10 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               onFocus={() => onSelectElement(id, false)}
               disabled={isPreview}
             />
+          </div>
+
+          {/* FILA 2: Miércoles/Jueves/Viernes + (Sábado arriba + Domingo abajo) */}
+          <div className="grid grid-cols-3 gap-4 h-1/2">
             {/* Miércoles */}
             <DayCard
               label={DAY_META[2].label}
@@ -221,10 +225,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               onFocus={() => onSelectElement(id, false)}
               disabled={isPreview}
             />
-          </div>
 
-          {/* Fila 2: Jueves, Viernes, Sábado/Domingo */}
-          <div className="flex flex-col gap-3">
             {/* Jueves */}
             <DayCard
               label={DAY_META[3].label}
@@ -236,39 +237,40 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               disabled={isPreview}
             />
 
-            {/* Viernes */}
-            <DayCard
-              label={DAY_META[4].label}
-              color={DAY_META[4].color}
-              dayNumber={format(weekDays[4], 'd', { locale: es })}
-              value={plannerContent.days[format(weekDays[4], 'yyyy-MM-dd')] || ''}
-              onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
-              disabled={isPreview}
-            />
-
-            {/* Sábado y Domingo en celdas separadas */}
-            <div className="flex flex-col gap-3 flex-1">
+            {/* Viernes + Sábado/Domingo */}
+            <div className="flex flex-col gap-2">
               <DayCard
-                label={DAY_META[5].label}
-                color={DAY_META[5].color}
-                dayNumber={format(weekDays[5], 'd', { locale: es })}
-                value={plannerContent.days[format(weekDays[5], 'yyyy-MM-dd')] || ''}
-                onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
+                label={DAY_META[4].label}
+                color={DAY_META[4].color}
+                dayNumber={format(weekDays[4], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[4], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
                 className="flex-1"
               />
-              <DayCard
-                label={DAY_META[6].label}
-                color={DAY_META[6].color}
-                dayNumber={format(weekDays[6], 'd', { locale: es })}
-                value={plannerContent.days[format(weekDays[6], 'yyyy-MM-dd')] || ''}
-                onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
-                disabled={isPreview}
-                className="flex-1"
-              />
+              <div className="flex gap-2 flex-1">
+                <DayCard
+                  label={DAY_META[5].label}
+                  color={DAY_META[5].color}
+                  dayNumber={format(weekDays[5], 'd', { locale: es })}
+                  value={plannerContent.days[format(weekDays[5], 'yyyy-MM-dd')] || ''}
+                  onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
+                  onFocus={() => onSelectElement(id, false)}
+                  disabled={isPreview}
+                  className="flex-1"
+                />
+                <DayCard
+                  label={DAY_META[6].label}
+                  color={DAY_META[6].color}
+                  dayNumber={format(weekDays[6], 'd', { locale: es })}
+                  value={plannerContent.days[format(weekDays[6], 'yyyy-MM-dd')] || ''}
+                  onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
+                  onFocus={() => onSelectElement(id, false)}
+                  disabled={isPreview}
+                  className="flex-1"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -314,22 +316,25 @@ function DayCard({
   disabled: boolean;
   className?: string;
 }) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   return (
-    <div className={cn("flex flex-col bg-white rounded-xl shadow-sm overflow-hidden", className)}>
+    <div className={cn('flex flex-col bg-white rounded-xl shadow-sm overflow-hidden', className)}>
       <div
-        className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white"
+        className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase text-white"
         style={{ backgroundColor: color }}
       >
         <span>{label}</span>
         {dayNumber && <span className="text-[11px] font-bold">{dayNumber}</span>}
       </div>
       <textarea
-        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none min-h-[80px]"
+        ref={textareaRef}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Escribe aquí..."
-        onFocus={() => onFocus(el)}
+        onFocus={() => onFocus(textareaRef.current)}
         disabled={disabled}
+        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none"
+        placeholder="Escribe el menú aquí..."
       />
     </div>
   );
