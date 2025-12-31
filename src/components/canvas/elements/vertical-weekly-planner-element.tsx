@@ -180,53 +180,49 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         </div>
       </div>
 
-      {/* Contenido principal - EXACTAMENTE 3 columnas × 2 filas como pediste */}
+      {/* Contenido principal - EXACTAMENTE como especificaste: 3 columnas × 2 filas */}
       <div className="flex-1 p-3">
         <div className="grid grid-rows-2 gap-4 h-full">
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
-          <div className="grid grid-cols-3 gap-4 h-1/2">
-            {/* Celda del título - arriba a la izquierda */}
+          <div className="flex flex-col gap-3">
+            {/* Título arriba */}
             <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
               <span className="text-xl font-bold text-[#6b7280] uppercase tracking-wide">MENÚ SEMANAL</span>
             </div>
-
-            {/* Lunes - abajo del título */}
-            <DayCard
-              label={DAY_META[0].label}
-              color={DAY_META[0].color}
-              dayNumber={format(weekDays[0], 'd', { locale: es })}
-              value={plannerContent.days[format(weekDays[0], 'yyyy-MM-dd')] || ''}
-              onChange={(v) => handleDayChange(format(weekDays[0], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
-              disabled={isPreview}
-            />
-
-            {/* Martes - abajo del título */}
-            <DayCard
-              label={DAY_META[1].label}
-              color={DAY_META[1].color}
-              dayNumber={format(weekDays[1], 'd', { locale: es })}
-              value={plannerContent.days[format(weekDays[1], 'yyyy-MM-dd')] || ''}
-              onChange={(v) => handleDayChange(format(weekDays[1], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
-              disabled={isPreview}
-            />
+            {/* Lunes, Martes, Miércoles abajo - tarjetas blancas editables */}
+            <div className="grid grid-cols-3 gap-3">
+              <DayCard
+                label={DAY_META[0].label}
+                color={DAY_META[0].color}
+                dayNumber={format(weekDays[0], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[0], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[0], 'yyyy-MM-dd'), v)}
+                onFocus={() => onSelectElement(id, false)}
+                disabled={isPreview}
+              />
+              <DayCard
+                label={DAY_META[1].label}
+                color={DAY_META[1].color}
+                dayNumber={format(weekDays[1], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[1], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[1], 'yyyy-MM-dd'), v)}
+                onFocus={() => onSelectElement(id, false)}
+                disabled={isPreview}
+              />
+              <DayCard
+                label={DAY_META[2].label}
+                color={DAY_META[2].color}
+                dayNumber={format(weekDays[2], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[2], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[2], 'yyyy-MM-dd'), v)}
+                onFocus={() => onSelectElement(id, false)}
+                disabled={isPreview}
+              />
+            </div>
           </div>
 
-          {/* FILA 2: Miércoles/Jueves/Viernes + (Sábado arriba + Domingo abajo) */}
-          <div className="grid grid-cols-3 gap-4 h-1/2">
-            {/* Miércoles */}
-            <DayCard
-              label={DAY_META[2].label}
-              color={DAY_META[2].color}
-              dayNumber={format(weekDays[2], 'd', { locale: es })}
-              value={plannerContent.days[format(weekDays[2], 'yyyy-MM-dd')] || ''}
-              onChange={(v) => handleDayChange(format(weekDays[2], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
-              disabled={isPreview}
-            />
-
-            {/* Jueves */}
+          {/* FILA 2: Jueves, Viernes, (Sábado arriba/Domingo abajo) */}
+          <div className="grid grid-cols-3 gap-3">
             <DayCard
               label={DAY_META[3].label}
               color={DAY_META[3].color}
@@ -237,40 +233,38 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               disabled={isPreview}
             />
 
-            {/* Viernes + Sábado/Domingo */}
-            <div className="flex flex-col gap-2">
+            <DayCard
+              label={DAY_META[4].label}
+              color={DAY_META[4].color}
+              dayNumber={format(weekDays[4], 'd', { locale: es })}
+              value={plannerContent.days[format(weekDays[4], 'yyyy-MM-dd')] || ''}
+              onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
+              onFocus={() => onSelectElement(id, false)}
+              disabled={isPreview}
+            />
+
+            {/* Sábado arriba, Domingo abajo */}
+            <div className="flex flex-col gap-3">
               <DayCard
-                label={DAY_META[4].label}
-                color={DAY_META[4].color}
-                dayNumber={format(weekDays[4], 'd', { locale: es })}
-                value={plannerContent.days[format(weekDays[4], 'yyyy-MM-dd')] || ''}
-                onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
+                label={DAY_META[5].label}
+                color={DAY_META[5].color}
+                dayNumber={format(weekDays[5], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[5], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
                 onFocus={() => onSelectElement(id, false)}
                 disabled={isPreview}
                 className="flex-1"
               />
-              <div className="flex gap-2 flex-1">
-                <DayCard
-                  label={DAY_META[5].label}
-                  color={DAY_META[5].color}
-                  dayNumber={format(weekDays[5], 'd', { locale: es })}
-                  value={plannerContent.days[format(weekDays[5], 'yyyy-MM-dd')] || ''}
-                  onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
-                  onFocus={() => onSelectElement(id, false)}
-                  disabled={isPreview}
-                  className="flex-1"
-                />
-                <DayCard
-                  label={DAY_META[6].label}
-                  color={DAY_META[6].color}
-                  dayNumber={format(weekDays[6], 'd', { locale: es })}
-                  value={plannerContent.days[format(weekDays[6], 'yyyy-MM-dd')] || ''}
-                  onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
-                  onFocus={() => onSelectElement(id, false)}
-                  disabled={isPreview}
-                  className="flex-1"
-                />
-              </div>
+              <DayCard
+                label={DAY_META[6].label}
+                color={DAY_META[6].color}
+                dayNumber={format(weekDays[6], 'd', { locale: es })}
+                value={plannerContent.days[format(weekDays[6], 'yyyy-MM-dd')] || ''}
+                onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
+                onFocus={() => onSelectElement(id, false)}
+                disabled={isPreview}
+                className="flex-1"
+              />
             </div>
           </div>
         </div>
