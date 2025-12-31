@@ -128,29 +128,23 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
         <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold text-[#0f172a]">{menuTitle}</span>
-            <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
-              Editable
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
-              className="p-0.5 hover:bg-white/60 rounded"
+              className="p-1 hover:bg-white/60 rounded"
               title="Semana anterior"
               onClick={(e) => { e.stopPropagation(); handlePrevWeek(); }}
             >
-              <ChevronLeft className="w-4 h-4 text-[#6b7280]" />
+              <ChevronLeft className="w-5 h-5 text-[#6b7280]" />
             </button>
-            <span className="text-xs uppercase text-[#6b7280]">
+            <span className="text-sm font-bold uppercase text-[#0f172a] tracking-wide">
               {format(weekStart, "LLLL", { locale: es })} - Semana del {format(weekStart, 'd', { locale: es })} al {format(addDays(weekStart, 6), 'd, yyyy', { locale: es })}
             </span>
             <button
-              className="p-0.5 hover:bg-white/60 rounded"
+              className="p-1 hover:bg-white/60 rounded"
               title="Semana siguiente"
               onClick={(e) => { e.stopPropagation(); handleNextWeek(); }}
             >
-              <ChevronRight className="w-4 h-4 text-[#6b7280]" />
+              <ChevronRight className="w-5 h-5 text-[#6b7280]" />
             </button>
           </div>
         </div>
