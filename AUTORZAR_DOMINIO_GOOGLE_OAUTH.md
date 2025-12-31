@@ -1,49 +1,27 @@
 # 🔐 AUTORIZAR DOMINIO GOOGLE OAUTH EN FIREBASE
 
-## ✅ CONFIGURACIÓN ACTUALIZADA:
-- ✅ Proyecto Vercel: `micerebroapp`
-- ✅ Proyecto Firebase: `micerebroapp`
-- ✅ URL: `https://micerebroapp.vercel.app`
+## ✅ CONFIGURACIÓN ACTUALIZADA Y CONSISTENTE:
+- ✅ Proyecto Vercel: `canvasmind-app`
+- ✅ Proyecto Firebase: `canvasmind-app`
+- ✅ Firebase CLI: `canvasmind-app`
+- ✅ URL: `https://canvasmind-app.vercel.app`
 
-## ❌ ERROR ACTUAL:
-```
-Firebase: Error (auth/requests-from-referer-https://micerebroapp.vercel.app-are-blocked.).
-```
+## ❌ ERROR ANTERIOR RESUELTO:
+El problema era inconsistencia entre proyectos. Ahora todo está configurado para `canvasmind-app`.
 
-## ✅ SOLUCIÓN FINAL - PASOS A SEGUIR:
+## ✅ VERIFICACIÓN DE FUNCIONAMIENTO:
 
-### 1. Ir a Firebase Console
-Ve a: https://console.firebase.google.com/
-
-### 2. Seleccionar Proyecto
-Elige el proyecto: **`micerebroapp`**
-
-### 3. Ir a Authentication
-En el menú lateral izquierdo, haz clic en **Authentication**
-
-### 4. Ir a Settings
-Haz clic en la pestaña **Settings** (⚙️)
-
-### 5. Ir a Authorized Domains
-Haz clic en la pestaña **Authorized domains**
-
-### 6. Agregar Dominio
-- Haz clic en **Add domain**
-- Escribe exactamente: `micerebroapp.vercel.app`
-- Haz clic en **Add**
-
-### 7. Verificar Lista
-Deberías ver estos dominios autorizados:
-- `localhost`
-- `micerebroapp.vercel.app` ← **Este es el que acabas de agregar**
-
-## 🔍 VERIFICACIÓN:
-
-Después de agregar el dominio:
-
-1. Ve a: https://micerebroapp.vercel.app/
+1. Ve a: `https://canvasmind-app.vercel.app/`
 2. Haz clic en **"Iniciar con Google"**
-3. ¡Debería funcionar sin errores!
+3. **¿Funciona sin errores?** ✅ ¡Excelente!
+
+## 🔍 SI AÚN HAY PROBLEMA:
+
+### Verificar dominio autorizado en Firebase Console:
+1. Ve a: `https://console.firebase.google.com/u/0/project/canvasmind-app/`
+2. **Authentication** → **Settings** → **Authorized domains**
+3. Busca `canvasmind-app.vercel.app`
+4. Si no está, agrégalo: **Add domain** → `canvasmind-app.vercel.app`
 
 ## 🚨 IMPORTANTE:
 
