@@ -4,7 +4,7 @@ import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/aut
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Configuración de Firebase
+// Configuración de Firebase - Proyecto CanvasMind (como la app que funciona)
 export const firebaseConfig = {
   apiKey: "AIzaSyDnDsbb2jVLZmgpfkrpdzA6yTFRpPo2f9c",
   authDomain: "canvasmind-app.firebaseapp.com",
