@@ -23,7 +23,7 @@ const DAY_META = [
   { key: 'tue', label: 'MARTES', color: '#c8491d' },
   { key: 'wed', label: 'MIÉRCOLES', color: '#7cab0b' },
   { key: 'thu', label: 'JUEVES', color: '#808000' },
-  { key: 'fri', label: 'VIERNES', color: '#e91e63' },
+  { key: 'fri', label: 'VIERNES', color: '#f3a009' },
   { key: 'sat', label: 'SÁBADO', color: '#1496d4' },
   { key: 'sun', label: 'DOMINGO', color: '#7be4ee' },
 ];
