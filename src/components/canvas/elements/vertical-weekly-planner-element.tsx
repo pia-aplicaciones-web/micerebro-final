@@ -115,7 +115,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     <div
       data-element-id={id}
         className={cn(
-          'w-full h-full flex flex-col overflow-hidden rounded-2xl border-2 border-dashed border-black shadow-md',
+          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-dashed border-black shadow-md',
           isSelected && 'ring-2 ring-primary/40'
         )}
       style={{
@@ -196,7 +196,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
           <div className="grid grid-rows-[auto_1fr] gap-3 h-full">
             {/* Título arriba - EDITABLE */}
-            <div className="bg-white rounded-xl shadow-sm p-4 border-2 border-dashed border-[#e0dcc5]">
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-dashed border-[#e0dcc5]">
               <input
                 type="text"
                 value={menuTitle}
@@ -329,7 +329,7 @@ function DayCard({
 
   return (
     <div className={cn(
-      'flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full border-2 border-dashed border-gray-300 transition-all duration-200',
+      'flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full border border-dashed border-gray-300 transition-all duration-200',
       isFocused && 'ring-2 ring-blue-400 shadow-lg',
       className
     )}>
