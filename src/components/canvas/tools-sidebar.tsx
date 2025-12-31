@@ -28,12 +28,10 @@ import { BookCopy,
   LayoutGrid,
   LayoutDashboard,
   List,
-  CalendarRange,
   Palette,
   Columns2,
   MapPin,
   Frame,
-  UtensilsCrossed,
   Grid3X3,
   Maximize,
   Mic,
@@ -828,36 +826,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <DropdownMenuItem onClick={onUploadImage}>
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Mi Plan */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarButton icon={CalendarRange} label="Mi Plan" title="Herramientas de planificación" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" sideOffset={5} className="w-52">
-              <DropdownMenuItem
-                onClick={() => handleAddElement('weekly-planner')}
-                className="flex items-start gap-3"
-              >
-                <CalendarRange className="h-4 w-4 mt-0.5 text-slate-600" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Plan Semanal</span>
-                  <span className="text-xs text-slate-500">Vista completa de lunes a domingo</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => handleAddElement('weekly-menu')}
-                className="flex items-start gap-3"
-              >
-                <UtensilsCrossed className="h-4 w-4 mt-0.5 text-teal-600" />
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Menú Semanal</span>
-                  <span className="text-xs text-slate-500">Planifica comidas de la semana</span>
-                </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
