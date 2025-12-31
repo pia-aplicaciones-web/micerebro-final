@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "micerebroapp",
+  "name": "canvasmind-app",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
