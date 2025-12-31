@@ -109,42 +109,38 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       )}
       style={{
         backgroundColor: '#f5f1d6',
-        width: '100vw',  // Usar toda la página ancho
-        height: '100vh', // Usar toda la página alto
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        zIndex: 50,
+        minWidth: 794, // Tamaño carta A4
+        minHeight: 1123, // Tamaño carta A4
       }}
     >
       {/* Header */}
-      <div className="drag-handle flex items-center justify-between px-6 py-4 cursor-grab active:cursor-grabbing">
-        <GripVertical className="w-6 h-6 text-[#6b7280]" />
+      <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
+        <GripVertical className="w-4 h-4 text-[#6b7280]" />
         <div className="flex flex-col items-center gap-0 leading-tight">
-          <span className="text-2xl font-bold text-[#0f172a]">MENÚ SEMANAL</span>
-          <div className="flex items-center gap-3 mt-2">
+          <span className="text-lg font-semibold text-[#0f172a]">MENÚ SEMANAL</span>
+          <div className="flex items-center gap-2">
             <button
-              className="p-2 hover:bg-white/60 rounded"
+              className="p-0.5 hover:bg-white/60 rounded"
               title="Semana anterior"
               onClick={(e) => { e.stopPropagation(); handlePrevWeek(); }}
             >
-              <ChevronLeft className="w-5 h-5 text-[#6b7280]" />
+              <ChevronLeft className="w-4 h-4 text-[#6b7280]" />
             </button>
-            <span className="text-sm uppercase text-[#6b7280] font-medium">
+            <span className="text-xs uppercase text-[#6b7280]">
               {format(weekStart, "LLLL", { locale: es })} - Semana del {format(weekStart, 'd', { locale: es })} al {format(addDays(weekStart, 6), 'd, yyyy', { locale: es })}
             </span>
             <button
-              className="p-2 hover:bg-white/60 rounded"
+              className="p-0.5 hover:bg-white/60 rounded"
               title="Semana siguiente"
               onClick={(e) => { e.stopPropagation(); handleNextWeek(); }}
             >
-              <ChevronRight className="w-5 h-5 text-[#6b7280]" />
+              <ChevronRight className="w-4 h-4 text-[#6b7280]" />
             </button>
           </div>
         </div>
         <div className="flex items-center gap-2 text-[#6b7280] relative">
           <button
-            className="p-2 hover:bg-white/60 rounded"
+            className="p-1 hover:bg-white/60 rounded"
             title="Seleccionar fecha"
             onClick={(e) => {
               e.stopPropagation();
@@ -152,7 +148,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               setTimeout(() => dateInputRef.current?.showPicker(), 100);
             }}
           >
-            <CalendarRange className="w-5 h-5" />
+            <CalendarRange className="w-4 h-4" />
           </button>
           <input
             ref={dateInputRef}
@@ -162,36 +158,36 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
             value={format(currentWeek, 'yyyy-MM-dd')}
           />
           <button
-            className="p-2 hover:bg-white/60 rounded"
+            className="p-1 hover:bg-white/60 rounded"
             title="Exportar PNG"
             onClick={(e) => { e.stopPropagation(); handleExportPng(); }}
           >
-            <FileImage className="w-5 h-5" />
+            <FileImage className="w-4 h-4" />
           </button>
-          <button className="p-2 hover:bg-white/60 rounded" title="Duplicar">
-            <Copy className="w-5 h-5" />
+          <button className="p-1 hover:bg-white/60 rounded" title="Duplicar">
+            <Copy className="w-4 h-4" />
           </button>
           <button
-            className="p-2 hover:bg-white/60 rounded text-red-500"
+            className="p-1 hover:bg-white/60 rounded text-red-500"
             title="Eliminar"
             onClick={(e) => {
               e.stopPropagation();
               deleteElement(id);
             }}
           >
-            <Trash2 className="w-5 h-5" />
+            <Trash2 className="w-4 h-4" />
           </button>
         </div>
       </div>
 
       {/* Contenido principal - EXACTAMENTE 3 columnas × 2 filas como pediste */}
-      <div className="flex-1 p-6">
+      <div className="flex-1 p-3">
         <div className="grid grid-rows-2 gap-4 h-full">
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
           <div className="grid grid-cols-3 gap-4 h-1/2">
             {/* Celda del título - arriba a la izquierda */}
-            <div className="bg-white rounded-xl shadow-sm p-6 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
-              <span className="text-3xl font-bold text-[#6b7280] uppercase tracking-wider">MENÚ SEMANAL</span>
+            <div className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-center border-2 border-dashed border-[#e0dcc5]">
+              <span className="text-xl font-bold text-[#6b7280] uppercase tracking-wide">MENÚ SEMANAL</span>
             </div>
 
             {/* Lunes - abajo del título */}
@@ -308,11 +304,11 @@ function DayCard({
   return (
     <div className={cn('flex flex-col bg-white rounded-xl shadow-sm overflow-hidden', className)}>
       <div
-        className="flex items-center justify-between px-4 py-3 text-sm font-bold uppercase text-white"
+        className="flex items-center justify-between px-3 py-2 text-xs font-semibold uppercase text-white"
         style={{ backgroundColor: color }}
       >
         <span>{label}</span>
-        {dayNumber && <span className="text-base font-bold">{dayNumber}</span>}
+        {dayNumber && <span className="text-[11px] font-bold">{dayNumber}</span>}
       </div>
       <textarea
         ref={textareaRef}
@@ -320,7 +316,7 @@ function DayCard({
         onChange={(e) => onChange(e.target.value)}
         onFocus={() => onFocus(textareaRef.current)}
         disabled={disabled}
-        className="flex-1 w-full p-4 text-base resize-none outline-none border-none"
+        className="flex-1 w-full p-3 text-sm resize-none outline-none border-none"
         placeholder="Escribe el menú aquí..."
       />
     </div>
