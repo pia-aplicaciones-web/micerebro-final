@@ -104,7 +104,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     <div
       data-element-id={id}
       className={cn(
-        'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-[#e0dcc5] shadow-md',
+        'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-black shadow-md',
         isSelected && 'ring-2 ring-primary/40'
       )}
       style={{
