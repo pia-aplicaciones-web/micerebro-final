@@ -4,14 +4,14 @@ import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/aut
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Configuración de Firebase - Proyecto canvasmind-app
+// Configuración de Firebase - Proyecto micerebroapp
 export const firebaseConfig = {
-  apiKey: "AIzaSyDnDsbb2jVLZmgpfkrpdzA6yTFRpPo2f9c",
-  authDomain: "canvasmind-app.firebaseapp.com",
-  projectId: "canvasmind-app",
-  storageBucket: "canvasmind-app.firebasestorage.app",
-  messagingSenderId: "917199598510",
-  appId: "1:917199598510:web:73840729e1333a07804e3f"
+  apiKey: "AIzaSyCbnZ8uKlOc8PBvTql2N2PkIDxc2BXWFCg",
+  authDomain: "micerebroapp.firebaseapp.com",
+  projectId: "micerebroapp",
+  storageBucket: "micerebroapp.firebasestorage.app",
+  messagingSenderId: "967156176052",
+  appId: "1:967156176052:web:2a7da145935daecdd6f3e1"
 };
 
 // Inicializar Firebase solo en el cliente
