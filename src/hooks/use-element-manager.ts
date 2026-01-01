@@ -240,7 +240,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         newElementData = { type, x: miniNotesPos.x, y: miniNotesPos.y, width: miniNotesSize.width, height: miniNotesSize.height, userId, properties: { ...baseProperties, position: miniNotesPos, size: miniNotesSize, backgroundColor: '#f9fb6a' }, content: props?.content || { text: '', searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'weekly-planner':
       case 'vertical-weekly-planner':
-        const plannerSize = { width: 794, height: 567 };
+        const plannerSize = { width: 794, height: 1123 }; // Tamaño carta A4 completo
         const plannerPos = getCenteredPosition(plannerSize.width, plannerSize.height);
         const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
         newElementData = {
