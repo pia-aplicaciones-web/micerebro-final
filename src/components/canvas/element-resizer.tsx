@@ -49,9 +49,21 @@ const ElementResizer: React.FC<ElementResizerProps> = ({
       minWidth={50 * scale}
       minHeight={50 * scale}
       bounds="parent"
+      enableResizing={false} // DESACTIVADO - No mostrar handles azules
+      dragHandleClassName="drag-handle"
       style={{
         zIndex: element.zIndex || 1,
         pointerEvents: 'auto',
+      }}
+      resizeHandleStyles={{
+        bottomRight: { display: 'none' },
+        bottomLeft: { display: 'none' },
+        topRight: { display: 'none' },
+        topLeft: { display: 'none' },
+        bottom: { display: 'none' },
+        top: { display: 'none' },
+        left: { display: 'none' },
+        right: { display: 'none' },
       }}
     >
       {children}

@@ -265,6 +265,21 @@ const BoardContent: React.FC<BoardContentProps> = ({
                 border: '1px dashed #6366F1',
               }}
             >
+              {/* Botón de redimensionamiento sutil en esquina inferior derecha */}
+              {selectedElementIds.length === 1 && (
+                <div className="absolute bottom-1 right-1 pointer-events-auto">
+                  <button
+                    className="w-3 h-3 bg-blue-500 rounded-sm flex items-center justify-center cursor-se-resize border border-white shadow-sm opacity-70 hover:opacity-100 transition-opacity"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      console.log('Botón de redimensionamiento clickeado');
+                    }}
+                    title="Redimensionar elemento"
+                  >
+                    <div className="w-1.5 h-1.5 border-r border-b border-white"></div>
+                  </button>
+                </div>
+              )}
             </motion.div>
           </AnimatePresence>
         )}
