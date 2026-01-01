@@ -351,7 +351,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
       console.error('Error en captura de la nota adhesiva:', error);
       console.error('Error message:', error.message);
     }
-  }, [id, backgroundColor]);
+  }, [id, currentPalette.bg]);
 
   // Copiar texto de la nota adhesiva
   const handleCopyText = async () => {
