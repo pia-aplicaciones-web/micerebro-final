@@ -315,11 +315,21 @@ const BoardContent: React.FC<BoardContentProps> = ({
                 border: '1px dashed #6366F1',
               }}
             >
-              {/* Botón de redimensionamiento sutil en esquina inferior derecha */}
-              {selectedElementIds.length === 1 && (
+              {/* Botón de redimensionamiento en esquina inferior derecha */}
+              {(() => {
+                console.log('🎛️ Estado de selección:', {
+                  selectedElementIds,
+                  length: selectedElementIds.length,
+                  selectionBounds: !!selectionBounds,
+                  mostrarBoton: selectedElementIds.length === 1
+                });
+                return selectedElementIds.length === 1;
+              })() && (
                 <div className="absolute bottom-1 right-1 pointer-events-auto">
-                  <button
-                    className="w-3 h-3 bg-blue-500 rounded-sm flex items-center justify-center cursor-se-resize border border-white shadow-sm opacity-70 hover:opacity-100 transition-opacity"
+                  {/* Indicador visual del botón de redimensionamiento */}
+                  <div className="relative">
+                    <button
+                    className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center cursor-se-resize border-2 border-white shadow-md opacity-90 hover:opacity-100 transition-opacity z-50"
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -339,7 +349,9 @@ const BoardContent: React.FC<BoardContentProps> = ({
 
                       console.log('🔄 Iniciando redimensionamiento del elemento:', elementId);
                     }}
-                    title="Redimensionar elemento"
+                    title="Redimensionar elemento (arrastrar para cambiar tamaño)"
+                    onMouseEnter={() => console.log('🎯 Cursor sobre botón de redimensionamiento')}
+                    onMouseLeave={() => console.log('👋 Cursor salió del botón de redimensionamiento')}
                   >
                     <div className="w-1.5 h-1.5 border-r border-b border-white"></div>
                   </button>
