@@ -38,12 +38,6 @@ import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { format } from 'date-fns';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 
 export default function YellowNotepadElement(props: CommonElementProps) {
   const {
