@@ -427,7 +427,7 @@ function DayCard({
   dayNumber: string;
   value: string;
   onChange: (v: string) => void;
-  onFocus: (el: HTMLTextAreaElement) => void;
+  onFocus?: (el: HTMLTextAreaElement) => void;
   disabled: boolean;
   className?: string;
 }) {
@@ -436,7 +436,7 @@ function DayCard({
 
   const handleFocus = () => {
     setIsFocused(true);
-    onFocus(textareaRef.current);
+    onFocus?.(textareaRef.current);
   };
 
   const handleBlur = () => {
