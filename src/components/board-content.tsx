@@ -1,6 +1,6 @@
 // src/components/board-content.tsx
 
-'use client'; 
+'use client';
 
 import React, { useCallback, useMemo, useRef, useState, useEffect } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -48,22 +48,22 @@ interface BoardContentProps {
 }
 
 const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<CommonElementProps> }> = {
-    text: TextElement,
-    sticky: StickyNoteElement,
-    image: ImageElement,
-    notepad: NotepadElement,
-    // cuaderno: CuadernoElement, // DESACTIVADO - causando problemas
-    todo: TodoListElement,
-    comment: CommentElement,
-    moodboard: MoodboardElement,
-    gallery: GalleryElement,
-    'yellow-notepad': YellowNotepadElement,
-    'weekly-planner': WeeklyPlannerElement,
-    'vertical-weekly-planner': VerticalWeeklyPlannerElement,
-    'photo-grid': PhotoGridElement,
-    'photo-grid-horizontal': PhotoGridHorizontalElement,
-    'photo-grid-adaptive': PhotoGridAdaptiveElement,
-    'photo-grid-free': PhotoGridFreeElement,
+  text: TextElement,
+  sticky: StickyNoteElement,
+  image: ImageElement,
+  notepad: NotepadElement,
+  // cuaderno: CuadernoElement, // DESACTIVADO - causando problemas
+  todo: TodoListElement,
+  comment: CommentElement,
+  moodboard: MoodboardElement,
+  gallery: GalleryElement,
+  'yellow-notepad': YellowNotepadElement,
+  'weekly-planner': WeeklyPlannerElement,
+  'vertical-weekly-planner': VerticalWeeklyPlannerElement,
+  'photo-grid': PhotoGridElement,
+  'photo-grid-horizontal': PhotoGridHorizontalElement,
+  'photo-grid-adaptive': PhotoGridAdaptiveElement,
+  'photo-grid-free': PhotoGridFreeElement,
 };
 
 
@@ -79,9 +79,59 @@ const BoardContent: React.FC<BoardContentProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isFormattingToolbarOpen, setIsFormattingToolbarOpen] = useState(false);
   const [activeTextEditorId, setActiveTextEditorId] = useState<string | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [resizeStartPos, setResizeStartPos] = useState<Point | null>(null);
+  const [originalSize, setOriginalSize] = useState<{ width: number; height: number } | null>(null);
+
+  // Función para manejar el redimensionamiento
+  const handleResize = useCallback((elementId: string, delta: { width: number; height: number }) => {
+    const element = elements.find(el => el.id === elementId);
+    if (!element) return;
+
+    const newWidth = Math.max(50, (originalSize?.width || element.width || 200) + delta.width);
+    const newHeight = Math.max(50, (originalSize?.height || element.height || 150) + delta.height);
+
+    onElementUpdate(elementId, {
+      width: newWidth,
+      height: newHeight,
+      properties: {
+        ...element.properties,
+        size: { width: newWidth, height: newHeight }
+      }
+    });
+  }, [elements, originalSize, onElementUpdate]);
+
+  // Handlers para mouse events durante redimensionamiento
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizeStartPos || selectedElementIds.length !== 1) return;
+
+      const deltaX = (e.clientX - resizeStartPos.x) / scale;
+      const deltaY = (e.clientY - resizeStartPos.y) / scale;
+
+      handleResize(selectedElementIds[0], { width: deltaX, height: deltaY });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      setResizeStartPos(null);
+      setOriginalSize(null);
+      console.log('✅ Redimensionamiento completado');
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, resizeStartPos, selectedElementIds, scale, handleResize]);
 
   const { scale, offset, panCanvas, zoomIn, zoomOut, resetZoomPan, panMode, setPanMode, clientToCanvas } = useZoomPan(canvasRef as React.RefObject<HTMLDivElement>);
-  
+
   const { clearSelection, addSelection, removeSelection, isSelected, updateSelectionBounds, selectionBounds } = useSelection(
     selectedElementIds,
     (id) => onSelectElement(id, false),
@@ -109,29 +159,29 @@ const BoardContent: React.FC<BoardContentProps> = ({
     addSelection,
     updateSelectionBounds,
   });
-  
+
   // Funciones intermediarias para el cambio de tamaño
   const onResize = (e: React.MouseEvent, type: string) => {
-      // Aquí necesitarías una lógica para identificar qué elemento se está redimensionando,
-      // probablemente basado en `selectionBounds` o `selectedElementIds`.
-      // Por simplicidad, asumiremos un solo elemento seleccionado.
-      const elementId = selectedElementIds[0];
-      if (!elementId) return;
+    // Aquí necesitarías una lógica para identificar qué elemento se está redimensionando,
+    // probablemente basado en `selectionBounds` o `selectedElementIds`.
+    // Por simplicidad, asumiremos un solo elemento seleccionado.
+    const elementId = selectedElementIds[0];
+    if (!elementId) return;
 
-      // La lógica para calcular el 'delta' dependerá de cómo se implemente el arrastre.
-      // Esto es una simplificación y podría necesitar ajustes.
-      const delta = { x: e.movementX / scale, y: e.movementY / scale, width: e.movementX / scale, height: e.movementY / scale };
-      handleResize(elementId, delta);
+    // La lógica para calcular el 'delta' dependerá de cómo se implemente el arrastre.
+    // Esto es una simplificación y podría necesitar ajustes.
+    const delta = { x: e.movementX / scale, y: e.movementY / scale, width: e.movementX / scale, height: e.movementY / scale };
+    handleResize(elementId, delta);
   };
-  
-  const onResizeStop = (e: React.MouseEvent, type: string) => {
-      const elementId = selectedElementIds[0];
-      if (!elementId) return;
 
-      // Similar a onResize, la lógica para `finalRect` necesita ser implementada.
-      // Esto es una simplificación.
-      const finalRect = { x: 0, y: 0, width: 0, height: 0 }; // Necesitarías calcular esto
-      handleResizeStop(elementId, finalRect);
+  const onResizeStop = (e: React.MouseEvent, type: string) => {
+    const elementId = selectedElementIds[0];
+    if (!elementId) return;
+
+    // Similar a onResize, la lógica para `finalRect` necesita ser implementada.
+    // Esto es una simplificación.
+    const finalRect = { x: 0, y: 0, width: 0, height: 0 }; // Necesitarías calcular esto
+    handleResizeStop(elementId, finalRect);
   };
 
 
@@ -162,7 +212,7 @@ const BoardContent: React.FC<BoardContentProps> = ({
       .map(e => e.zIndex!);
     return zIndexes.length > 0 ? Math.max(...zIndexes) + 1 : 2;
   }, [elements]);
-  
+
   const onDuplicateElement = useCallback((elementId: string) => {
     const elementToDuplicate = elements.find(el => el.id === elementId);
     if (elementToDuplicate) {
@@ -204,7 +254,7 @@ const BoardContent: React.FC<BoardContentProps> = ({
         addElement={onElementAdd as any}
         setActiveTextEditorId={setActiveTextEditorId}
         isEditing={activeTextEditorId === element.id}
-        onDoubleClick={(rect) => {}}
+        onDoubleClick={(rect) => { }}
         onLocateElement={(elementId: string) => { /* lógica para localizar elemento */ }}
         onEditComment={(element: WithId<CanvasElement>) => { /* lógica para editar comentario */ }}
         isListening={false}
@@ -270,9 +320,24 @@ const BoardContent: React.FC<BoardContentProps> = ({
                 <div className="absolute bottom-1 right-1 pointer-events-auto">
                   <button
                     className="w-3 h-3 bg-blue-500 rounded-sm flex items-center justify-center cursor-se-resize border border-white shadow-sm opacity-70 hover:opacity-100 transition-opacity"
-                    onClick={(e) => {
+                    onMouseDown={(e) => {
                       e.stopPropagation();
-                      console.log('Botón de redimensionamiento clickeado');
+                      e.preventDefault();
+
+                      // Iniciar modo de redimensionamiento
+                      setIsResizing(true);
+
+                      const elementId = selectedElementIds[0];
+                      const element = elements.find(el => el.id === elementId);
+                      if (element) {
+                        setResizeStartPos({ x: e.clientX, y: e.clientY });
+                        setOriginalSize({
+                          width: element.width || 200,
+                          height: element.height || 150
+                        });
+                      }
+
+                      console.log('🔄 Iniciando redimensionamiento del elemento:', elementId);
                     }}
                     title="Redimensionar elemento"
                   >
