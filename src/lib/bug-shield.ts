@@ -7,7 +7,7 @@ import type { CanvasElement, ElementType, WithId } from './types';
 
 // Tipos válidos de elementos
 const VALID_ELEMENT_TYPES: ElementType[] = [
-  'image', 'text', 'sticky', 'notepad', 'cuaderno',
+  'image', 'text', 'sticky', 'notepad', // 'cuaderno', // DESACTIVADO COMPLETAMENTE
   'comment', 'comment-small', 'comment-r',
   'todo', 'moodboard', 'gallery', 'yellow-notepad',
   'stopwatch', 'countdown', 'highlight-text',

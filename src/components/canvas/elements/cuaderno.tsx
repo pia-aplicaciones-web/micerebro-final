@@ -1,3 +1,5 @@
+// DESACTIVADO COMPLETAMENTE - Causa Minified React error #130 y otros problemas
+/*
 'use client';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +32,7 @@ import './notepad-element.css';
 
 
 export default function CuadernoElement(props: CommonElementProps) {
+*/
     const {
         id,
         content,
@@ -1053,3 +1056,4 @@ export default function CuadernoElement(props: CommonElementProps) {
         </Card>
     );
 }
+// */
