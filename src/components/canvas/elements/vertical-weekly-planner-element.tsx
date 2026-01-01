@@ -194,16 +194,6 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeek, i));
   const weekStart = currentWeek;
 
-  // Título editable
-  const menuTitle = plannerContent.title || 'MENÚ SEMANAL';
-
-  const handleTitleChange = (newTitle: string) => {
-    const newContent = {
-      ...plannerContent,
-      title: newTitle
-    };
-    onUpdate(id, { content: newContent });
-  };
 
   return (
     <div
@@ -295,21 +285,8 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       {/* Contenido principal - FILAS QUE LLENAN TODO EL ESPACIO CON CASILLAS IGUALES */}
       <div className="flex-1 p-3">
         <div className="flex flex-col gap-4 h-full">
-          {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
-          <div className="flex flex-col gap-3 flex-1">
-            {/* Título arriba - EDITABLE */}
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-dashed border-[#e0dcc5]">
-              <input
-                type="text"
-                value={menuTitle}
-                onChange={(e) => handleTitleChange(e.target.value)}
-                className="w-full text-center text-xl font-bold text-[#6b7280] uppercase tracking-wide bg-transparent border-none outline-none placeholder:text-[#6b7280] placeholder:opacity-60"
-                placeholder="MENÚ SEMANAL"
-                spellCheck={false}
-              />
-            </div>
-            {/* Lunes, Martes, Miércoles abajo - tarjetas blancas editables */}
-            <div className="grid grid-cols-3 gap-3">
+          {/* FILA 1: Lunes, Martes, Miércoles - MISMA ALTURA QUE FILA 2 */}
+          <div className="grid grid-cols-3 gap-3 flex-1">
               <DayCard
                 label={DAY_META[0].label}
                 color={DAY_META[0].color}
