@@ -4,6 +4,7 @@ import {
   type Auth,
   GoogleAuthProvider,
   signInWithRedirect,
+  signInWithPopup,
   getRedirectResult,
   signOut as firebaseSignOut,
   signInAnonymously,
@@ -13,10 +14,32 @@ import {
 } from 'firebase/auth';
 
 /**
- * Initiates the Google sign-in process using redirect (sin popup).
+ * Detecta si el dispositivo es móvil o si hay problemas con sessionStorage
+ */
+function shouldUsePopup(): boolean {
+  // Verificar si estamos en un dispositivo móvil
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // Verificar si sessionStorage está disponible
+  let sessionStorageAvailable = false;
+  try {
+    const testKey = '__firebase_auth_test__';
+    sessionStorage.setItem(testKey, 'test');
+    sessionStorage.removeItem(testKey);
+    sessionStorageAvailable = true;
+  } catch (e) {
+    sessionStorageAvailable = false;
+  }
+
+  // Usar popup si es móvil o si sessionStorage no está disponible
+  return isMobile || !sessionStorageAvailable;
+}
+
+/**
+ * Initiates the Google sign-in process using redirect (desktop) or popup (mobile).
  * @param auth The Firebase Auth instance.
  */
-export async function signInWithGoogle(auth: Auth): Promise<void> {
+export async function signInWithGoogle(auth: Auth): Promise<UserCredential> {
   if (typeof window === 'undefined') {
     throw new Error('signInWithGoogle solo puede ejecutarse en el cliente');
   }
@@ -25,25 +48,61 @@ export async function signInWithGoogle(auth: Auth): Promise<void> {
   provider.setCustomParameters({
     prompt: 'select_account',
   });
-  
-  console.log('🔄 Redirigiendo a Google para login...');
-  await signInWithRedirect(auth, provider);
+
+  const usePopup = shouldUsePopup();
+
+  if (usePopup) {
+    console.log('🔄 Usando popup para login con Google (móvil/detectado problema de sessionStorage)...');
+    try {
+      const result = await signInWithPopup(auth, provider);
+      console.log('✅ Login con Google exitoso:', result.user.email);
+      return result;
+    } catch (error: any) {
+      console.error('❌ Error en popup de Google:', error);
+
+      // Si el popup es bloqueado, intentar con redirect como fallback
+      if (error.code === 'auth/popup-blocked') {
+        console.log('🔄 Popup bloqueado, intentando con redirect...');
+        await signInWithRedirect(auth, provider);
+        // Esta línea no se ejecutará porque signInWithRedirect redirige
+        throw new Error('Redirigiendo a Google...');
+      }
+
+      throw error;
+    }
+  } else {
+    console.log('🔄 Redirigiendo a Google para login (desktop)...');
+    await signInWithRedirect(auth, provider);
+    // Esta función ya no retorna un UserCredential porque signInWithRedirect redirige
+    throw new Error('Redirigiendo a Google...');
+  }
 }
 
 /**
- * Gets the result after Google redirect.
+ * Maneja el resultado de Google sign-in (tanto popup como redirect).
  * @param auth The Firebase Auth instance.
  * @returns A promise that resolves with the user credential or null.
  */
-export async function getGoogleRedirectResult(auth: Auth): Promise<UserCredential | null> {
+export async function handleGoogleSignInResult(auth: Auth): Promise<UserCredential | null> {
   try {
-    const result = await getRedirectResult(auth);
-    if (result) {
-      console.log('✅ Login con Google exitoso:', result.user.email);
+    // Primero intentar obtener resultado de redirect (por si se usó redirect)
+    const redirectResult = await getRedirectResult(auth);
+    if (redirectResult) {
+      console.log('✅ Login con Google exitoso (redirect):', redirectResult.user.email);
+      return redirectResult;
     }
-    return result;
+
+    // Si no hay resultado de redirect, significa que no se usó redirect o ya se procesó
+    return null;
   } catch (error: any) {
     console.error('❌ Error getting redirect result:', error);
+
+    // Si hay un error relacionado con sessionStorage, sugerir usar popup
+    if (error.message?.includes('sessionStorage') || error.message?.includes('initial state')) {
+      console.warn('⚠️ Problema con sessionStorage detectado. Se recomienda usar popup para móviles.');
+      throw new Error('Problema con el almacenamiento del navegador. Intenta desde una pestaña de incógnito o usa otro navegador.');
+    }
+
     throw error;
   }
 }

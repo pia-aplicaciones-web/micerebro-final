@@ -6,6 +6,8 @@ import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { signInWithGoogle, signInWithEmail, createUserWithEmail } from '@/lib/auth';
+import { handleGoogleSignInResult } from '@/firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirebaseFirestore } from '@/lib/firebase';
 
 export default function HomePage() {
@@ -17,6 +19,29 @@ export default function HomePage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const hasProcessedRef = useRef(false);
+
+  // Manejar resultado de redirect de Google al cargar la página
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      if (hasProcessedRef.current) return;
+
+      try {
+        const auth = getAuth();
+        const result = await handleGoogleSignInResult(auth);
+
+        if (result?.user) {
+          hasProcessedRef.current = true;
+          console.log('✅ Procesando resultado de redirect de Google:', result.user.email);
+          await redirectToBoard(result.user);
+        }
+      } catch (error) {
+        console.error('❌ Error procesando redirect de Google:', error);
+        // No mostrar toast para errores de redirect ya que pueden ser normales
+      }
+    };
+
+    handleRedirectResult();
+  }, []);
 
   // Función para redirigir al tablero
   const redirectToBoard = useCallback(async (user) => {
@@ -132,6 +157,14 @@ export default function HomePage() {
       }
     } catch (error) {
       console.error('❌ Error Google:', error);
+
+      // Si el error indica que está redirigiendo, es normal
+      if (error.message?.includes('Redirigiendo a Google')) {
+        console.log('🔄 Redirigiendo a Google (comportamiento normal)...');
+        // No mostrar error al usuario, es parte del flujo normal
+        return;
+      }
+
       toast({
         variant: 'destructive',
         title: 'Error',
