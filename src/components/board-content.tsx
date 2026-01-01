@@ -7,6 +7,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Rnd } from 'react-rnd';
+import { ChevronDown } from 'lucide-react';
 
 import type { WithId, CanvasElement, Point, CommonElementProps } from '@/lib/types';
 
@@ -316,48 +317,47 @@ const BoardContent: React.FC<BoardContentProps> = ({
               }}
             >
               {/* Botón de redimensionamiento en esquina inferior derecha */}
-              {(() => {
-                console.log('🎛️ Estado de selección:', {
-                  selectedElementIds,
-                  length: selectedElementIds.length,
-                  selectionBounds: !!selectionBounds,
-                  mostrarBoton: selectedElementIds.length === 1
-                });
-                return selectedElementIds.length === 1;
+              {selectedElementIds.length === 1 && selectionBounds && (() => {
+                console.log('🔵 BOTÓN DE REDIMENSIONAMIENTO ACTIVO para elemento:', selectedElementIds[0]);
+                return true;
               })() && (
-                <div className="absolute bottom-1 right-1 pointer-events-auto">
-                  {/* Indicador visual del botón de redimensionamiento */}
-                  <div className="relative">
-                    <button
-                    className="w-4 h-4 bg-blue-500 rounded-sm flex items-center justify-center cursor-se-resize border-2 border-white shadow-md opacity-90 hover:opacity-100 transition-opacity z-50"
-                    onMouseDown={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
+                  <div className="absolute bottom-1 right-1 pointer-events-auto">
+                    {/* Indicador visual del botón de redimensionamiento */}
+                    <div className="relative group">
+                      {/* Indicador adicional para hacer el botón más visible */}
+                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                        Redimensionar
+                      </div>
+                      <button
+                        className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm hover:bg-gray-200 transition-colors z-50"
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
 
-                      // Iniciar modo de redimensionamiento
-                      setIsResizing(true);
+                          // Iniciar modo de redimensionamiento
+                          setIsResizing(true);
 
-                      const elementId = selectedElementIds[0];
-                      const element = elements.find(el => el.id === elementId);
-                      if (element) {
-                        setResizeStartPos({ x: e.clientX, y: e.clientY });
-                        setOriginalSize({
-                          width: element.width || 200,
-                          height: element.height || 150
-                        });
-                      }
+                          const elementId = selectedElementIds[0];
+                          const element = elements.find(el => el.id === elementId);
+                          if (element) {
+                            setResizeStartPos({ x: e.clientX, y: e.clientY });
+                            setOriginalSize({
+                              width: element.width || 200,
+                              height: element.height || 150
+                            });
+                          }
 
-                      console.log('🔄 Iniciando redimensionamiento del elemento:', elementId);
-                    }}
-                    title="Redimensionar elemento (arrastrar para cambiar tamaño)"
-                    onMouseEnter={() => console.log('🎯 Cursor sobre botón de redimensionamiento')}
-                    onMouseLeave={() => console.log('👋 Cursor salió del botón de redimensionamiento')}
-                  >
-                    <div className="w-1.5 h-1.5 border-r border-b border-white"></div>
-                  </button>
-                </div>
+                          console.log('🔄 Iniciando redimensionamiento del elemento:', elementId);
+                        }}
+                        title="Redimensionar elemento (arrastrar para cambiar tamaño)"
+                        onMouseEnter={() => console.log('🎯 Cursor sobre botón de redimensionamiento')}
+                        onMouseLeave={() => console.log('👋 Cursor salió del botón de redimensionamiento')}
+                      >
+                        <ChevronDown className="w-3 h-3 text-gray-600" />
+                      </button>
+                    </div>
               )}
-            </motion.div>
+                  </motion.div>
           </AnimatePresence>
         )}
       </div>
