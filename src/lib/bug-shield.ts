@@ -22,7 +22,7 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'sticky': { width: 200, height: 200 },
   'text': { width: 300, height: 100 },
   'notepad': { width: 400, height: 500 },
-  'cuaderno': { width: 794, height: 1123 }, // A3
+  // 'cuaderno': { width: 794, height: 1123 }, // A3 - DESACTIVADO
   'todo': { width: 280, height: 350 },
   'image': { width: 300, height: 200 },
   'moodboard': { width: 600, height: 400 },

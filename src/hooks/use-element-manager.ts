@@ -153,23 +153,23 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         }; break;
-      case 'cuaderno':
-        // Cuaderno A3 - tamaño carta A4 (aproximadamente A3)
-        const cuadernoSize = { width: 794, height: 1123 };
-        const cuadernoPos = getCenteredPosition(cuadernoSize.width, cuadernoSize.height);
-        newElementData = {
-          type,
-          x: cuadernoPos.x,
-          y: cuadernoPos.y,
-          width: cuadernoSize.width,
-          height: cuadernoSize.height,
-          userId,
-          properties: { ...baseProperties, position: cuadernoPos, size: cuadernoSize, zIndex: -1 },
-          content: { title: 'Cuaderno A3', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
-          zIndex: -1,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        }; break;
+      // case 'cuaderno': // DESACTIVADO - causando problemas
+      //   // Cuaderno A3 - tamaño carta A4 (aproximadamente A3)
+      //   const cuadernoSize = { width: 794, height: 1123 };
+      //   const cuadernoPos = getCenteredPosition(cuadernoSize.width, cuadernoSize.height);
+      //   newElementData = {
+      //     type,
+      //     x: cuadernoPos.x,
+      //     y: cuadernoPos.y,
+      //     width: cuadernoSize.width,
+      //     height: cuadernoSize.height,
+      //     userId,
+      //     properties: { ...baseProperties, position: cuadernoPos, size: cuadernoSize, zIndex: -1 },
+      //     content: { title: 'Cuaderno A3', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
+      //     zIndex: -1,
+      //     createdAt: serverTimestamp(),
+      //     updatedAt: serverTimestamp()
+      //   }; break;
       case 'sticky':
         const stickyColor = props?.color || 'yellow';
         const stickySize = { width: 224, height: 224 };
