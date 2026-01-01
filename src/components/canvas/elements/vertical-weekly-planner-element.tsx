@@ -21,6 +21,8 @@ import {
   FileImage,
   Camera,
   MoreVertical,
+  Maximize2,
+  CornerDownRight,
 } from 'lucide-react';
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -48,6 +50,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     return saved ? new Date(saved) : startOfWeek(new Date(), { weekStartsOn: 1 });
   });
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isResizing, setIsResizing] = useState(false);
 
   // Función para manejar cambios en días
   const handleDayChange = (dateKey: string, value: string) => {
@@ -177,6 +180,42 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     }
   }, [id, currentWeek]);
 
+  // Funciones de redimensionamiento manual
+  const handleResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsResizing(true);
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = safeProperties?.size?.width || 794;
+    const startHeight = safeProperties?.size?.height || 1123;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      const newWidth = Math.max(400, startWidth + deltaX); // Mínimo 400px
+      const newHeight = Math.max(300, startHeight + deltaY); // Mínimo 300px
+
+      onUpdate(id, {
+        properties: {
+          ...safeProperties,
+          size: { width: newWidth, height: newHeight },
+        },
+      });
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [safeProperties, onUpdate, id]);
+
   // Navegar semanas
   const handlePrevWeek = () => {
     const newWeek = subWeeks(currentWeek, 1);
@@ -189,6 +228,21 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     setCurrentWeek(newWeek);
     onUpdate(id, { properties: { ...safeProperties, weekStart: newWeek.toISOString() } });
   };
+
+  const handleRestoreOriginalSize = useCallback(() => {
+    if (isPreview) return;
+
+    // Tamaño original del menú semanal: carta A4
+    const originalSize = { width: 794, height: 1123 };
+
+    // Restaurar tamaño original
+    onUpdate(id, {
+      properties: {
+        ...properties,
+        size: originalSize,
+      },
+    });
+  }, [isPreview, properties, onUpdate, id]);
 
   const plannerContent = typeof content === 'object' && content !== null ? content : { days: {} };
   const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(currentWeek, i));
@@ -246,22 +300,11 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         <div className="flex items-center gap-2 text-[#6b7280] relative">
           <button
             className="p-1 hover:bg-white/60 rounded"
-            title="Seleccionar fecha"
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowDatePicker(!showDatePicker);
-              setTimeout(() => dateInputRef.current?.showPicker(), 100);
-            }}
+            title="Restaurar tamaño original"
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
           >
-            <CalendarRange className="w-4 h-4" />
+            <Maximize2 className="w-4 h-4" />
           </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            className="absolute opacity-0 w-0 h-0"
-            onChange={handleDateChange}
-            value={format(currentWeek, 'yyyy-MM-dd')}
-          />
           <DropdownMenu modal={false}>
             <DropdownMenuTrigger asChild>
               <button className="p-1 hover:bg-white/60 rounded" title="Más opciones">
@@ -393,6 +436,18 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Botón de redimensionamiento manual - esquina inferior derecha */}
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+        <button
+          className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-sm flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm"
+          onMouseDown={handleResizeStart}
+          title="Redimensionar manualmente"
+          style={{ opacity: isResizing ? 1 : undefined }}
+        >
+          <CornerDownRight className="w-3 h-3 text-gray-600" />
+        </button>
       </div>
 
     </div>
