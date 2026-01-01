@@ -1,10 +1,16 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   GripVertical,
   CalendarRange,
@@ -13,10 +19,13 @@ import {
   ChevronLeft,
   ChevronRight,
   FileImage,
+  Camera,
+  MoreVertical,
 } from 'lucide-react';
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 const DAY_META = [
   { key: 'mon', label: 'LUNES', color: '#16b5a3' },
@@ -38,6 +47,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     const saved = safeProperties.weekStart;
     return saved ? new Date(saved) : startOfWeek(new Date(), { weekStartsOn: 1 });
   });
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // Función para manejar cambios en días
   const handleDayChange = (dateKey: string, value: string) => {
@@ -82,6 +92,90 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       console.error('Error exporting PNG:', error);
     }
   };
+
+  // Nueva función: Exportar captura usando html-to-image (similar al cuaderno)
+  const handleExportCapture = useCallback(async () => {
+    try {
+      // Buscar el elemento del menú semanal
+      const plannerElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!plannerElement) {
+        console.error('No se pudo encontrar el elemento del menú semanal');
+        return;
+      }
+
+      // Mostrar indicador de carga
+      console.log('Capturando menú semanal...');
+
+      setIsCapturing(true);
+
+      // Esperar a que React renderice completamente
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      // Verificar que las fuentes externas estén completamente cargadas
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      // Esperar fuentes con mejor timeout
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500); // Timeout más corto
+        });
+      }
+
+      // Esperar estabilidad completa del DOM
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Configuración optimizada para captura perfecta (sin errores CORS)
+      const dataUrl = await toPng(plannerElement, {
+        cacheBust: true,
+        pixelRatio: 3, // 3x para buena calidad sin ser excesivo
+        quality: 0.95, // Alta calidad pero optimizada
+        backgroundColor: '#FFFFF0', // Fondo marfil del menú semanal
+        includeQueryParams: false,
+        skipFonts: true, // Evitar errores CORS con fuentes externas
+        width: plannerElement.offsetWidth, // Ancho exacto del elemento
+        height: plannerElement.offsetHeight, // Alto exacto del elemento
+        // Filtrar hojas de estilo externas para evitar errores CORS
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false; // Excluir Google Fonts CSS
+          }
+          return true;
+        },
+      });
+
+      // DESACTIVAR MODO CAPTURA
+      setIsCapturing(false);
+
+      // Crear link de descarga con nombre específico
+      const link = document.createElement('a');
+      link.download = `menu-semanal_${format(currentWeek, 'yyyy-MM-dd')}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura del menú semanal completada');
+    } catch (error: any) {
+      // Asegurar desactivar modo captura en error
+      setIsCapturing(false);
+
+      console.error('Error en captura del menú semanal:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, currentWeek]);
 
   // Navegar semanas
   const handlePrevWeek = () => {
@@ -167,26 +261,34 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
             onChange={handleDateChange}
             value={format(currentWeek, 'yyyy-MM-dd')}
           />
-          <button
-            className="p-1 hover:bg-white/60 rounded"
-            title="Exportar PNG"
-            onClick={(e) => { e.stopPropagation(); handleExportPng(); }}
-          >
-            <FileImage className="w-4 h-4" />
-          </button>
-          <button className="p-1 hover:bg-white/60 rounded" title="Duplicar">
-            <Copy className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1 hover:bg-white/60 rounded text-red-500"
-            title="Eliminar"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteElement(id);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-white/60 rounded" title="Más opciones">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                <Camera className="mr-2 h-4 w-4" />
+                <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportPng(); }}>
+                <FileImage className="mr-2 h-4 w-4" />
+                <span>Exportar PNG (alta resolución)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Duplicar</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteElement(id); }}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Eliminar</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
