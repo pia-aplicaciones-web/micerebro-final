@@ -95,8 +95,7 @@ export default function StopwatchElement({ id, onUpdate, onSelectElement, isSele
   return (
     <Card
       className={cn(
-        'w-full h-full p-4 flex flex-col gap-3 shadow-lg border relative',
-        isSelected && 'ring-2 ring-primary ring-offset-2'
+        'w-full h-full p-4 flex flex-col gap-3 shadow-lg border relative'
       )}
       onClick={(e) => {
         e.stopPropagation();

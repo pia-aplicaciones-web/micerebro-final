@@ -84,8 +84,7 @@ export default function CountdownElement({ id, onUpdate, onSelectElement, isSele
   return (
     <Card
       className={cn(
-        'w-full h-full p-3 flex flex-col gap-2 shadow-lg border relative',
-        isSelected && 'ring-2 ring-primary ring-offset-2'
+        'w-full h-full p-3 flex flex-col gap-2 shadow-lg border relative'
       )}
       onClick={(e) => {
         e.stopPropagation();

@@ -264,8 +264,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     <div
       data-element-id={id}
         className={cn(
-          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-black shadow-md',
-          isSelected && 'ring-2 ring-primary/40'
+          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-black shadow-md'
         )}
       style={{
         backgroundColor: '#FFFFF0', // Blanco marfil
@@ -439,7 +438,10 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
       </div>
 
       {/* Botón de redimensionamiento manual - esquina inferior derecha */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
+      <div className={cn(
+        "absolute bottom-2 right-2 transition-opacity duration-200 z-10",
+        isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+      )}>
         <button
           className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-sm flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm"
           onMouseDown={handleResizeStart}

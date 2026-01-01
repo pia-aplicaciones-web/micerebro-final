@@ -96,8 +96,7 @@ export default function WeeklyMenuElement(props: CommonElementProps) {
     <div
       data-element-id={id}
       className={cn(
-        'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-teal-300 shadow-md',
-        isSelected && 'ring-2 ring-primary/40'
+        'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-teal-300 shadow-md'
       )}
       style={{
         backgroundColor: '#008080', // Teal
