@@ -226,12 +226,12 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     <div
       data-element-id={id}
         className={cn(
-          'w-full h-full flex flex-col overflow-hidden rounded-2xl border border-black shadow-md'
+          'flex flex-col overflow-hidden rounded-2xl border border-black shadow-md'
         )}
       style={{
         backgroundColor: '#FFFFF0', // Blanco marfil
-        minWidth: 794, // Tamaño carta A4
-        minHeight: 1123, // Tamaño carta A4
+        width: 794, // Tamaño carta A4 fijo
+        height: 1123, // Tamaño carta A4 fijo
       }}
     >
       {/* Header */}
