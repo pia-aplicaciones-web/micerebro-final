@@ -85,34 +85,40 @@ const BoardContent: React.FC<BoardContentProps> = ({
   const [originalSize, setOriginalSize] = useState<{ width: number; height: number } | null>(null);
 
   // Función para manejar el redimensionamiento
-  const handleResize = useCallback((elementId: string, delta: { width: number; height: number }) => {
+  const handleResize = useCallback((elementId: string, newSize: { width: number; height: number }) => {
     const element = elements.find(el => el.id === elementId);
     if (!element) return;
 
-    const newWidth = Math.max(50, (originalSize?.width || element.width || 200) + delta.width);
-    const newHeight = Math.max(50, (originalSize?.height || element.height || 150) + delta.height);
+    // Asegurar dimensiones mínimas
+    const finalWidth = Math.max(50, newSize.width);
+    const finalHeight = Math.max(50, newSize.height);
 
     onElementUpdate(elementId, {
-      width: newWidth,
-      height: newHeight,
+      width: finalWidth,
+      height: finalHeight,
       properties: {
         ...element.properties,
-        size: { width: newWidth, height: newHeight }
+        size: { width: finalWidth, height: finalHeight }
       }
     });
-  }, [elements, originalSize, onElementUpdate]);
+  }, [elements, onElementUpdate]);
 
   // Handlers para mouse events durante redimensionamiento
   useEffect(() => {
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!resizeStartPos || selectedElementIds.length !== 1) return;
+      if (!resizeStartPos || !originalSize || selectedElementIds.length !== 1) return;
 
+      // Calcular nuevas dimensiones basadas en el movimiento del mouse
       const deltaX = (e.clientX - resizeStartPos.x) / scale;
       const deltaY = (e.clientY - resizeStartPos.y) / scale;
 
-      handleResize(selectedElementIds[0], { width: deltaX, height: deltaY });
+      const newWidth = originalSize.width + deltaX;
+      const newHeight = originalSize.height + deltaY;
+
+      handleResize(selectedElementIds[0], { width: newWidth, height: newHeight });
+      console.log('📏 Redimensionando:', { newWidth, newHeight, deltaX, deltaY });
     };
 
     const handleMouseUp = () => {
@@ -325,8 +331,8 @@ const BoardContent: React.FC<BoardContentProps> = ({
                     {/* Indicador visual del botón de redimensionamiento */}
                     <div className="relative group">
                       {/* Indicador adicional para hacer el botón más visible */}
-                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                        Redimensionar
+                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                        Click y arrastra para redimensionar
                       </div>
                       <button
                         className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm hover:bg-gray-200 transition-colors z-50"
@@ -347,7 +353,10 @@ const BoardContent: React.FC<BoardContentProps> = ({
                             });
                           }
 
-                          console.log('🔄 Iniciando redimensionamiento del elemento:', elementId);
+                          console.log('🔄 Iniciando redimensionamiento del elemento:', elementId, {
+                            originalSize,
+                            element: { width: element.width, height: element.height }
+                          });
                         }}
                         title="Redimensionar elemento (arrastrar para cambiar tamaño)"
                         onMouseEnter={() => console.log('🎯 Cursor sobre botón de redimensionamiento')}
