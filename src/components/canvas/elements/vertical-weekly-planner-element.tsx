@@ -222,6 +222,14 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
   };
 
 
+  // Debug: Log container dimensions
+  console.log('📏 CONTENEDOR - Menú semanal:', {
+    id: id,
+    width: 794,
+    height: 1123,
+    elementType: 'vertical-weekly-planner'
+  });
+
   return (
     <div
       data-element-id={id}
