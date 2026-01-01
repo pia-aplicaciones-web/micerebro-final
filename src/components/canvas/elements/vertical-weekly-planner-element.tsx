@@ -359,7 +359,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 dayNumber={format(weekDays[0], 'd', { locale: es })}
                 value={plannerContent.days[format(weekDays[0], 'yyyy-MM-dd')] || ''}
                 onChange={(v) => handleDayChange(format(weekDays[0], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
+                onFocus={() => !isSelected && onSelectElement(id, false)}
                 disabled={isPreview}
                 className="h-full"
               />
@@ -369,7 +369,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 dayNumber={format(weekDays[1], 'd', { locale: es })}
                 value={plannerContent.days[format(weekDays[1], 'yyyy-MM-dd')] || ''}
                 onChange={(v) => handleDayChange(format(weekDays[1], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
+                onFocus={() => !isSelected && onSelectElement(id, false)}
                 disabled={isPreview}
                 className="h-full"
               />
@@ -379,7 +379,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 dayNumber={format(weekDays[2], 'd', { locale: es })}
                 value={plannerContent.days[format(weekDays[2], 'yyyy-MM-dd')] || ''}
                 onChange={(v) => handleDayChange(format(weekDays[2], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
+                onFocus={() => !isSelected && onSelectElement(id, false)}
                 disabled={isPreview}
                 className="h-full"
               />
@@ -418,7 +418,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 dayNumber={format(weekDays[5], 'd', { locale: es })}
                 value={plannerContent.days[format(weekDays[5], 'yyyy-MM-dd')] || ''}
                 onChange={(v) => handleDayChange(format(weekDays[5], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
+                onFocus={() => !isSelected && onSelectElement(id, false)}
                 disabled={isPreview}
                 className="h-full"
               />
@@ -428,7 +428,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
                 dayNumber={format(weekDays[6], 'd', { locale: es })}
                 value={plannerContent.days[format(weekDays[6], 'yyyy-MM-dd')] || ''}
                 onChange={(v) => handleDayChange(format(weekDays[6], 'yyyy-MM-dd'), v)}
-                onFocus={() => onSelectElement(id, false)}
+                onFocus={() => !isSelected && onSelectElement(id, false)}
                 disabled={isPreview}
                 className="h-full"
               />

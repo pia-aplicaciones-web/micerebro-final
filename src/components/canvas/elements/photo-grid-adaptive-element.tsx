@@ -252,7 +252,7 @@ export default function PhotoGridAdaptiveElement(props: CommonElementProps) {
               const newTitle = e.target.value;
               onUpdate(id, { content: { ...gridContent, title: newTitle } });
             }}
-            onFocus={() => onSelectElement(id, false)}
+            onFocus={() => !isSelected && onSelectElement(id, false)}
             className="flex-1 min-w-0 bg-transparent outline-none cursor-text font-headline text-sm font-semibold p-1"
             onClick={(e) => e.stopPropagation()}
             placeholder=""

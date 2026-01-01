@@ -192,7 +192,7 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
               dayNumber={format(day, 'd', { locale: es })}
               value={dayContent}
               onChange={(v) => handleDayChange(dateKey, v)}
-              onFocus={() => onSelectElement(id, false)}
+              onFocus={() => !isSelected && onSelectElement(id, false)}
               disabled={isPreview}
             />
           );
@@ -211,7 +211,7 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
               dayNumber={format(day, 'd', { locale: es })}
               value={dayContent}
               onChange={(v) => handleDayChange(dateKey, v)}
-              onFocus={() => onSelectElement(id, false)}
+              onFocus={() => !isSelected && onSelectElement(id, false)}
               disabled={isPreview}
             />
           );
@@ -245,7 +245,7 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
               value={noteContent}
               onChange={(e) => handleDayChange(notesKey, e.target.value)}
               placeholder="Notas..."
-              onFocus={() => onSelectElement(id, false)}
+              onFocus={() => !isSelected && onSelectElement(id, false)}
               disabled={isPreview}
             />
           </div>

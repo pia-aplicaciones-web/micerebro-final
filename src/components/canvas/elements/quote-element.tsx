@@ -131,7 +131,7 @@ export default function QuoteElement(props: CommonElementProps) {
           className="flex-1 text-lg font-medium outline-none min-h-[60px]"
           onBlur={handleBlur}
           onInput={handleChange}
-          onFocus={() => onSelectElement(id, false)}
+          onFocus={() => !isSelected && onSelectElement(id, false)}
           dangerouslySetInnerHTML={{ __html: textContent || 'Cita destacada...' }}
         />
       </div>
