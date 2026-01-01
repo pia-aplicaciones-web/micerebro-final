@@ -35,7 +35,7 @@ import { useZoomPan } from '@/lib/hooks/useZoomPan';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
 
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
-import ResizeHandle from '@/components/canvas/resize-handle'; 
+// import ResizeHandle from '@/components/canvas/resize-handle'; // REMOVIDO - ya no se usa 
 
 interface BoardContentProps {
   boardId: string;
