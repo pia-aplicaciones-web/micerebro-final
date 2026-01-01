@@ -21,14 +21,22 @@ import {
   ArrowLeft,
   ArrowRight,
   Plus,
+  Camera,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { format } from 'date-fns';
 import {
   DropdownMenu,
@@ -58,6 +66,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportPdfDialogOpen, setIsExportPdfDialogOpen] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // Parsear contenido
   const typedContent = (content || {}) as YellowNotepadContent;
@@ -227,6 +236,77 @@ export default function YellowNotepadElement(props: CommonElementProps) {
       setIsExportingPng(false);
     }
   }, [toast, id]);
+
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const notepadElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!notepadElement) {
+        console.error('No se pudo encontrar el elemento del cuaderno amarillo');
+        return;
+      }
+
+      console.log('Capturando cuaderno amarillo...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(notepadElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: '#FFFFE0',
+        includeQueryParams: false,
+        skipFonts: true,
+        width: notepadElement.offsetWidth,
+        height: notepadElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      const title = typedContent.title || 'cuaderno-amarillo';
+      link.download = `${title}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura del cuaderno amarillo completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura del cuaderno amarillo:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, typedContent.title]);
 
   // Copiar texto como .txt ordenado
   const handleCopyAsTxt = useCallback(async () => {
@@ -537,6 +617,10 @@ export default function YellowNotepadElement(props: CommonElementProps) {
               <DropdownMenuItem onClick={handleCopyAsTxt}>
                 <FileText className="mr-2 h-4 w-4" />
                 <span>Copiar texto como .txt ordenado</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                <Camera className="mr-2 h-4 w-4" />
+                <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleExportToPng(e)}} disabled={isExportingPng}>
                 <FileImage className="mr-2 h-4 w-4" />

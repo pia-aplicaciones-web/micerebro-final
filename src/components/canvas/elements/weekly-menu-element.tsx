@@ -1,10 +1,16 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   GripVertical,
   CalendarRange,
@@ -13,10 +19,13 @@ import {
   FileImage,
   ChevronLeft,
   ChevronRight,
+  Camera,
+  MoreVertical,
 } from 'lucide-react';
 import { startOfWeek, addDays, addWeeks, subWeeks, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 // Columnas para Menú Semanal de comidas
 const MEAL_META = [
@@ -33,6 +42,7 @@ export default function WeeklyMenuElement(props: CommonElementProps) {
   
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(() => {
     const saved = safeProperties.weekStart;
     return saved ? new Date(saved) : startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -92,6 +102,76 @@ export default function WeeklyMenuElement(props: CommonElementProps) {
     }
   };
 
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const menuElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!menuElement) {
+        console.error('No se pudo encontrar el elemento del menú semanal');
+        return;
+      }
+
+      console.log('Capturando menú semanal...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(menuElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: '#ffffff',
+        includeQueryParams: false,
+        skipFonts: true,
+        width: menuElement.offsetWidth,
+        height: menuElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      link.download = `menu-semanal_${format(currentWeek, 'yyyy-MM-dd')}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura del menú semanal completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura del menú semanal:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, currentWeek]);
+
   return (
     <div
       data-element-id={id}
@@ -147,22 +227,34 @@ export default function WeeklyMenuElement(props: CommonElementProps) {
             onChange={handleDateChange}
             value={format(currentWeek, 'yyyy-MM-dd')}
           />
-          <button className="p-1 hover:bg-white/20 rounded" title="Exportar PNG" onClick={(e) => { e.stopPropagation(); handleExportPng(); }}>
-            <FileImage className="w-4 h-4" />
-          </button>
-          <button className="p-1 hover:bg-white/20 rounded" title="Duplicar">
-            <Copy className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1 hover:bg-white/20 rounded text-red-300"
-            title="Eliminar"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteElement(id);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-white/20 rounded" title="Más opciones">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                <Camera className="mr-2 h-4 w-4" />
+                <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportPng(); }}>
+                <FileImage className="mr-2 h-4 w-4" />
+                <span>Exportar PNG (alta resolución)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Duplicar</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteElement(id); }}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Eliminar</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

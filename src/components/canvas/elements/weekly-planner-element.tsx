@@ -6,6 +6,12 @@ import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   GripVertical,
   CalendarRange,
   Copy,
@@ -15,10 +21,12 @@ import {
   ChevronRight,
   FileImage,
   Camera,
+  MoreVertical,
 } from 'lucide-react';
 import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { toPng } from 'html-to-image';
 
 const DAY_META = [
@@ -38,6 +46,7 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const [showDatePicker, setShowDatePicker] = useState(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(() => {
     const saved = safeProperties.weekStart;
     return saved ? new Date(saved) : startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -86,6 +95,76 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
       console.error('Error exporting:', error);
     }
   };
+
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const plannerElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!plannerElement) {
+        console.error('No se pudo encontrar el elemento del planner semanal');
+        return;
+      }
+
+      console.log('Capturando planner semanal...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(plannerElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: '#f5f1d6',
+        includeQueryParams: false,
+        skipFonts: true,
+        width: plannerElement.offsetWidth,
+        height: plannerElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      link.download = `plan-semanal_${format(currentWeek, 'yyyy-MM-dd')}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura del planner semanal completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura del planner semanal:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, currentWeek]);
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -157,26 +236,34 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
             onChange={handleDateChange}
             value={format(currentWeek, 'yyyy-MM-dd')}
           />
-          <button 
-            className="p-1 hover:bg-white/60 rounded" 
-            title="Exportar PNG"
-            onClick={(e) => { e.stopPropagation(); handleExportPng(); }}
-          >
-            <FileImage className="w-4 h-4" />
-          </button>
-          <button className="p-1 hover:bg-white/60 rounded" title="Duplicar">
-            <Copy className="w-4 h-4" />
-          </button>
-          <button
-            className="p-1 hover:bg-white/60 rounded text-red-500"
-            title="Eliminar"
-            onClick={(e) => {
-              e.stopPropagation();
-              deleteElement(id);
-            }}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+              <button className="p-1 hover:bg-white/60 rounded" title="Más opciones">
+                <MoreVertical className="w-4 h-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                <Camera className="mr-2 h-4 w-4" />
+                <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportPng(); }}>
+                <FileImage className="mr-2 h-4 w-4" />
+                <span>Exportar PNG (alta resolución)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                <Copy className="mr-2 h-4 w-4" />
+                <span>Duplicar</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteElement(id); }}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                <span>Eliminar</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

@@ -7,11 +7,18 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { TwitterPicker } from 'react-color';
-import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText } from 'lucide-react';
+import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 
 const COLORS = [
   '#FF6900', '#FCB900', '#7BDCB5', '#00D084', '#8ED1FC', '#0693E3',
@@ -108,7 +115,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
   const fontSize = safeProperties.fontSize || '16px';
 
   const editorRef = useRef<HTMLDivElement>(null);
-  
+  const [isCapturing, setIsCapturing] = useState(false);
+
    // Type guard para content: sticky notes usan un objeto con una propiedad de texto
    const typedContent = (content || {}) as { text: string };
    const textContent = typedContent.text || '';
@@ -275,6 +283,76 @@ export default function StickyNoteElement(props: CommonElementProps) {
     }
   };
 
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const stickyElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!stickyElement) {
+        console.error('No se pudo encontrar el elemento de la nota adhesiva');
+        return;
+      }
+
+      console.log('Capturando nota adhesiva...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(stickyElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: backgroundColor,
+        includeQueryParams: false,
+        skipFonts: true,
+        width: stickyElement.offsetWidth,
+        height: stickyElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      link.download = `nota-adhesiva_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura de la nota adhesiva completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura de la nota adhesiva:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, backgroundColor]);
+
   // Copiar texto de la nota adhesiva
   const handleCopyText = async () => {
     try {
@@ -421,24 +499,32 @@ export default function StickyNoteElement(props: CommonElementProps) {
               </PopoverContent>
             </Popover>
             {/* Botón exportar PNG */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-1 hover:bg-black/10 rounded"
-              title="Exportar PNG"
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportPNG(); }}
-            >
-              <FileImage className="h-4 w-4 text-gray-700" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 p-1 hover:bg-black/10 rounded"
-              title="Copiar texto"
-              onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyText(); }}
-            >
-              <Copy className="h-4 w-4 text-gray-700" />
-            </Button>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 p-1 hover:bg-black/10 rounded"
+                  title="Más opciones"
+                >
+                  <Maximize className="h-4 w-4 text-gray-700" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                  <Camera className="mr-2 h-4 w-4" />
+                  <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportPNG(); }}>
+                  <FileImage className="mr-2 h-4 w-4" />
+                  <span>Exportar PNG</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleCopyText(); }}>
+                  <Copy className="mr-2 h-4 w-4" />
+                  <span>Copiar texto</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </>
         )}
         <Button

@@ -5,12 +5,13 @@ import type { CommonElementProps } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { GripVertical, Search, Trash2, FileImage, MoreVertical, Grid3x3, CalendarDays, Minus, X, Paintbrush, Edit, Plus, FileText, Copy, ArrowLeft, ArrowRight, Maximize2 } from 'lucide-react';
+import { GripVertical, Search, Trash2, FileImage, MoreVertical, Grid3x3, CalendarDays, Minus, X, Paintbrush, Edit, Plus, FileText, Copy, ArrowLeft, ArrowRight, Maximize2, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +36,7 @@ export default function NotesElement(props: CommonElementProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // Parsear contenido
   const typedContent = (content || {}) as { text?: string; searchQuery?: string };
@@ -237,6 +239,77 @@ export default function NotesElement(props: CommonElementProps) {
       setIsExportingPng(false);
     }
   }, [toast, id]);
+
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const notesElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!notesElement) {
+        console.error('No se pudo encontrar el elemento de notas');
+        return;
+      }
+
+      console.log('Capturando notas...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(notesElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: backgroundColor,
+        includeQueryParams: false,
+        skipFonts: true,
+        width: notesElement.offsetWidth,
+        height: notesElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      const title = typedContent.title || 'notas';
+      link.download = `${title}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura de notas completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura de notas:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, typedContent.title, backgroundColor]);
 
   // Manejar cambios en el contenido
   const handleContentInput = useCallback(() => {
@@ -525,6 +598,10 @@ export default function NotesElement(props: CommonElementProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
+              <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing}>
+                <Camera className="mr-2 h-4 w-4" />
+                <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleExportToPng(e)}} disabled={isExportingPng}>
                 <FileImage className="mr-2 h-4 w-4" />
                 <span>{isExportingPng ? 'Exportando...' : 'Exportar a PNG: alta resolución'}</span>

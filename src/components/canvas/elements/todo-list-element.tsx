@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import type { CommonElementProps, TodoItem, TodoContent } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -28,6 +29,7 @@ import {
   Copy,
   X,
   FileText,
+  Camera,
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
@@ -117,6 +119,7 @@ export default function TodoListElement(props: CommonElementProps) {
     }
   }, [isSelected, bindDictationTarget]);
   const [newItemText, setNewItemText] = useState('');
+  const [isCapturing, setIsCapturing] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const newItemRef = useRef<HTMLTextAreaElement>(null);
 
@@ -354,6 +357,77 @@ export default function TodoListElement(props: CommonElementProps) {
     handleAutoSaveChange(); // Programar auto-save después de reordenar
   };
 
+  // Nueva función: Exportar captura usando html-to-image
+  const handleExportCapture = useCallback(async () => {
+    try {
+      const listElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!listElement) {
+        console.error('No se pudo encontrar el elemento de la lista de tareas');
+        return;
+      }
+
+      console.log('Capturando lista de tareas...');
+      setIsCapturing(true);
+
+      await new Promise(resolve => setTimeout(resolve, 150));
+
+      const checkFontsLoaded = () => {
+        return document.fonts.check('14px "Poppins", sans-serif') ||
+               document.fonts.check('14px "Space Grotesk", sans-serif') ||
+               document.fonts.check('14px "Patrick Hand", cursive');
+      };
+
+      let fontsReady = checkFontsLoaded();
+      if (!fontsReady) {
+        await new Promise<void>((resolve) => {
+          const checkInterval = setInterval(() => {
+            if (checkFontsLoaded() || document.fonts.status === 'loaded') {
+              clearInterval(checkInterval);
+              resolve();
+            }
+          }, 50);
+          setTimeout(() => {
+            clearInterval(checkInterval);
+            resolve();
+          }, 1500);
+        });
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const dataUrl = await toPng(listElement, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.95,
+        backgroundColor: backgroundColor,
+        includeQueryParams: false,
+        skipFonts: true,
+        width: listElement.offsetWidth,
+        height: listElement.offsetHeight,
+        filter: (element) => {
+          if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
+            return false;
+          }
+          return true;
+        },
+      });
+
+      setIsCapturing(false);
+
+      const link = document.createElement('a');
+      const listTitle = title || 'lista-tareas';
+      link.download = `${listTitle}_captura.png`;
+      link.href = dataUrl;
+      link.click();
+
+      console.log('Captura de la lista de tareas completada');
+    } catch (error: any) {
+      setIsCapturing(false);
+      console.error('Error en captura de la lista de tareas:', error);
+      console.error('Error message:', error.message);
+    }
+  }, [id, title, backgroundColor]);
+
   return (
     <Card
       ref={cardRef}
@@ -462,6 +536,10 @@ export default function TodoListElement(props: CommonElementProps) {
                 <DropdownMenuItem onClick={handleCopyFormat} className="text-sm" title="Copia la lista con formato ordenado y estructura clara">
                   <FileText className="mr-2 h-3 w-3" />
                   <span>Copiar formato</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing} className="text-sm">
+                  <Camera className="mr-2 h-3 w-3" />
+                  <span>{isCapturing ? 'Capturando...' : 'Exportar captura'}</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportPNG} className="text-sm" title="Exporta la lista como imagen PNG de alta resolución (reducida 30%)">
                   <Download className="mr-2 h-3 w-3" />
