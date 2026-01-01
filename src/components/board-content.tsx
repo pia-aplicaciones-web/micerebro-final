@@ -34,7 +34,8 @@ import { useZoomPan } from '@/lib/hooks/useZoomPan';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
 
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
-import ResizeHandle from '@/components/canvas/resize-handle'; 
+import ResizeHandle from '@/components/canvas/resize-handle';
+import { CornerDownRight } from 'lucide-react'; 
 
 interface BoardContentProps {
   boardId: string;
@@ -131,6 +132,46 @@ const BoardContent: React.FC<BoardContentProps> = ({
       const finalRect = { x: 0, y: 0, width: 0, height: 0 }; // Necesitarías calcular esto
       handleResizeStop(elementId, finalRect);
   };
+
+  // Nueva función: Redimensionamiento global para cualquier elemento seleccionado
+  const handleGlobalResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const elementId = selectedElementIds[0];
+    if (!elementId) return;
+
+    const element = elements.find(el => el.id === elementId);
+    if (!element) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = element.properties?.size?.width || element.width || 400;
+    const startHeight = element.properties?.size?.height || element.height || 300;
+
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      const newWidth = Math.max(200, startWidth + deltaX); // Mínimo 200px
+      const newHeight = Math.max(150, startHeight + deltaY); // Mínimo 150px
+
+      onElementUpdate(elementId, {
+        properties: {
+          ...element.properties,
+          size: { width: newWidth, height: newHeight },
+        },
+      });
+    };
+
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, [selectedElementIds, elements, onElementUpdate]);
 
 
   useKeyboardNavigation({
@@ -262,11 +303,16 @@ const BoardContent: React.FC<BoardContentProps> = ({
                 border: '1px dashed #6366F1',
               }}
             >
-              {/* Controles de redimensionamiento removidos - ahora se usa el botón en esquina inferior derecha */}
-              {/* <ResizeHandle type="tl" onResize={onResize} onResizeStop={onResizeStop} />
-              <ResizeHandle type="tr" onResize={onResize} onResizeStop={onResizeStop} />
-              <ResizeHandle type="bl" onResize={onResize} onResizeStop={onResizeStop} />
-              <ResizeHandle type="br" onResize={onResize} onResizeStop={onResizeStop} /> */}
+              {/* Botón global de redimensionamiento - esquina inferior derecha */}
+              <div className="absolute bottom-2 right-2 z-10 pointer-events-auto">
+                <button
+                  className="w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-sm flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm transition-colors duration-150"
+                  onMouseDown={handleGlobalResizeStart}
+                  title="Redimensionar elemento"
+                >
+                  <CornerDownRight className="w-3 h-3 text-gray-600" />
+                </button>
+              </div>
             </motion.div>
           </AnimatePresence>
         )}
