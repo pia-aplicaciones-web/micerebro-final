@@ -287,7 +287,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'cuaderno', 'notes', 'mini'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
@@ -631,6 +631,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Agregar Cuaderno</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('cuaderno')}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>A3</span>
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('yellow-notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Block</span>
@@ -664,6 +668,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             break;
                           case 'yellow-notepad':
                             title = 'Cuaderno Amarillo';
+                            break;
+                          case 'cuaderno':
+                            const cuadernoContent = element.content as NotepadContent;
+                            title = cuadernoContent?.title || 'Cuaderno A3';
                             break;
                           case 'photo-grid':
                           case 'photo-grid-horizontal':
@@ -713,6 +721,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                           case 'yellow-notepad':
                             const notepadContent = element.content as NotepadContent;
                             title = notepadContent?.title || 'Cuaderno';
+                            break;
+                          case 'cuaderno':
+                            const cuadernoContent = element.content as NotepadContent;
+                            title = cuadernoContent?.title || 'Cuaderno A3';
                             break;
                           case 'photo-grid':
                           case 'photo-grid-horizontal':

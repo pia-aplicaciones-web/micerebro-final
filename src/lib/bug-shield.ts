@@ -7,7 +7,7 @@ import type { CanvasElement, ElementType, WithId } from './types';
 
 // Tipos válidos de elementos
 const VALID_ELEMENT_TYPES: ElementType[] = [
-  'image', 'text', 'sticky', 'notepad',
+  'image', 'text', 'sticky', 'notepad', 'cuaderno',
   'comment', 'comment-small', 'comment-r',
   'todo', 'moodboard', 'gallery', 'yellow-notepad',
   'stopwatch', 'countdown', 'highlight-text',
@@ -22,6 +22,7 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'sticky': { width: 200, height: 200 },
   'text': { width: 300, height: 100 },
   'notepad': { width: 400, height: 500 },
+  'cuaderno': { width: 794, height: 1123 }, // A3
   'todo': { width: 280, height: 350 },
   'image': { width: 300, height: 200 },
   'moodboard': { width: 600, height: 400 },

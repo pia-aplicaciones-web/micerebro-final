@@ -15,6 +15,7 @@ import TextElement from '@/components/canvas/elements/text-element';
 import StickyNoteElement from '@/components/canvas/elements/sticky-note-element';
 import ImageElement from '@/components/canvas/elements/image-element';
 import NotepadElement from '@/components/canvas/elements/notepad-element';
+import CuadernoElement from '@/components/canvas/elements/cuaderno';
 import TodoListElement from '@/components/canvas/elements/todo-list-element';
 import CommentElement from '@/components/canvas/elements/comment-element';
 import MoodboardElement from '@/components/canvas/elements/moodboard-element';
@@ -51,6 +52,7 @@ const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<Com
     sticky: StickyNoteElement,
     image: ImageElement,
     notepad: NotepadElement,
+    cuaderno: CuadernoElement,
     todo: TodoListElement,
     comment: CommentElement,
     moodboard: MoodboardElement,

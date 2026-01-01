@@ -11,6 +11,7 @@ import DeleteElementDialog from './elements/delete-element-dialog';
 // IMPORTACIONES DIRECTAS: Cambiar de lazy a imports directos para evitar problemas con chunks de webpack
 // Esto previene errores como "Cannot find module './948.js'" durante desarrollo
 import NotepadElement from './elements/notepad-element';
+import CuadernoElement from './elements/cuaderno';
 import StickyNoteElement from './elements/sticky-note-element';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
@@ -42,6 +43,7 @@ import CountdownElement from './elements/countdown-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
+  cuaderno: CuadernoElement,
   sticky: StickyNoteElement,
   todo: TodoListElement,
   image: ImageElement,
