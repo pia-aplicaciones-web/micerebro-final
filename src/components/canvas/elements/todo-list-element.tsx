@@ -296,13 +296,19 @@ export default function TodoListElement(props: CommonElementProps) {
         description: 'Generando imagen PNG de la lista.',
       });
 
-      // Capturar el elemento usando html2canvas con resolución reducida 30%
+      // Capturar el elemento usando html2canvas con configuración completa
       const canvas = await html2canvas(cardRef.current, {
-        scale: 2.1, // 30% menos que 3x (solo para lista de tareas)
+        scale: 3, // Alta resolución completa
         backgroundColor: backgroundColor,
         useCORS: true,
         logging: false,
         allowTaint: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: cardRef.current.scrollWidth,
+        windowHeight: cardRef.current.scrollHeight,
+        width: cardRef.current.scrollWidth,
+        height: cardRef.current.scrollHeight,
       });
 
       // Convertir canvas a blob y descargar
@@ -402,8 +408,8 @@ export default function TodoListElement(props: CommonElementProps) {
         backgroundColor: backgroundColor,
         includeQueryParams: false,
         skipFonts: true,
-        width: listElement.offsetWidth,
-        height: listElement.offsetHeight,
+        width: listElement.scrollWidth,
+        height: listElement.scrollHeight,
         filter: (element) => {
           if (element.tagName === 'LINK' && element.getAttribute('href')?.includes('fonts.googleapis.com')) {
             return false;
@@ -434,7 +440,7 @@ export default function TodoListElement(props: CommonElementProps) {
       className={cn(
         'w-full h-auto flex flex-col relative group overflow-hidden',
         'min-w-[200px] min-h-[150px] max-h-none',
-        'rounded-lg shadow-md border-none',
+        'rounded-lg shadow-md border border-gray-300',
         isSelected && 'ring-2 ring-blue-500 ring-offset-2'
       )}
       style={{ backgroundColor: '#ffffff' }} // Fondo blanco para el card, color solo en header
