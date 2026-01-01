@@ -344,20 +344,18 @@ export default function TransformableElement({
       dragHandleClassName: 'drag-handle',
       className: cn("focus:outline-none"),
       onMouseDown: handleMouseDown,
-      enableResizing: !isGroupedFrame,
+      enableResizing: false, // DESACTIVADO - No mostrar handles azules molestos
       scale: scale,
       bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined,
       resizeHandleStyles: {
-        bottomRight: {
-          width: 12,
-          height: 12,
-          right: -6,
-          bottom: -6,
-          backgroundColor: 'hsl(var(--primary))',
-          border: '2px solid white',
-          borderRadius: '2px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-        }
+        bottomRight: { display: 'none' },
+        bottomLeft: { display: 'none' },
+        topRight: { display: 'none' },
+        topLeft: { display: 'none' },
+        bottom: { display: 'none' },
+        top: { display: 'none' },
+        left: { display: 'none' },
+        right: { display: 'none' },
       }
   };
   
