@@ -165,7 +165,7 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
           innerRef={elementRef}
           html={text}
           onChange={handleTextChange}
-          onFocus={() => !isSelected && onSelectElement(id, false)}
+          // onFocus={() => !isSelected && onSelectElement(id, false)} // REMOVIDO - interfiere con edición
           contentEditable={!isPreview}
           className="outline-none min-h-[100px] w-full"
           style={{ backgroundColor: 'transparent' }}

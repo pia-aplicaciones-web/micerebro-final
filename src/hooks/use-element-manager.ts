@@ -26,7 +26,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
   const firestore = getFirebaseFirestore();
 
   useEffect(() => {
-    initFirebase().catch(() => {});
+    initFirebase().catch(() => { });
   }, []);
 
   // CRÍTICO: Usar refs para funciones que pueden cambiar frecuentemente
@@ -48,7 +48,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
     }
     const elementsRef = collection(firestore, 'users', userId, 'canvasBoards', boardId, 'canvasElements');
     const defaultPosition = getViewportCenterRef.current(); // ✅ Usar ref
-    
+
     // REGLAS GENERALES: Elementos de cuadernos y contenedores inician con zIndex -1
     // Otros elementos van a la primera capa (zIndex máximo + 1)
     const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns'].includes(type);
@@ -57,8 +57,8 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
     // REGLA #1: Los elementos se abren centrados en el viewport del usuario
     // Si no se proporciona una posición específica, usar el centro del viewport
     // IMPORTANTE: Verificar que props existe antes de acceder a properties
-    const viewportCenter = (props && props.properties && props.properties.position) 
-      ? props.properties.position 
+    const viewportCenter = (props && props.properties && props.properties.position)
+      ? props.properties.position
       : defaultPosition;
     const baseSize = (props && props.properties && props.properties.size)
       ? props.properties.size
@@ -73,20 +73,20 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
       // Obtener el centro del viewport visible (ya calculado con scroll y scale)
       const centerX = viewportCenter.x;
       const centerY = viewportCenter.y;
-      
+
       // Calcular posición centrada ideal (centro del elemento = centro del viewport visible)
       let x = centerX - (width / 2);
       let y = centerY - (height / 2);
-      
+
       // CRÍTICO: Asegurar que el elemento aparezca SIEMPRE en el área visible
       // Si el cálculo da negativo, ajustar para que al menos parte del elemento sea visible
       // Mínimo: asegurar que la esquina superior izquierda esté dentro del viewport visible
       const minOffset = 20; // Margen mínimo desde el borde visible
-      
+
       // Obtener dimensiones del viewport en coordenadas del canvas
       const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
       const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-      
+
       // Asegurar que el elemento quede dentro del área visible del viewport
       // Si el elemento es más pequeño que el viewport, centrarlo
       // Si es más grande, asegurar que al menos parte sea visible
@@ -97,7 +97,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         // Elemento más grande que el viewport: alinear para que sea visible desde el inicio
         x = Math.max(minOffset, centerX - viewportWidth / 4);
       }
-      
+
       if (height <= viewportHeight) {
         // Elemento cabe en el viewport: centrarlo
         y = Math.max(minOffset, Math.min(y, centerY + viewportHeight / 2 - height));
@@ -105,10 +105,10 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         // Elemento más grande que el viewport: alinear para que sea visible desde el inicio
         y = Math.max(minOffset, centerY - viewportHeight / 4);
       }
-      
+
       // Verificación final: NUNCA permitir coordenadas negativas
-      return { 
-        x: Math.max(0, x), 
+      return {
+        x: Math.max(0, x),
         y: Math.max(0, y)
       };
     };
@@ -119,7 +119,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
       zIndex: zIndex,
       rotation: 0,
     };
-    
+
     // Agregar propiedades adicionales de props si existen
     if (props && props.properties && typeof props.properties === 'object') {
       Object.assign(baseProperties, props.properties);
@@ -174,17 +174,17 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         const stickyColor = props?.color || 'yellow';
         const stickySize = { width: 224, height: 224 };
         const stickyPos = getCenteredPosition(stickySize.width, stickySize.height);
-        const stickyElement: Omit<StickyCanvasElement, 'id'> = { 
-          type: 'sticky', 
-          x: stickyPos.x, 
-          y: stickyPos.y, 
-          width: stickySize.width, 
-          height: stickySize.height, 
-          userId, 
-          properties: { ...baseProperties, position: stickyPos, size: stickySize, color: stickyColor } as CanvasElementProperties, 
-          content: (typeof props?.content === 'string' ? props.content : 'Escribe algo...'), 
-          zIndex, 
-          createdAt: serverTimestamp(), 
+        const stickyElement: Omit<StickyCanvasElement, 'id'> = {
+          type: 'sticky',
+          x: stickyPos.x,
+          y: stickyPos.y,
+          width: stickySize.width,
+          height: stickySize.height,
+          userId,
+          properties: { ...baseProperties, position: stickyPos, size: stickySize, color: stickyColor } as CanvasElementProperties,
+          content: (typeof props?.content === 'string' ? props.content : 'Escribe algo...'),
+          zIndex,
+          createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
           ...(props?.tags && { tags: props.tags }),
         };
@@ -515,7 +515,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
   const updateElement = useCallback((id: string, updates: Partial<CanvasElement>) => {
     if (!firestore || !user || !boardId) return;
     const elementDocRef = doc(firestore, 'users', user.uid, 'canvasBoards', boardId, 'canvasElements', id);
-    
+
     // Limpiar valores undefined (Firestore no los acepta)
     const cleanUpdates: Record<string, any> = { updatedAt: serverTimestamp() };
     Object.keys(updates).forEach(key => {
@@ -527,10 +527,10 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         cleanUpdates[key] = null;
       }
     });
-    
+
     // Actualizar el elemento
     updateDoc(elementDocRef, cleanUpdates);
-    
+
     // AUTOGUARDADO DEL TABLERO: Actualizar también el tablero con updatedAt
     // Esto asegura que el tablero refleje siempre la última modificación
     const boardDocRef = doc(firestore, 'users', user.uid, 'canvasBoards', boardId);
@@ -541,14 +541,14 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
 
   const deleteElement = useCallback(async (id: string, allElements: WithId<CanvasElement>[]) => {
     if (!firestore || !user || !boardId) return;
-    
+
     const elementToDeleteRef = allElements.find(el => el.id === id);
     if (!elementToDeleteRef) return;
 
     const elementsRef = collection(firestore, 'users', user.uid, 'canvasBoards', boardId, 'canvasElements');
     const batch = writeBatch(firestore);
     const elementDocRef = doc(elementsRef, id);
-    
+
     batch.delete(elementDocRef);
 
     await batch.commit();
@@ -556,7 +556,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
 
   const unanchorElement = useCallback(async (elementId: string) => {
     // Contenedores eliminados: función sin efecto
-      return;
+    return;
   }, [firestore, user, boardId, toast]);
 
   return { addElement, updateElement, deleteElement, unanchorElement };

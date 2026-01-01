@@ -697,7 +697,7 @@ export default function PhotoGridFreeElement(props: CommonElementProps) {
                             const newTitle = e.target.value;
                             onUpdate(id, { content: { ...gridContent, title: newTitle } });
                         }}
-                        onFocus={() => !isSelected && onSelectElement?.(id, false)}
+                        // onFocus={() => !isSelected && onSelectElement?.(id, false)} // REMOVIDO - interfiere con edición
                         className="flex-1 min-w-0 bg-transparent outline-none cursor-text font-headline text-xs font-semibold text-black p-0 leading-none"
                         onClick={(e) => e.stopPropagation()}
                         placeholder=""
