@@ -7,7 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { signInWithGoogle, signInWithEmail, createUserWithEmail } from '@/lib/auth';
 import { handleGoogleSignInResult } from '@/firebase/auth';
-import { getAuth } from 'firebase/auth';
+import { initFirebase } from '@/lib/firebase';
 import { getFirebaseFirestore } from '@/lib/firebase';
 
 export default function HomePage() {
@@ -26,7 +26,13 @@ export default function HomePage() {
       if (hasProcessedRef.current) return;
 
       try {
-        const auth = getAuth();
+        // Inicializar Firebase primero
+        const { auth } = await initFirebase();
+        if (!auth) {
+          console.log('ℹ️ Firebase no disponible en servidor');
+          return;
+        }
+
         const result = await handleGoogleSignInResult(auth);
 
         if (result?.user) {
