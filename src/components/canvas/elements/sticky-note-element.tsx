@@ -241,7 +241,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
       // Capturar el elemento usando html2canvas
       const canvas = await html2canvas(stickyCard, {
         scale: 2.1,
-        backgroundColor: backgroundColor,
+        backgroundColor: currentPalette.bg,
         useCORS: true,
         logging: false,
         allowTaint: false,
@@ -325,7 +325,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
         cacheBust: true,
         pixelRatio: 3,
         quality: 0.95,
-        backgroundColor: backgroundColor,
+        backgroundColor: currentPalette.bg,
         includeQueryParams: false,
         skipFonts: true,
         width: stickyElement.offsetWidth,
