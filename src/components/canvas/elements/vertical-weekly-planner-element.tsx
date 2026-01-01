@@ -192,9 +192,9 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
 
       {/* Contenido principal - FILAS QUE LLENAN TODO EL ESPACIO CON CASILLAS IGUALES */}
       <div className="flex-1 p-3">
-        <div className="grid grid-rows-2 gap-4 h-full">
+        <div className="flex flex-col gap-4 h-full">
           {/* FILA 1: Título arriba + Lunes/Martes/Miércoles abajo */}
-          <div className="grid grid-rows-[auto_1fr] gap-3 h-1/2">
+          <div className="flex flex-col gap-3 flex-1">
             {/* Título arriba - EDITABLE */}
             <div className="bg-white rounded-xl shadow-sm p-4 border border-dashed border-[#e0dcc5]">
               <input
@@ -242,7 +242,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
           </div>
 
           {/* FILA 2: Jueves, Viernes, (Sábado arriba/Domingo abajo) - TODAS MISMA ALTURA */}
-          <div className="grid grid-cols-3 gap-3 h-1/2">
+          <div className="grid grid-cols-3 gap-3 flex-1">
             <DayCard
               label={DAY_META[3].label}
               color={DAY_META[3].color}
