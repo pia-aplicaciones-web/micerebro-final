@@ -27,7 +27,6 @@ import { startOfWeek, addDays, format, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
-import { toPng } from 'html-to-image';
 
 const DAY_META = [
   { key: 'mon', label: 'LUNES', color: '#16b5a3' },
