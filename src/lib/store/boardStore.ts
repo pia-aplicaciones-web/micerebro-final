@@ -21,6 +21,64 @@ import { firebaseConfig, getFirebaseFirestore } from '@/lib/firebase';
 import { WithId, CanvasElement, Board } from '@/lib/types';
 import { validateElementsList, validateUpdateProps, validateAndRepairElement, logBugShieldError } from '@/lib/bug-shield';
 
+// Función para actualizar elementos existentes con nuevas propiedades por defecto
+function updateExistingElements(elements: WithId<CanvasElement>[], userId: string, boardId: string): WithId<CanvasElement>[] {
+  let needsUpdate = false;
+  const updatedElements = elements.map(element => {
+    let updatedElement = { ...element };
+
+    // 🔧 ACTUALIZACIONES ESPECÍFICAS POR TIPO DE ELEMENTO
+
+    // 1. Menú semanal: Asegurar dimensiones correctas (794x1123)
+    if (element.type === 'vertical-weekly-planner') {
+      const correctWidth = 794;
+      const correctHeight = 1123;
+
+      if (element.width !== correctWidth || element.height !== correctHeight) {
+        console.log(`🔄 Actualizando menú semanal ${element.id}: ${element.width}x${element.height} → ${correctWidth}x${correctHeight}`);
+        updatedElement.width = correctWidth;
+        updatedElement.height = correctHeight;
+
+        // Actualizar también en properties.size si existe
+        if (updatedElement.properties) {
+          updatedElement.properties = {
+            ...updatedElement.properties,
+            size: { width: correctWidth, height: correctHeight }
+          };
+        }
+
+        needsUpdate = true;
+
+        // Actualizar en Firebase de forma asíncrona (no bloqueante)
+        setTimeout(async () => {
+          try {
+            const db = getDb();
+            const elementRef = doc(db, 'users', userId, 'canvasBoards', boardId, 'canvasElements', element.id);
+            await updateDoc(elementRef, {
+              width: correctWidth,
+              height: correctHeight,
+              properties: updatedElement.properties
+            });
+            console.log(`✅ Menú semanal ${element.id} actualizado en Firebase`);
+          } catch (error) {
+            console.error(`❌ Error actualizando menú semanal ${element.id}:`, error);
+          }
+        }, 100);
+      }
+    }
+
+    // 🔄 AGREGAR MÁS ACTUALIZACIONES AQUÍ PARA OTROS ELEMENTOS
+
+    return updatedElement;
+  });
+
+  if (needsUpdate) {
+    console.log('🔄 Elementos actualizados automáticamente:', updatedElements.length);
+  }
+
+  return updatedElements;
+}
+
 // MODO DESARROLLO: usar localStorage en lugar de Firebase
 const DEV_MODE = false; // Cambiado a false para siempre usar Firebase
 
@@ -271,12 +329,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         unsubscribe = onSnapshot(
           elementsQuery,
           (snapshot) => {
-            const newElements = snapshot.docs
+            let newElements = snapshot.docs
               .map(doc => ({
-              id: doc.id, 
-              ...doc.data() 
+              id: doc.id,
+              ...doc.data()
               } as WithId<CanvasElement>))
               .filter(el => el.type !== 'photo-ideas-guide'); // Filtrar elementos eliminados
+
+            // 🔄 ACTUALIZACIÓN AUTOMÁTICA: Actualizar elementos existentes con nuevas propiedades por defecto
+            newElements = updateExistingElements(newElements, userId, boardId);
             // CRÍTICO: Solo actualizar si realmente cambió (evitar re-renders innecesarios y bucles infinitos)
             const currentElements = get().elements;
             // Comparar por IDs y contenido, no por índice (el orden puede cambiar)
