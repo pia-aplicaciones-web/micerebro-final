@@ -262,10 +262,11 @@ const BoardContent: React.FC<BoardContentProps> = ({
                 border: '1px dashed #6366F1',
               }}
             >
-              <ResizeHandle type="tl" onResize={onResize} onResizeStop={onResizeStop} />
+              {/* Controles de redimensionamiento removidos - ahora se usa el botón en esquina inferior derecha */}
+              {/* <ResizeHandle type="tl" onResize={onResize} onResizeStop={onResizeStop} />
               <ResizeHandle type="tr" onResize={onResize} onResizeStop={onResizeStop} />
               <ResizeHandle type="bl" onResize={onResize} onResizeStop={onResizeStop} />
-              <ResizeHandle type="br" onResize={onResize} onResizeStop={onResizeStop} />
+              <ResizeHandle type="br" onResize={onResize} onResizeStop={onResizeStop} /> */}
             </motion.div>
           </AnimatePresence>
         )}
