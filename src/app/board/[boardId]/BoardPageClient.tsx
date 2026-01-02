@@ -32,6 +32,7 @@ import EditCommentDialog from '@/components/canvas/elements/edit-comment-dialog'
 import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
+import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
 import { SafetyIndicator } from '@/components/SafetyControls';
 
@@ -160,9 +161,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   // Estados de UI
   const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [shouldOpenCropAfterUrl, setShouldOpenCropAfterUrl] = useState(false);
   const [changeFormatDialogOpen, setChangeFormatDialogOpen] = useState(false);
   const [isPanningActive, setIsPanningActive] = useState(false);
   const [isRenameBoardDialogOpen, setIsRenameBoardDialogOpen] = useState(false);
+  const [isImageCropDialogOpen, setIsImageCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [uploadedFileToProcess, setUploadedFileToProcess] = useState<File | null>(null);
   
   // Estados de Selección
   const [selectedElement, setSelectedElement] = useState<WithId<CanvasElement> | null>(null);
@@ -506,20 +511,86 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      try {
-        const result = await uploadFile(file, userId, storage);
-        if (result.success) {
-          await addElement('image', { content: { url: result.url }, properties: { size: { width: 300, height: 200 } } });
-          toast({ title: 'Imagen subida' });
-        } else {
-          toast({ variant: 'destructive', title: 'Error', description: result.error });
-        }
-      } catch {
-        toast({ variant: 'destructive', title: 'Error al subir imagen' });
-      }
+
+      // Crear URL temporal para preview y crop
+      const imageUrl = URL.createObjectURL(file);
+      setImageToCrop(imageUrl);
+      setUploadedFileToProcess(file);
+      setIsImageCropDialogOpen(true);
     };
     input.click();
-  }, [user, storage, addElement, toast]);
+  }, [user, storage]);
+
+  const handleCropImage = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      // Crear URL temporal para preview y crop
+      const imageUrl = URL.createObjectURL(file);
+      setImageToCrop(imageUrl);
+      setUploadedFileToProcess(file);
+      setIsImageCropDialogOpen(true);
+    };
+    input.click();
+  }, []);
+
+  const handleAddImageFromUrlWithCrop = useCallback(() => {
+    setIsImageUrlDialogOpen(true);
+    setShouldOpenCropAfterUrl(true);
+  }, []);
+
+  const handleCropComplete = useCallback(async (croppedImageDataUrl: string) => {
+    const userId = user?.uid;
+    if (!userId || !storage || !uploadedFileToProcess) {
+      toast({ title: 'Error', description: 'Sesión expirada o archivo no encontrado' });
+      return;
+    }
+
+    try {
+      // Convertir el data URL a File
+      const response = await fetch(croppedImageDataUrl);
+      const blob = await response.blob();
+      const croppedFile = new File([blob], uploadedFileToProcess.name, {
+        type: uploadedFileToProcess.type,
+        lastModified: Date.now()
+      });
+
+      // Subir la imagen recortada
+      const result = await uploadFile(croppedFile, userId, storage);
+      if (result.success) {
+        await addElement('image', { content: { url: result.url }, properties: { size: { width: 300, height: 200 } } });
+        toast({ title: 'Imagen subida y recortada' });
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.error });
+      }
+    } catch (error) {
+      console.error('Error al procesar imagen recortada:', error);
+      toast({ variant: 'destructive', title: 'Error al subir imagen recortada' });
+    } finally {
+      // Limpiar estados
+      setIsImageCropDialogOpen(false);
+      setImageToCrop("");
+      setUploadedFileToProcess(null);
+      // Limpiar URL temporal
+      if (imageToCrop) {
+        URL.revokeObjectURL(imageToCrop);
+      }
+    }
+  }, [user, storage, addElement, toast, uploadedFileToProcess, imageToCrop]);
+
+  const handleCropCancel = useCallback(() => {
+    setIsImageCropDialogOpen(false);
+    setImageToCrop("");
+    setUploadedFileToProcess(null);
+    // Limpiar URL temporal
+    if (imageToCrop) {
+      URL.revokeObjectURL(imageToCrop);
+    }
+  }, [imageToCrop]);
 
   // Ref para almacenar el ID pendiente de localizar (para elementos recién creados)
   const pendingLocateRef = useRef<string | null>(null);
@@ -754,7 +825,12 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           boardId={boardId}
           user={user}
           onUploadImage={handleUploadImage}
-          onAddImageFromUrl={() => setIsImageUrlDialogOpen(true)}
+          onAddImageFromUrl={() => {
+            setIsImageUrlDialogOpen(true);
+            setShouldOpenCropAfterUrl(false);
+          }}
+          onCropImage={handleCropImage}
+          onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
           onPanToggle={() => canvasRef.current?.activatePanMode()}
           onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
           onDeleteBoard={handleDeleteBoard}
@@ -806,9 +882,24 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           isOpen={isImageUrlDialogOpen}
           onOpenChange={setIsImageUrlDialogOpen}
           onAddImage={async (url) => {
-            await addElement('image', { content: { url }, properties: { size: { width: 300, height: 200 } } });
+            if (shouldOpenCropAfterUrl) {
+              // Para "Desde URL + Crop": abrir diálogo de crop
+              setImageToCrop(url);
+              setIsImageCropDialogOpen(true);
+              setShouldOpenCropAfterUrl(false);
+            } else {
+              // Para "Desde URL" normal: agregar imagen directamente
+              await addElement('image', { content: { url }, properties: { size: { width: 300, height: 200 } } });
+            }
             setIsImageUrlDialogOpen(false);
           }}
+        />
+
+        <ImageCropDialog
+          isOpen={isImageCropDialogOpen}
+          onClose={handleCropCancel}
+          imageSrc={imageToCrop}
+          onCropComplete={handleCropComplete}
         />
 
         {selectedCommentForEdit && (

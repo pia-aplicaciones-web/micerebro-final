@@ -102,6 +102,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
     deleteElement,
     isPreview,
     minimized,
+    scale = 1,
+    offset = { x: 0, y: 0 },
   } = props;
 
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
@@ -427,23 +429,24 @@ export default function StickyNoteElement(props: CommonElementProps) {
     }
   }, [isPreview, minimized, properties, onUpdate, id]);
 
+
   return (
     <Card
-      className={cn(
-        'w-full h-full flex flex-col relative group overflow-hidden',
-        'min-w-[200px] min-h-[150px] max-w-[400px] max-h-[500px]',
-        'rounded-lg shadow-md border-none'
-      )}
-      style={{
-        backgroundColor: currentPalette.bg,
-      }}
-      onMouseDown={(e) => {
-        if ((e.target as HTMLElement).closest('.drag-handle')) return;
-        e.stopPropagation();
-        onSelectElement(id, e.shiftKey || e.ctrlKey || e.metaKey);
-      }}
-      onDoubleClick={() => onEditElement(id)}
-    >
+        className={cn(
+          'w-full h-full flex flex-col relative group overflow-visible',
+          'min-w-[200px] min-h-[150px] max-w-[400px] max-h-[500px]',
+          'rounded-lg shadow-md border-none'
+        )}
+        style={{
+          backgroundColor: currentPalette.bg,
+        }}
+        onMouseDown={(e) => {
+          if ((e.target as HTMLElement).closest('.drag-handle')) return;
+          e.stopPropagation();
+          onSelectElement(id, e.shiftKey || e.ctrlKey || e.metaKey);
+        }}
+        onDoubleClick={() => onEditElement(id)}
+      >
       {/* Header con iconos en la esquina superior izquierda */}
       <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
         <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded">

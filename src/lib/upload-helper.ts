@@ -73,11 +73,18 @@ export async function compressImage(file: File, maxSizeKB: number = 200): Promis
           reject(new Error('No se pudo obtener el contexto del canvas'));
           return;
         }
-        
+
         // Configurar calidad de imagen para mantener buena calidad a 72 DPI
         ctx.imageSmoothingEnabled = true;
         ctx.imageSmoothingQuality = 'high';
-        
+
+        // REGLA: Imágenes PNG siempre se suben con fondo blanco
+        if (file.type === 'image/png') {
+          // Dibujar fondo blanco para imágenes PNG con transparencia
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+        }
+
         // Dibujar imagen redimensionada
         ctx.drawImage(img, 0, 0, width, height);
         
@@ -273,7 +280,8 @@ export async function uploadFile(
     // Generar un nombre único para el archivo
     const timestamp = Date.now();
     const randomString = Math.random().toString(36).substring(2, 15);
-    const fileExtension = fileToUpload.name.split('.').pop() || 'jpg';
+    // Para PNG con fondo blanco, usar extensión .jpg ya que se convierte a JPEG
+    const fileExtension = fileToUpload.type === 'image/png' ? 'jpg' : (fileToUpload.name.split('.').pop() || 'jpg');
     const fileName = `${timestamp}_${randomString}.${fileExtension}`;
     const storagePath = `users/${userId}/images/${fileName}`;
 

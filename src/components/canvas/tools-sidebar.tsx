@@ -39,7 +39,8 @@ import { BookCopy,
   MicOff,
   Highlighter,
   Menu,
-  X as CloseIcon
+  X as CloseIcon,
+  Crop
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -138,6 +139,8 @@ interface ToolsSidebarProps {
   user: AuthUser | null;
   onUploadImage: () => void;
   onAddImageFromUrl: () => void;
+  onCropImage: () => void;
+  onAddImageFromUrlWithCrop: () => void;
   onPanToggle: () => void;
   onRenameBoard: () => void;
   onDeleteBoard: () => void;
@@ -169,6 +172,8 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   user,
   onUploadImage,
   onAddImageFromUrl,
+  onCropImage,
+  onAddImageFromUrlWithCrop,
   onPanToggle,
   onRenameBoard,
   onDeleteBoard,
@@ -840,6 +845,15 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onCropImage}>
+                <Crop className="mr-2 h-4 w-4" />
+                <span>Subir + Crop</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onAddImageFromUrlWithCrop}>
+                <LinkIcon className="mr-2 h-4 w-4" />
+                <span>Desde URL + Crop</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -900,6 +914,18 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('moodboard')}>
                 Moodboard
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('photo-collage')}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                Collage
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('photo-collage-free')}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                Collage Libre
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('collage-editable')}>
+                <Grid3X3 className="mr-2 h-4 w-4" />
+                Collage Editable
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>

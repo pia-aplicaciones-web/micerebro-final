@@ -30,6 +30,9 @@ export type ElementType =
   'photo-grid-horizontal' |
   'photo-grid-adaptive' |
   'photo-grid-free' |
+  'photo-collage' |
+  'photo-collage-free' |
+  'collage-editable' |
   'libreta';
 
 // Interfaz para propiedades de elementos del canvas

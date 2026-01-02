@@ -7,7 +7,6 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useDebouncedCallback } from 'use-debounce';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Rnd } from 'react-rnd';
-import { ChevronDown } from 'lucide-react';
 
 import type { WithId, CanvasElement, Point, CommonElementProps } from '@/lib/types';
 
@@ -28,6 +27,8 @@ import PhotoGridElement from '@/components/canvas/elements/photo-grid-element';
 import PhotoGridHorizontalElement from '@/components/canvas/elements/photo-grid-horizontal-element';
 import PhotoGridAdaptiveElement from '@/components/canvas/elements/photo-grid-adaptive-element';
 import PhotoGridFreeElement from '@/components/canvas/elements/photo-grid-free-element';
+import PhotoCollageElement from '@/components/canvas/elements/photo-collage-element';
+import PhotoCollageFreeElement from '@/components/canvas/elements/photo-collage-free-element';
 import LibretaElement from '@/components/canvas/elements/libreta-element';
 
 import { useCanvasDragAndDrop } from '@/lib/hooks/useCanvasDragAndDrop';
@@ -36,7 +37,6 @@ import { useZoomPan } from '@/lib/hooks/useZoomPan';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
 
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
-// import ResizeHandle from '@/components/canvas/resize-handle'; // REMOVIDO - ya no se usa 
 
 interface BoardContentProps {
   boardId: string;
@@ -48,7 +48,7 @@ interface BoardContentProps {
   selectedElementIds: string[];
 }
 
-const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<CommonElementProps> }> = {
+const ELEMENT_COMPONENTS = {
   text: TextElement,
   sticky: StickyNoteElement,
   image: ImageElement,
@@ -65,6 +65,9 @@ const ELEMENT_COMPONENTS: Partial<{ [key in CanvasElement['type']]: React.FC<Com
   'photo-grid-horizontal': PhotoGridHorizontalElement,
   'photo-grid-adaptive': PhotoGridAdaptiveElement,
   'photo-grid-free': PhotoGridFreeElement,
+  'photo-collage': PhotoCollageElement,
+  'photo-collage-free': PhotoCollageFreeElement,
+  libreta: LibretaElement,
 };
 
 
@@ -80,62 +83,7 @@ const BoardContent: React.FC<BoardContentProps> = ({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isFormattingToolbarOpen, setIsFormattingToolbarOpen] = useState(false);
   const [activeTextEditorId, setActiveTextEditorId] = useState<string | null>(null);
-  const [isResizing, setIsResizing] = useState(false);
-  const [resizeStartPos, setResizeStartPos] = useState<Point | null>(null);
-  const [originalSize, setOriginalSize] = useState<{ width: number; height: number } | null>(null);
 
-  // Función para manejar el redimensionamiento
-  const handleResize = useCallback((elementId: string, newSize: { width: number; height: number }) => {
-    const element = elements.find(el => el.id === elementId);
-    if (!element) return;
-
-    // Asegurar dimensiones mínimas
-    const finalWidth = Math.max(50, newSize.width);
-    const finalHeight = Math.max(50, newSize.height);
-
-    onElementUpdate(elementId, {
-      width: finalWidth,
-      height: finalHeight,
-      properties: {
-        ...element.properties,
-        size: { width: finalWidth, height: finalHeight }
-      }
-    });
-  }, [elements, onElementUpdate]);
-
-  // Handlers para mouse events durante redimensionamiento
-  useEffect(() => {
-    if (!isResizing) return;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!resizeStartPos || !originalSize || selectedElementIds.length !== 1) return;
-
-      // Calcular nuevas dimensiones basadas en el movimiento del mouse
-      const deltaX = (e.clientX - resizeStartPos.x) / scale;
-      const deltaY = (e.clientY - resizeStartPos.y) / scale;
-
-      const newWidth = originalSize.width + deltaX;
-      const newHeight = originalSize.height + deltaY;
-
-      handleResize(selectedElementIds[0], { width: newWidth, height: newHeight });
-      console.log('📏 Redimensionando:', { newWidth, newHeight, deltaX, deltaY });
-    };
-
-    const handleMouseUp = () => {
-      setIsResizing(false);
-      setResizeStartPos(null);
-      setOriginalSize(null);
-      console.log('✅ Redimensionamiento completado');
-    };
-
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizing, resizeStartPos, selectedElementIds, scale, handleResize]);
 
   const { scale, offset, panCanvas, zoomIn, zoomOut, resetZoomPan, panMode, setPanMode, clientToCanvas } = useZoomPan(canvasRef as React.RefObject<HTMLDivElement>);
 
@@ -167,29 +115,6 @@ const BoardContent: React.FC<BoardContentProps> = ({
     updateSelectionBounds,
   });
 
-  // Funciones intermediarias para el cambio de tamaño
-  const onResize = (e: React.MouseEvent, type: string) => {
-    // Aquí necesitarías una lógica para identificar qué elemento se está redimensionando,
-    // probablemente basado en `selectionBounds` o `selectedElementIds`.
-    // Por simplicidad, asumiremos un solo elemento seleccionado.
-    const elementId = selectedElementIds[0];
-    if (!elementId) return;
-
-    // La lógica para calcular el 'delta' dependerá de cómo se implemente el arrastre.
-    // Esto es una simplificación y podría necesitar ajustes.
-    const delta = { x: e.movementX / scale, y: e.movementY / scale, width: e.movementX / scale, height: e.movementY / scale };
-    handleResize(elementId, delta);
-  };
-
-  const onResizeStop = (e: React.MouseEvent, type: string) => {
-    const elementId = selectedElementIds[0];
-    if (!elementId) return;
-
-    // Similar a onResize, la lógica para `finalRect` necesita ser implementada.
-    // Esto es una simplificación.
-    const finalRect = { x: 0, y: 0, width: 0, height: 0 }; // Necesitarías calcular esto
-    handleResizeStop(elementId, finalRect);
-  };
 
 
 
@@ -264,9 +189,6 @@ const BoardContent: React.FC<BoardContentProps> = ({
         onDoubleClick={(rect) => { }}
         onLocateElement={(elementId: string) => { /* lógica para localizar elemento */ }}
         onEditComment={(element: WithId<CanvasElement>) => { /* lógica para editar comentario */ }}
-        isListening={false}
-        finalTranscript={''}
-        interimTranscript={''}
       />
     );
   }, [scale, offset, isSelected, onSelectElement, onElementUpdate, onElementDelete, onDuplicateElement, elements, onElementAdd, setActiveTextEditorId, activeTextEditorId]);
@@ -306,69 +228,6 @@ const BoardContent: React.FC<BoardContentProps> = ({
       >
         {elements.map(renderElement)}
 
-        {selectedElementIds.length > 0 && selectionBounds && (
-          <AnimatePresence>
-            <motion.div
-              key="selection-handles"
-              className="absolute pointer-events-none"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              style={{
-                left: selectionBounds.x,
-                top: selectionBounds.y,
-                width: selectionBounds.width,
-                height: selectionBounds.height,
-                border: '1px dashed #6366F1',
-              }}
-            >
-              {/* Botón de redimensionamiento en esquina inferior derecha */}
-              {selectedElementIds.length === 1 && selectionBounds && (() => {
-                console.log('🔵 BOTÓN DE REDIMENSIONAMIENTO ACTIVO para elemento:', selectedElementIds[0]);
-                return true;
-              })() && (
-                  <div className="absolute bottom-1 right-1 pointer-events-auto">
-                    {/* Indicador visual del botón de redimensionamiento */}
-                    <div className="relative group">
-                      {/* Indicador adicional para hacer el botón más visible */}
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
-                        Click y arrastra para redimensionar
-                      </div>
-                      <button
-                        className="w-5 h-5 bg-gray-100 rounded flex items-center justify-center cursor-se-resize border border-gray-300 shadow-sm hover:bg-gray-200 transition-colors z-50"
-                        onMouseDown={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-
-                          // Iniciar modo de redimensionamiento
-                          setIsResizing(true);
-
-                          const elementId = selectedElementIds[0];
-                          const element = elements.find(el => el.id === elementId);
-                          if (element) {
-                            setResizeStartPos({ x: e.clientX, y: e.clientY });
-                            setOriginalSize({
-                              width: element.width || 200,
-                              height: element.height || 150
-                            });
-                          }
-
-                          console.log('🔄 Iniciando redimensionamiento del elemento:', elementId, {
-                            originalSize,
-                            element: { width: element.width, height: element.height }
-                          });
-                        }}
-                        title="Redimensionar elemento (arrastrar para cambiar tamaño)"
-                        onMouseEnter={() => console.log('🎯 Cursor sobre botón de redimensionamiento')}
-                        onMouseLeave={() => console.log('👋 Cursor salió del botón de redimensionamiento')}
-                      >
-                        <ChevronDown className="w-3 h-3 text-gray-600" />
-                      </button>
-                    </div>
-              )}
-                  </motion.div>
-          </AnimatePresence>
-        )}
       </div>
 
       {/* Creative Moodboard Panel */}

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ImageCropDialog from "@/components/canvas/image-crop-dialog";
 
 type AddImageFromUrlDialogProps = {
   isOpen: boolean;
@@ -25,11 +26,45 @@ export default function AddImageFromUrlDialog({
   onAddImage,
 }: AddImageFromUrlDialogProps) {
   const [url, setUrl] = useState("");
+  const [isCropDialogOpen, setIsCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [isLoadingImage, setIsLoadingImage] = useState(false);
 
-  const handleAddClick = () => {
-    if (url) {
+  const handleAddClick = async () => {
+    if (!url) return;
+
+    setIsLoadingImage(true);
+    try {
+      // Validar que la URL sea accesible
+      const response = await fetch(url, { method: 'HEAD' });
+      if (!response.ok) {
+        throw new Error('La URL no es accesible');
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.startsWith('image/')) {
+        throw new Error('La URL no apunta a una imagen válida');
+      }
+
+      // Si es válida, abrir el diálogo de crop
+      setImageToCrop(url);
+      setIsCropDialogOpen(true);
+      onOpenChange(false); // Cerrar el diálogo actual
+    } catch (error) {
+      console.error('Error al validar la imagen:', error);
+      // Si hay error, añadir la imagen directamente sin crop
       onAddImage(url);
+      onOpenChange(false);
+    } finally {
+      setIsLoadingImage(false);
     }
+  };
+
+  const handleCropComplete = (croppedImageUrl: string) => {
+    onAddImage(croppedImageUrl);
+    setIsCropDialogOpen(false);
+    setImageToCrop("");
+    setUrl("");
   };
 
   return (
@@ -60,9 +95,23 @@ export default function AddImageFromUrlDialog({
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleAddClick} disabled={!url}>Añadir Imagen</Button>
+          <Button onClick={handleAddClick} disabled={!url || isLoadingImage}>
+            {isLoadingImage ? "Validando..." : "Continuar"}
+          </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Diálogo de Crop */}
+      <ImageCropDialog
+        isOpen={isCropDialogOpen}
+        onClose={() => {
+          setIsCropDialogOpen(false);
+          setImageToCrop("");
+          onOpenChange(true); // Reabrir el diálogo original
+        }}
+        imageSrc={imageToCrop}
+        onCropComplete={handleCropComplete}
+      />
     </Dialog>
   );
 }

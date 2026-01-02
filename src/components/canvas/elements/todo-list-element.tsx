@@ -438,7 +438,7 @@ export default function TodoListElement(props: CommonElementProps) {
     <Card
       ref={cardRef}
       className={cn(
-        'w-full h-auto flex flex-col relative group overflow-hidden',
+        'w-full h-auto flex flex-col relative group overflow-visible',
         'min-w-[200px] min-h-[150px] max-h-none',
         'rounded-lg shadow-md border border-gray-300',
         isSelected && 'ring-2 ring-blue-500 ring-offset-2'

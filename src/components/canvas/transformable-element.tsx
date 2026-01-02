@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement, NotepadSimpleCanvasElement } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
@@ -40,6 +40,9 @@ import LibretaElement from './elements/libreta-element';
 import NotesElement from './elements/notes-element';
 import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
+import PhotoCollageElement from './elements/photo-collage-element';
+import PhotoCollageFreeElement from './elements/photo-collage-free-element';
+import CollageEditableElement from './elements/collage-editable-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -50,7 +53,6 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   text: TextElement,
   comment: CommentElement,
   'comment-small': CommentElement, // Usa mismo componente con fontSize diferente
-  'comment-r': CommentRElement,
   'comment-r': CommentRElement,
   moodboard: MoodboardElement,
   gallery: GalleryElement,
@@ -74,6 +76,9 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'notes': NotesElement,
   'mini': MiniElement,
   'countdown': CountdownElement,
+  'photo-collage': PhotoCollageElement,
+  'photo-collage-free': PhotoCollageFreeElement,
+  'collage-editable': CollageEditableElement,
 };
 
 type TransformableElementProps = {
@@ -191,14 +196,15 @@ export default function TransformableElement({
   
   // Asegurar que size tenga valores numéricos válidos
   // Para pomodoro-timer usar ancho fijo de 180px
+  // Para vertical-weekly-planner usar tamaño carta A4 fijo
   const safeSize = {
-    width: element.type === 'pomodoro-timer' ? 180 : (typeof size.width === 'number' && size.width > 0 ? size.width : 200),
-    height: typeof size.height === 'number' && size.height > 0 ? size.height : 150
+    width: element.type === 'pomodoro-timer' ? 180 :
+           element.type === 'vertical-weekly-planner' ? 794 :
+           (typeof size.width === 'number' && size.width > 0 ? size.width : 200),
+    height: element.type === 'vertical-weekly-planner' ? 1123 :
+            (typeof size.height === 'number' && size.height > 0 ? size.height : 150)
   };
   
-  const handleMouseDown = (e: MouseEvent) => {
-    onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
-  };
   
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
     const newPosition = { x: d.x, y: d.y };
@@ -318,6 +324,10 @@ export default function TransformableElement({
 
   const isGroupedFrame = false;
 
+  const handleMouseDown = (e: MouseEvent) => {
+    onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
+  };
+
   const handleDragStart = useCallback((e: RndDragEvent) => {
     // Configurar dataTransfer para drag and drop hacia otros elementos (como galería)
     if (e.dataTransfer) {
@@ -326,39 +336,104 @@ export default function TransformableElement({
     }
   }, [element.id]);
 
+  
   const rndProps = {
-      style: {
-        zIndex: zIndex,
-        border: isSelected && element.type !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
-        boxSizing: 'border-box' as 'border-box',
-        transform: `rotate(${rotation}deg)`,
-        transformOrigin: 'center center',
-      },
-      size: { width: safeSize.width, height: safeSize.height },
-      position: position,
-      onDragStart: handleDragStart,
-      onDragStop: onDragStop,
-      onResizeStop: onResizeStop,
-      minWidth: 50,
-      minHeight: 50,
-      dragHandleClassName: 'drag-handle',
-      className: cn("focus:outline-none"),
-      onMouseDown: handleMouseDown,
-      enableResizing: false, // DESACTIVADO - No mostrar handles azules molestos
-      scale: scale,
-      bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined,
+    style: {
+      zIndex: zIndex,
+      border: isSelected && element.type !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
+      boxSizing: 'border-box' as 'border-box',
+      transform: `rotate(${rotation}deg)`,
+      transformOrigin: 'center center',
+    },
+    size: { width: safeSize.width, height: safeSize.height },
+    position: position,
+    onDragStart: handleDragStart,
+    onDragStop: onDragStop,
+    onResizeStop: onResizeStop,
+    minWidth: 50,
+    minHeight: 50,
+    dragHandleClassName: 'drag-handle',
+    className: cn("focus:outline-none"),
+    onMouseDown: handleMouseDown,
+    enableResizing: true, // ACTIVADO - Mostrar handles de redimensionamiento
+    scale: scale,
+    bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined,
       resizeHandleStyles: {
-        bottomRight: { display: 'none' },
-        bottomLeft: { display: 'none' },
-        topRight: { display: 'none' },
-        topLeft: { display: 'none' },
-        bottom: { display: 'none' },
-        top: { display: 'none' },
-        left: { display: 'none' },
-        right: { display: 'none' },
+        bottomRight: {
+          width: '20px',
+          height: '20px',
+          right: '-10px',
+          bottom: '-10px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'nw-resize'
+        },
+        bottomLeft: {
+          width: '20px',
+          height: '20px',
+          left: '-10px',
+          bottom: '-10px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ne-resize'
+        },
+        topRight: {
+          width: '20px',
+          height: '20px',
+          right: '-10px',
+          top: '-10px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ne-resize'
+        },
+        topLeft: {
+          width: '20px',
+          height: '20px',
+          left: '-10px',
+          top: '-10px',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'nw-resize'
+        },
+        bottom: {
+          height: '10px',
+          left: '50%',
+          bottom: '-5px',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ns-resize'
+        },
+        top: {
+          height: '10px',
+          left: '50%',
+          top: '-5px',
+          transform: 'translateX(-50%)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ns-resize'
+        },
+        left: {
+          width: '10px',
+          top: '50%',
+          left: '-5px',
+          transform: 'translateY(-50%)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ew-resize'
+        },
+        right: {
+          width: '10px',
+          top: '50%',
+          right: '-5px',
+          transform: 'translateY(-50%)',
+          backgroundColor: 'transparent',
+          border: 'none',
+          cursor: 'ew-resize'
+        },
       }
   };
-  
+
   return (
     <>
       <Rnd {...rndProps}>
@@ -424,7 +499,7 @@ export default function TransformableElement({
           />
         </div>
       </Rnd>
-      
+
       {/* REGLA #2: Diálogo de confirmación de eliminación */}
       <DeleteElementDialog
         isOpen={isDeleteDialogOpen}

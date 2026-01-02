@@ -457,6 +457,57 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           updatedAt: serverTimestamp(),
         };
         break;
+      case 'photo-collage':
+        const collageSize = { width: 800, height: 600 };
+        const collagePos = getCenteredPosition(collageSize.width, collageSize.height);
+        newElementData = {
+          type,
+          x: collagePos.x,
+          y: collagePos.y,
+          width: collageSize.width,
+          height: collageSize.height,
+          userId,
+          properties: { ...baseProperties, position: collagePos, size: collageSize, backgroundColor: '#ffffff' },
+          content: { title: 'Collage de Fotos', photos: [], width: collageSize.width, height: collageSize.height },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      case 'photo-collage-free':
+        const freeCollageSize = { width: 600, height: 400 };
+        const freeCollagePos = getCenteredPosition(freeCollageSize.width, freeCollageSize.height);
+        newElementData = {
+          type,
+          x: freeCollagePos.x,
+          y: freeCollagePos.y,
+          width: freeCollageSize.width,
+          height: freeCollageSize.height,
+          userId,
+          properties: { ...baseProperties, position: freeCollagePos, size: freeCollageSize, backgroundColor: '#ffffff' },
+          content: { title: 'Collage Libre', images: [] },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      case 'collage-editable':
+        const editableCollageSize = { width: 640, height: 480 }; // Tamaño inicial, se adaptará dinámicamente
+        const editableCollagePos = getCenteredPosition(editableCollageSize.width, editableCollageSize.height);
+        newElementData = {
+          type,
+          x: editableCollagePos.x,
+          y: editableCollagePos.y,
+          width: editableCollageSize.width,
+          height: editableCollageSize.height,
+          userId,
+          properties: { ...baseProperties, position: editableCollagePos, size: editableCollageSize, backgroundColor: '#ffffff' },
+          content: { title: 'Collage Editable', images: [] },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
       case 'libreta':
         const libretaSize = { width: 378, height: 567 }; // 10x15 cm
         const libretaPos = getCenteredPosition(libretaSize.width, libretaSize.height);
