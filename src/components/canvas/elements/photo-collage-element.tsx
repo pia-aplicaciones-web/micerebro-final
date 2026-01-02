@@ -29,6 +29,25 @@ import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { ReactPhotoCollage, Photo } from 'react-photo-collage';
 
+// Wrapper para ReactPhotoCollage que filtra props no reconocidas
+function SafeReactPhotoCollage(props: any) {
+  // Extraemos solo las props que queremos pasar al componente
+  const { width, height, layout, photos, showNumOfRemainingPhotos, ...otherProps } = props;
+
+  // Creamos un div wrapper que contenga el componente y maneje las props restantes
+  return (
+    <div {...otherProps}>
+      <ReactPhotoCollage
+        width={width}
+        height={height}
+        layout={layout}
+        photos={photos}
+        showNumOfRemainingPhotos={showNumOfRemainingPhotos}
+      />
+    </div>
+  );
+}
+
 interface PhotoCollageContent {
   title: string;
   photos: Photo[];
@@ -337,6 +356,15 @@ export default function PhotoCollageElement(props: CommonElementProps) {
               >
                 <Maximize className="h-3 w-3" />
               </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 text-red-500 hover:text-red-700 hover:bg-red-50"
+                title="Eliminar collage"
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); deleteElement(id); }}
+              >
+                <Trash2 className="h-3 w-3" />
+              </Button>
             </div>
 
             <DropdownMenu>
@@ -406,7 +434,7 @@ export default function PhotoCollageElement(props: CommonElementProps) {
           {photos.length > 0 ? (
             <div className="w-full h-full p-4 flex items-center justify-center">
               <div className="w-full max-w-4xl">
-                <ReactPhotoCollage
+                <SafeReactPhotoCollage
                   width={Math.min(width - 32, 800).toString()}
                   height={Math.min(height - 32, 600).toString()}
                   layout={[3, 2]}

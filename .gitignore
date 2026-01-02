@@ -35,4 +35,21 @@ node_modules
 
 # OS
 .DS_Store
-.vercel
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
+
+# Next.js generated files
+public/index.html
+
+# Environment variables (expanded)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/

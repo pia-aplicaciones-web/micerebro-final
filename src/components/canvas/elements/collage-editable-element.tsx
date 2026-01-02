@@ -124,12 +124,21 @@ interface CollageEditableElementProps extends CommonElementProps {
 
 export default function CollageEditableElement({
   content,
-  onUpdateElement,
+  onUpdate,
   id,
   isSelected,
   onSelectElement,
 }: CollageEditableElementProps) {
-  const [images, setImages] = useState<CollageImageData[]>(content.images || []);
+  const [images, setImages] = useState<CollageImageData[]>(
+    (content.images || []).map((img: any) => ({
+      id: img.id,
+      src: img.url,
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 200,
+    }))
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [stageScale, setStageScale] = useState(1);
   const [stageX, setStageX] = useState(0);
@@ -143,16 +152,20 @@ export default function CollageEditableElement({
   const canvasSize = getCanvasSize(images.length);
 
   // Auto-save
-  useAutoSave(() => {
-    if (onUpdateElement) {
-      onUpdateElement({
-        content: {
-          ...content,
-          images,
-        },
-      });
-    }
-  }, [images, content, onUpdateElement]);
+  const { handleChange } = useAutoSave({
+    getContent: () => ({
+      ...content,
+      images: images.map(img => ({
+        id: img.id,
+        url: img.src,
+        thumbnail: img.src,
+      })),
+    }),
+    onSave: (newContent) => {
+      onUpdate(id, { content: newContent });
+    },
+    debounceMs: 1000,
+  });
 
   const handleUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -199,6 +212,12 @@ export default function CollageEditableElement({
   }, []);
 
   const handleStageClick = useCallback((e: KonvaEventObject<MouseEvent>) => {
+    if (e.target === e.target.getStage()) {
+      setSelectedId(null);
+    }
+  }, []);
+
+  const handleStageTap = useCallback((e: KonvaEventObject<TouchEvent>) => {
     if (e.target === e.target.getStage()) {
       setSelectedId(null);
     }
@@ -251,7 +270,7 @@ export default function CollageEditableElement({
         'relative border shadow-md rounded-lg overflow-visible',
         isSelected && 'ring-2 ring-primary'
       )}
-      onClick={() => onSelectElement?.(id)}
+      onClick={() => onSelectElement?.(id, false)}
       style={{
         width: canvasSize.width + 40,
         height: canvasSize.height + 80,
@@ -279,7 +298,7 @@ export default function CollageEditableElement({
             <Camera className="h-3 w-3 mr-1" />
             PNG
           </Button>
-          <SaveStatusIndicator />
+          <SaveStatusIndicator status="idle" />
         </div>
       </div>
 
@@ -289,7 +308,7 @@ export default function CollageEditableElement({
           width={canvasSize.width}
           height={canvasSize.height}
           onClick={handleStageClick}
-          onTap={handleStageClick}
+          onTap={handleStageTap}
         >
           <Layer>
             {/* Lienzo blanco */}

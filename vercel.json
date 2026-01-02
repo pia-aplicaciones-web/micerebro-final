@@ -2,6 +2,7 @@
   "version": 2,
   "name": "canvasmind-app",
   "buildCommand": "npm run build",
+  "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",
   "framework": "nextjs",
   "public": true,

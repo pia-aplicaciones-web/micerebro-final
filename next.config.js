@@ -8,14 +8,14 @@ const nextConfig = {
   // Trailing slash para compatibilidad
   trailingSlash: true,
   
-  // Ignorar errores durante build
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Habilitar detección de errores (mejor práctica)
+  // typescript: {
+  //   ignoreBuildErrors: false, // default behavior
+  // },
+
+  // eslint: {
+  //   ignoreDuringBuilds: false, // default behavior
+  // },
   
   // Configuración experimental para chunks
   experimental: {

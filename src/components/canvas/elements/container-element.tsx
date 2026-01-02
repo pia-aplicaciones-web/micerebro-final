@@ -30,7 +30,6 @@ const EXTENDED_PALETTES = {
   // Tierra
   sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
   terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-  sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
   coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
 
   // Océano
@@ -131,9 +130,9 @@ export default function ContainerElement(
     if (!element || element.id === id) return;
     
     // Agregar el elemento al contenedor
-    if (!containerContent.elementIds.includes(elementId)) {
-      const newElementIds = [...containerContent.elementIds, elementId];
-      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } });
+    if (!(containerContent as ContainerContent).elementIds.includes(elementId)) {
+      const newElementIds = [...(containerContent as ContainerContent).elementIds, elementId];
+      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } as ContainerContent });
       
       // Ocultar el elemento original del canvas
       onUpdate(elementId, { parentId: id, hidden: true });
@@ -172,8 +171,8 @@ export default function ContainerElement(
   useEffect(() => {
     if (properties?.size && !originalSizeRef.current) {
       originalSizeRef.current = {
-        width: properties.size.width || 600, // Valores por defecto
-        height: properties.size.height || 400,
+        width: typeof properties.size.width === 'number' ? properties.size.width : parseFloat(String(properties.size.width)) || 600,
+        height: typeof properties.size.height === 'number' ? properties.size.height : parseFloat(String(properties.size.height)) || 400,
       };
     }
   }, [properties?.size]);
@@ -190,7 +189,7 @@ export default function ContainerElement(
     }
   }, [id, onUpdate, properties]);
 
-  const containedElements: ElementCard[] = containerContent.elementIds
+  const containedElements: ElementCard[] = (containerContent as ContainerContent).elementIds
     .map((elementId) => {
       const element = allElements.find((el) => el.id === elementId);
       return element ? { elementId, element } : null;
@@ -225,7 +224,7 @@ export default function ContainerElement(
 
   const handleLayoutToggle = useCallback(() => {
     const newLayout = layout === 'single' ? 'two-columns' : 'single';
-    onUpdate(id, { content: { ...containerContent, layout: newLayout } });
+    onUpdate(id, { content: { ...containerContent, layout: newLayout } as ContainerContent });
   }, [id, containerContent, layout, onUpdate]);
 
   const handleClose = useCallback(() => {
@@ -234,8 +233,8 @@ export default function ContainerElement(
 
   const handleReleaseElement = useCallback(
     (elementId: string) => {
-      const newElementIds = containerContent.elementIds.filter((eid) => eid !== elementId);
-      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } });
+      const newElementIds = (containerContent as ContainerContent).elementIds.filter((eid) => eid !== elementId);
+      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } as ContainerContent });
 
       const containerPosition = safeProperties.position || { x: 0, y: 0 };
       const containerSize = safeProperties.size || { width: 378, height: 567 };
@@ -396,7 +395,7 @@ export default function ContainerElement(
           <p 
             className="w-full break-words line-clamp-4"
             style={{
-              fontSize: `${Math.min(fontSize * 0.4, 12)}px`,
+              fontSize: `${Math.min((fontSize as number) * 0.4, 12)}px`,
               fontWeight,
               textAlign,
             }}
@@ -457,7 +456,7 @@ export default function ContainerElement(
       );
     }
 
-    if (element.type === 'comment' || element.type === 'comment-small') {
+    if (element.type === 'comment' || (element.type as any) === 'comment-small') {
       const c = (element.content || {}) as any;
       const text = c?.text || c?.label || c?.title || 'Comentario';
       const safeProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};

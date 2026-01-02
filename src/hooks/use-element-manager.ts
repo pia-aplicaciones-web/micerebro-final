@@ -40,7 +40,21 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
     getNextZIndexRef.current = getNextZIndex;
   }, [getViewportCenter, getNextZIndex]);
 
-  const addElement = useCallback(async (type: ElementType, props?: { color?: string; content?: ElementContent; properties?: CanvasElementProperties; parentId?: string; tags?: string[] }): Promise<string> => {
+  const addElement = useCallback(async (type: ElementType, props?: {
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    rotation?: number;
+    zIndex?: number;
+    color?: string;
+    backgroundColor?: string;
+    content?: ElementContent;
+    properties?: CanvasElementProperties;
+    parentId?: string;
+    tags?: string[];
+    hidden?: boolean;
+  }): Promise<string> => {
     const userId = user?.uid;
     if (!firestore || !userId || !boardId) {
       const errorMsg = !firestore ? 'Firestore no está disponible' : !userId ? 'Usuario no autenticado' : 'Board ID no válido';

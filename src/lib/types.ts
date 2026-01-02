@@ -13,6 +13,7 @@ export type ElementType =
   'todo' |
   'moodboard' |
   'gallery' |
+  'photo-ideas-guide' |
   'yellow-notepad' |
   'mini-notes' |
   'mini' |
@@ -280,6 +281,12 @@ export interface GalleryCanvasElement extends BaseVisualProperties {
   content: GalleryContent;
 }
 
+export interface PhotoIdeasGuideCanvasElement extends BaseVisualProperties {
+  type: 'photo-ideas-guide';
+  hidden?: boolean;
+  content: PhotoIdeasGuideContent;
+}
+
 export interface YellowNotepadCanvasElement extends BaseVisualProperties {
   type: 'yellow-notepad';
   hidden?: boolean;
@@ -288,7 +295,12 @@ export interface YellowNotepadCanvasElement extends BaseVisualProperties {
 
 export interface WeeklyPlannerCanvasElement extends BaseVisualProperties {
   type: 'weekly-planner';
-} | {
+  hidden?: boolean;
+  content: WeeklyPlannerContent;
+  properties?: CanvasElementProperties & { weekStart?: string };
+}
+
+export interface VerticalWeeklyPlannerCanvasElement extends BaseVisualProperties {
   type: 'vertical-weekly-planner';
   hidden?: boolean;
   content: WeeklyPlannerContent;
@@ -384,10 +396,10 @@ export type ElementContent =
   | ImageFrameContent
   | PhotoGridContent
   | PhotoGridFreeContent
-  | PhotoGridFreeContent
   | PhotoIdeasGuideContent
   | LibretaContent
   | MiniContent
+  | ContainerContent
   | Record<string, unknown>;
 
 // --- INTERFAZ UNIVERSAL DE PROPS -- CORRECTED ---
@@ -419,7 +431,12 @@ export interface CommonElementProps {
     onUpdate: (id: string, updates: Partial<WithId<CanvasElement>>) => void;
     deleteElement: (id: string) => void;
     onSelectElement: (id: string | null, isMultiSelect: boolean) => void;
-    onEditElement: (id: string) => void; 
+    onEditElement: (id: string) => void;
+
+    // Props de speech-to-text (opcionales)
+    isListening?: boolean;
+    finalTranscript?: string;
+    interimTranscript?: string; 
     
     // Callbacks opcionales/específicas
     onDuplicateElement?: (id: string) => void;
@@ -441,4 +458,7 @@ export interface CommonElementProps {
     onActivateDrag?: (id: string) => void;
     setIsDirty?: (isDirty: boolean) => void;
     boardId?: string;
+    onUploadImage?: () => void;
+    storage?: any;
+    userId?: string;
 }

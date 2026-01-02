@@ -273,7 +273,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   // Filtrar elementos para el canvas (SIEMPRE excluir gallery del canvas)
   const canvasElements = useMemo(() => {
-    return elements.filter(el => el.type !== 'gallery' && el.type !== 'photo-ideas-guide');
+    return elements.filter(el => el.type !== 'gallery' && (el.type as any) !== 'photo-ideas-guide');
   }, [elements]);
 
   // Este código de actualización específica se ha removido para evitar conflictos
@@ -849,7 +849,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
           isFormatToolbarOpen={isFormatToolbarOpen}
           onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-          onUpdateElement={updateElement}
           canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
           canvasScale={canvasRef.current?.getTransform().scale || 1}
           isGalleryPanelOpen={isGalleryOpen}
