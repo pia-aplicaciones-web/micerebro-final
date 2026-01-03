@@ -12,6 +12,7 @@ import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
+import { format } from 'date-fns';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +40,7 @@ export default function NotesElement(props: CommonElementProps) {
   const [isCapturing, setIsCapturing] = useState(false);
 
   // Parsear contenido
-  const typedContent = (content || {}) as { text?: string; searchQuery?: string };
+  const typedContent = (content || {}) as { text?: string; searchQuery?: string; title?: string; pages?: string[]; currentPage?: number };
   const textContent = typedContent.text || '';
   const initialSearchQuery = typedContent.searchQuery || '';
 
@@ -63,7 +64,6 @@ export default function NotesElement(props: CommonElementProps) {
     // Tierra
     sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
     terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-    sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
     coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
 
     // Océano
@@ -502,7 +502,6 @@ export default function NotesElement(props: CommonElementProps) {
                 const newTitle = e.currentTarget.textContent || 'Apuntes';
                 // Aquí puedes agregar lógica para guardar el título si es necesario
               }}
-              onFocus={() => onUpdate(id, { isSelected: true })}
             >
               Apuntes
             </span>

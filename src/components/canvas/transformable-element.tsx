@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useCallback, useState, useEffect } from 'react';
-import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement, NotepadSimpleCanvasElement } from '@/lib/types';
+import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
 import TextElement from './elements/text-element';
 import CommentElement from './elements/comment-element';
-import CommentBubbleElement from './elements/comment-bubble-element';
+import CommentBubbleElement from './elements/comment-r-element';
 import MoodboardElement from './elements/moodboard-element';
 import GalleryElement from './elements/gallery-element';
 import YellowNotepadElement from './elements/yellow-notepad-element';
@@ -52,7 +52,6 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   image: ImageElement,
   text: TextElement,
   comment: CommentElement,
-  'comment-small': CommentElement, // Usa mismo componente con fontSize diferente
   'comment-r': CommentRElement,
   moodboard: MoodboardElement,
   gallery: GalleryElement,
@@ -198,10 +197,10 @@ export default function TransformableElement({
   // Para pomodoro-timer usar ancho fijo de 180px
   // Para vertical-weekly-planner usar tamaño carta A4 fijo
   const safeSize = {
-    width: element.type === 'pomodoro-timer' ? 180 :
-           element.type === 'vertical-weekly-planner' ? 794 :
+    width: (element.type as any) === 'pomodoro-timer' ? 180 :
+           (element.type as any) === 'vertical-weekly-planner' ? 794 :
            (typeof size.width === 'number' && size.width > 0 ? size.width : 200),
-    height: element.type === 'vertical-weekly-planner' ? 1123 :
+    height: (element.type as any) === 'vertical-weekly-planner' ? 1123 :
             (typeof size.height === 'number' && size.height > 0 ? size.height : 150)
   };
   
@@ -211,7 +210,7 @@ export default function TransformableElement({
     const safeProperties = (typeof element.properties === 'object' && element.properties !== null ? element.properties : {}) as CanvasElementProperties;
     
     // Intento de anclar a contenedor si se suelta sobre uno
-    const containers = allElements?.filter(el => el.type === 'container' || el.type === 'two-columns') || [];
+    const containers = allElements?.filter(el => (el.type as any) === 'container') || [];
     // Usar esquina superior izquierda para detectar contenedor (regla especial)
     const elementRect = {
       x: newPosition.x,
@@ -234,7 +233,7 @@ export default function TransformableElement({
       );
     });
 
-    if (targetContainer && element.type !== 'container' && element.type !== 'two-columns') {
+    if (targetContainer && (element.type as any) !== 'container') {
       const cProps = (typeof targetContainer.properties === 'object' && targetContainer.properties !== null ? targetContainer.properties : {}) as CanvasElementProperties;
       const cPos = cProps.position || { x: targetContainer.x || 0, y: targetContainer.y || 0 };
       const relPos = { x: elementRect.x - cPos.x, y: elementRect.y - cPos.y };
@@ -330,9 +329,9 @@ export default function TransformableElement({
 
   const handleDragStart = useCallback((e: RndDragEvent) => {
     // Configurar dataTransfer para drag and drop hacia otros elementos (como galería)
-    if (e.dataTransfer) {
-      e.dataTransfer.setData('application/element-id', element.id);
-      e.dataTransfer.effectAllowed = 'copy';
+    if ((e as any).dataTransfer) {
+      (e as any).dataTransfer.setData('application/element-id', element.id);
+      (e as any).dataTransfer.effectAllowed = 'copy';
     }
   }, [element.id]);
 
@@ -340,7 +339,7 @@ export default function TransformableElement({
   const rndProps = {
     style: {
       zIndex: zIndex,
-      border: isSelected && element.type !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
+      border: isSelected && (element.type as any) !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
       boxSizing: 'border-box' as 'border-box',
       transform: `rotate(${rotation}deg)`,
       transformOrigin: 'center center',

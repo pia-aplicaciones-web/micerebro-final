@@ -84,7 +84,7 @@ export default function PhotoGridFreeElement(props: CommonElementProps) {
       getContent: () => [...recibidorImages],
       onSave: (newImages) => {
         // Guardar las imágenes del recibidor en el content del elemento
-        onUpdate(id, { content: { ...gridContent, recibidorImages: newImages } });
+        onUpdate(id, { content: { ...gridContent, recibidorImages: newImages } as any });
       },
       debounceMs: 500, // Auto-guardar más frecuentemente para el recibidor
     });
@@ -236,6 +236,7 @@ export default function PhotoGridFreeElement(props: CommonElementProps) {
             y: Math.random() * (containerHeight - 100),
             width: 200,
             height: 100,
+            rotation: 0,
             fontSize: 13,
             fontFamily: 'Poppins',
             color: '#000000',

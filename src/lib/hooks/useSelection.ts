@@ -84,9 +84,9 @@ export const useSelection = (
     const rect = new DOMRect(minX * scale + offset.x, minY * scale + offset.y, (maxX - minX) * scale, (maxY - minY) * scale);
 
     // Debug: Log dimensions for troubleshooting
-    if (selectedElements.some(el => el.type === 'vertical-weekly-planner')) {
+    if (selectedElements.some(el => (el.type as any) === 'vertical-weekly-planner')) {
       console.log('🟦 RECTÁNGULO AZUL - Menú semanal:', {
-        elemento: selectedElements.find(el => el.type === 'vertical-weekly-planner'),
+        elemento: selectedElements.find(el => (el.type as any) === 'vertical-weekly-planner'),
         rectanguloAzul: { width: rect.width, height: rect.height, left: rect.left, top: rect.top },
         scale: scale,
         offset: offset

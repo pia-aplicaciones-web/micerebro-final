@@ -403,7 +403,7 @@ export default function GalleryElement(props: CommonElementProps) {
                 )}
                 draggable
                 onDragStart={(e) => handleDragStart(e, image.id)}
-                onDragOver={(e) => handleDragOver(e, index)}
+                onDragOver={handleDragOver}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleReorderDrop(e, index)}
                 >
@@ -448,7 +448,7 @@ export default function GalleryElement(props: CommonElementProps) {
       {/* Diálogo para agregar imagen desde URL */}
       <AddImageFromUrlDialog
         isOpen={isImageUrlDialogOpen}
-        onClose={() => setIsImageUrlDialogOpen(false)}
+        onOpenChange={setIsImageUrlDialogOpen}
         onAddImage={handleAddImageFromUrl}
       />
     </Card>

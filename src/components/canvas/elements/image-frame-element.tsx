@@ -42,7 +42,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
     e.stopPropagation();
     const delta = e.deltaY > 0 ? -0.1 : 0.1;
     const newZoom = Math.max(0.5, Math.min(5, zoom + delta));
-    onUpdate(id, { content: { ...frameContent, zoom: newZoom } });
+    onUpdate(id, { content: { ...frameContent, zoom: newZoom } as any });
   }, [id, frameContent, zoom, onUpdate]);
 
   // Pan start
@@ -60,7 +60,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
     e.preventDefault();
     const newPanX = e.clientX - startPos.x;
     const newPanY = e.clientY - startPos.y;
-    onUpdate(id, { content: { ...frameContent, panX: newPanX, panY: newPanY } });
+    onUpdate(id, { content: { ...frameContent, panX: newPanX, panY: newPanY } as any });
   }, [isPanning, startPos, id, frameContent, onUpdate]);
 
   // Pan end
@@ -71,7 +71,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
   // Rotar
   const handleRotate = useCallback(() => {
     const newRotation = (rotation + 90) % 360;
-    onUpdate(id, { content: { ...frameContent, rotation: newRotation } });
+    onUpdate(id, { content: { ...frameContent, rotation: newRotation } as any });
   }, [id, frameContent, rotation, onUpdate]);
 
   // DROP - Solo acepta imágenes arrastradas
@@ -86,7 +86,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const newUrl = event.target?.result as string;
-        onUpdate(id, { content: { url: newUrl, zoom: 1, panX: 0, panY: 0, rotation: 0 } });
+        onUpdate(id, { content: { url: newUrl, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
       };
       reader.readAsDataURL(file);
       return;
@@ -95,21 +95,21 @@ export default function ImageFrameElement(props: CommonElementProps) {
     // 2) URL en text/uri-list
     const uriList = e.dataTransfer.getData('text/uri-list');
     if (uriList && (uriList.startsWith('http') || uriList.startsWith('data:'))) {
-      onUpdate(id, { content: { url: uriList, zoom: 1, panX: 0, panY: 0, rotation: 0 } });
+      onUpdate(id, { content: { url: uriList, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
       return;
     }
 
     // 3) URL en text/plain
     const plain = e.dataTransfer.getData('text/plain');
     if (plain && (plain.startsWith('http') || plain.startsWith('data:'))) {
-      onUpdate(id, { content: { url: plain, zoom: 1, panX: 0, panY: 0, rotation: 0 } });
+      onUpdate(id, { content: { url: plain, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
       return;
     }
 
     // 4) Imagen desde clipboard base64 (custom)
     const customImage = e.dataTransfer.getData('application/x-image');
     if (customImage) {
-      onUpdate(id, { content: { url: customImage, zoom: 1, panX: 0, panY: 0, rotation: 0 } });
+      onUpdate(id, { content: { url: customImage, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
     }
   }, [id, onUpdate]);
 
@@ -133,12 +133,12 @@ export default function ImageFrameElement(props: CommonElementProps) {
   // Zoom buttons
   const handleZoomIn = useCallback(() => {
     const newZoom = Math.min(5, zoom + 0.25);
-    onUpdate(id, { content: { ...frameContent, zoom: newZoom } });
+    onUpdate(id, { content: { ...frameContent, zoom: newZoom } as any });
   }, [id, frameContent, zoom, onUpdate]);
 
   const handleZoomOut = useCallback(() => {
     const newZoom = Math.max(0.5, zoom - 0.25);
-    onUpdate(id, { content: { ...frameContent, zoom: newZoom } });
+    onUpdate(id, { content: { ...frameContent, zoom: newZoom } as any });
   }, [id, frameContent, zoom, onUpdate]);
 
   // Toggle minimize (copiado del notepad)
@@ -166,7 +166,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
       onUpdate(id, {
         minimized: false,
         properties: newProperties,
-        content: frameContent, // Asegurar que el contenido se preserve
+        content: frameContent as any, // Asegurar que el contenido se preserve
       });
     } else {
       // Guardar el contenido actual antes de minimizar
@@ -179,7 +179,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
           size: { width: currentWidth, height: 48 },
           originalSize: currentSizeNumeric
         },
-        content: updatedContent, // Guardar el contenido actualizado
+        content: updatedContent as any, // Guardar el contenido actualizado
       });
     }
   }, [isPreview, minimized, properties, onUpdate, id, frameContent]);

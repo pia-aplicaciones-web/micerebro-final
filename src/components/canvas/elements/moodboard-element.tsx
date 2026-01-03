@@ -25,7 +25,6 @@ const EXTENDED_PALETTES = {
   // Tierra
   sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
   terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-  sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
   coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
 
   // Océano
@@ -100,8 +99,8 @@ export default function MoodboardElement(props: CommonElementProps) {
   useEffect(() => {
     if (properties?.size && !originalSizeRef.current) {
       originalSizeRef.current = {
-        width: properties.size.width || 600, // Valores por defecto para MoodboardElement
-        height: properties.size.height || 500,
+        width: typeof properties.size.width === 'number' ? properties.size.width : parseFloat(String(properties.size.width)) || 600,
+        height: typeof properties.size.height === 'number' ? properties.size.height : parseFloat(String(properties.size.height)) || 500,
       };
     }
   }, [properties?.size]);

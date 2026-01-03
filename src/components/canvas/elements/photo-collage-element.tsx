@@ -27,7 +27,13 @@ import {
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
-import { ReactPhotoCollage, Photo } from 'react-photo-collage';
+import { ReactPhotoCollage } from 'react-photo-collage';
+
+// Definir tipo Photo localmente
+interface Photo {
+  source: string;
+  alt?: string;
+}
 
 // Wrapper para ReactPhotoCollage que filtra props no reconocidas
 function SafeReactPhotoCollage(props: any) {
@@ -182,11 +188,11 @@ export default function PhotoCollageElement(props: CommonElementProps) {
       }
     }
 
-    onUpdate(id, { content: { ...collageContent, photos: newPhotos } });
+    onUpdate(id, { content: { ...collageContent, photos: newPhotos } as any });
   }, [id, collageContent, photos, onUpdate]);
 
   const handleDeleteAll = useCallback(() => {
-    onUpdate(id, { content: { ...collageContent, photos: [] } });
+    onUpdate(id, { content: { ...collageContent, photos: [] } as any });
   }, [id, collageContent, onUpdate]);
 
   const handleExportPng = useCallback(async () => {

@@ -21,7 +21,6 @@ const EXTENDED_PALETTES = {
   // Tierra
   sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
   terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-  sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
   coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
 
   // Océano

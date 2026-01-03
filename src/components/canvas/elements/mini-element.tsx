@@ -299,7 +299,6 @@ export default function MiniElement(props: CommonElementProps) {
                 const newTitle = e.currentTarget.textContent || 'Mini';
                 // Aquí puedes agregar lógica para guardar el título si es necesario
               }}
-              onFocus={() => onUpdate(id, { isSelected: true })}
               className="bg-transparent flex-grow outline-none cursor-text font-headline text-sm font-semibold p-1"
               style={{ color: '#000000' }}
               data-placeholder='Título'

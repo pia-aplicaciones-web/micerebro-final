@@ -180,8 +180,8 @@ export default function LibretaElement(props: CommonElementProps) {
   useEffect(() => {
     if (properties?.size && !originalSizeRef.current) {
       originalSizeRef.current = {
-        width: properties.size.width || 600, 
-        height: properties.size.height || 400,
+        width: typeof properties.size.width === 'number' ? properties.size.width : parseFloat(String(properties.size.width)) || 600,
+        height: typeof properties.size.height === 'number' ? properties.size.height : parseFloat(String(properties.size.height)) || 400,
       };
     }
     // Inicializar contenido editable y título una sola vez si están vacíos

@@ -62,7 +62,7 @@ export default function ZoomControls({
         <span className="sr-only">Ir al Inicio</span>
       </Button>
       
-      {selectedElement && selectedElement.type !== 'frame' && (
+      {selectedElement && (selectedElement.type as any) !== 'frame' && (
         <>
           <Separator orientation="vertical" className="h-6 mx-1" />
           <Button variant="ghost" size="icon" onClick={() => onBringToFront(selectedElement.id)} className="h-8 w-8" title="Traer al frente">

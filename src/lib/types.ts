@@ -9,7 +9,7 @@ export interface Point {
 
 export type ElementType =
   'image' | 'text' | 'sticky' | 'notepad' |
-  'comment' | 'comment-small' | 'comment-r' |
+  'comment' | 'comment-small' | 'comment-r' | 'comment-bubble' |
   'todo' |
   'moodboard' |
   'gallery' |
@@ -31,6 +31,7 @@ export type ElementType =
   'photo-grid-horizontal' |
   'photo-grid-adaptive' |
   'photo-grid-free' |
+  'pomodoro-timer' |
   'photo-collage' |
   'photo-collage-free' |
   'collage-editable' |
@@ -169,6 +170,8 @@ export interface PhotoIdeasGuideContent {
 export interface LibretaContent {
   title?: string;
   text?: string;
+  pages?: string[];
+  currentPage?: number;
 }
 
 export interface MiniContent {
@@ -213,13 +216,17 @@ export interface MoodboardContent {
   layout?: 'grid' | 'masonry';
 }
 
+export interface GalleryImage {
+  id: string;
+  url: string;
+  filename?: string;
+  uploadedAt?: string;
+  thumbnail?: string;
+}
+
 export interface GalleryContent {
   title?: string;
-  images: Array<{
-    id: string;
-    url: string;
-    thumbnail?: string;
-  }>;
+  images: GalleryImage[];
 }
 
 // Alias para compatibilidad (ahora tipados correctamente)
@@ -435,6 +442,7 @@ export interface CommonElementProps {
 
     // Props de speech-to-text (opcionales)
     isListening?: boolean;
+    liveTranscript?: string;
     finalTranscript?: string;
     interimTranscript?: string; 
     

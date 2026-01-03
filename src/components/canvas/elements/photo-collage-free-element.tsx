@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import type { CommonElementProps } from '@/lib/types';
+import type { CommonElementProps, GalleryImage } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -132,25 +132,30 @@ export default function PhotoCollageFreeElement(props: CommonElementProps) {
   const handleFileUpload = useCallback(async (files: FileList | null) => {
     if (!files) return;
 
-    const newImages = [...images];
+    const newImages: any[] = [...images];
 
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue;
 
       try {
         const compressedUrl = await compressImage(file);
-        newImages.push(compressedUrl);
+        newImages.push({
+          id: `img_${Date.now()}_${Math.random()}`,
+          url: compressedUrl,
+          filename: file.name,
+          uploadedAt: new Date().toISOString(),
+        });
       } catch (error) {
         console.error('Error compressing image:', error);
       }
     }
 
-    onUpdate(id, { content: { ...collageContent, images: newImages } });
+    onUpdate(id, { content: { ...collageContent, images: newImages } as any });
   }, [id, collageContent, images, onUpdate]);
 
   const handleDeleteImage = useCallback((index: number) => {
     const newImages = images.filter((_, i) => i !== index);
-    onUpdate(id, { content: { ...collageContent, images: newImages } });
+    onUpdate(id, { content: { ...collageContent, images: newImages } as any });
   }, [id, collageContent, images, onUpdate]);
 
   const handleDeleteAll = useCallback(() => {

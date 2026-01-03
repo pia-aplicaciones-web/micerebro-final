@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { TwitterPicker } from 'react-color';
 import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +39,6 @@ const EXTENDED_PALETTES = {
   // Tierra
   sage: { bg: '#D7E4C0', text: '#3D5C2E', name: 'Salvia' },
   terracotta: { bg: '#FFCCBC', text: '#BF360C', name: 'Terracota' },
-  sand: { bg: '#FFF3E0', text: '#8D6E63', name: 'Arena' },
   coffee: { bg: '#D7CCC8', text: '#4E342E', name: 'Café' },
   
   // Océano
@@ -105,6 +105,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
     scale = 1,
     offset = { x: 0, y: 0 },
   } = props;
+
+  const { toast } = useToast();
 
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const colorValue = (typeof safeProperties.color === 'string' ? safeProperties.color : 'yellow') || 'yellow';
@@ -201,8 +203,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
   const handleAddContent = (e: React.MouseEvent) => {
     e.stopPropagation();
     // Crear una nueva etiqueta/tag para la nota adhesiva
-    const newTag = `etiqueta${(properties?.tags?.length || 0) + 1}`;
-    const currentTags = properties?.tags || [];
+    const newTag = `etiqueta${((properties?.tags as string[])?.length || 0) + 1}`;
+    const currentTags = (properties?.tags as string[]) || [];
     const updatedTags = [...currentTags, newTag];
 
     // Actualizar las propiedades con la nueva etiqueta
@@ -358,8 +360,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
   // Copiar texto de la nota adhesiva
   const handleCopyText = async () => {
     try {
-      const textContent = content?.text || '';
-      const tagText = properties?.tags?.length ? `\nEtiquetas: ${properties.tags.join(', ')}` : '';
+      const textContent = (content as any)?.text || '';
+      const tagText = (properties?.tags as string[])?.length ? `\nEtiquetas: ${(properties.tags as string[]).join(', ')}` : '';
 
       const fullText = `${textContent}${tagText}`.trim();
 
