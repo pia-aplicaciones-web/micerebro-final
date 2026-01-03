@@ -8,7 +8,7 @@ import type { CommonElementProps } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, Camera, ZoomIn, ZoomOut, RotateCw, Undo, Redo, Copy, Clipboard } from 'lucide-react';
+import { Upload, Camera, ZoomIn, ZoomOut, RotateCw, Undo, Redo, Copy, Clipboard, Trash2 } from 'lucide-react';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 
@@ -128,6 +128,8 @@ export default function CollageEditableElement({
   id,
   isSelected,
   onSelectElement,
+  deleteElement,
+  isPreview,
 }: CollageEditableElementProps) {
   const [images, setImages] = useState<CollageImageData[]>(
     (content.images || []).map((img: any) => ({
@@ -346,6 +348,24 @@ export default function CollageEditableElement({
         onChange={handleUpload}
         className="hidden"
       />
+
+      {/* Botón eliminar fuera del header */}
+      {deleteElement && (
+        <div className="absolute -top-2 -right-2 z-10">
+          <Button
+            variant="destructive"
+            size="icon"
+            className="h-6 w-6 rounded-full shadow-lg"
+            title="Eliminar elemento"
+            onClick={(e) => {
+              e.stopPropagation();
+              deleteElement(id);
+            }}
+          >
+            <Trash2 className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
