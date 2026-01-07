@@ -104,6 +104,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
     minimized,
     scale = 1,
     offset = { x: 0, y: 0 },
+    width,
+    height,
   } = props;
 
   const { toast } = useToast();
@@ -435,12 +437,17 @@ export default function StickyNoteElement(props: CommonElementProps) {
   return (
     <Card
         className={cn(
-          'w-full h-full flex flex-col relative group overflow-visible',
-          'min-w-[200px] min-h-[150px] max-w-[400px] max-h-[500px]',
+          'flex flex-col relative group overflow-visible',
           'rounded-lg shadow-md border-none'
         )}
         style={{
           backgroundColor: currentPalette.bg,
+          width: width || '100%',
+          height: height || '100%',
+          minWidth: '200px',
+          minHeight: '150px',
+          maxWidth: '400px',
+          maxHeight: '500px',
         }}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) return;
@@ -544,7 +551,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
       </div>
 
       {/* Contenido editable */}
-      <div className="relative flex-grow">
+      <div className="relative flex-grow w-full h-full">
         <div
           ref={editorRef}
           contentEditable={!isPreview}
@@ -552,13 +559,14 @@ export default function StickyNoteElement(props: CommonElementProps) {
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
           onFocus={() => onEditElement(id)}
-          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6"
+          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
           style={{
             color: currentPalette.text,
             fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
             fontSize: fontSize,
             lineHeight: '1.6',
-            minHeight: 'calc(100% - 1rem)'
+            minHeight: 'calc(100% - 1rem)',
+            boxSizing: 'border-box'
           }}
         />
         {/* Indicador de estado de guardado */}
