@@ -98,6 +98,8 @@ export default function TodoListElement(props: CommonElementProps) {
     isSelected,
     onLocateElement,
     onEditComment,
+    width,
+    height,
   } = props;
 
   const { toast } = useToast();
@@ -438,14 +440,22 @@ export default function TodoListElement(props: CommonElementProps) {
     <Card
       ref={cardRef}
       className={cn(
-        'w-full h-auto flex flex-col relative group overflow-visible',
-        'min-w-[200px] min-h-[150px] max-h-none',
+        'flex flex-col relative group overflow-visible',
         'rounded-lg shadow-md border border-gray-300',
         isSelected && 'ring-2 ring-blue-500 ring-offset-2'
       )}
-      style={{ backgroundColor: '#ffffff' }} // Fondo blanco para el card, color solo en header
+      style={{
+        backgroundColor: '#ffffff', // Fondo blanco para el card, color solo en header
+        width: width || '100%',
+        height: height || 'auto',
+        minWidth: '200px',
+        minHeight: '150px',
+        maxHeight: 'none',
+      }}
       onClick={() => onEditElement(id)}
     >
+      {/* Contenedor principal que permite altura automática */}
+      <div className="w-full h-full flex flex-col" style={{ minHeight: 'inherit' }}>
       {/* Indicador de estado de guardado */}
       <div className="absolute top-2 right-2 z-10">
         <SaveStatusIndicator status={saveStatus} size="sm" />
@@ -590,7 +600,7 @@ export default function TodoListElement(props: CommonElementProps) {
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           className={cn(
-                            'flex items-center gap-1 p-1 rounded transition-colors group/item',
+                            'flex items-start gap-1 p-1 rounded transition-colors group/item min-h-[32px]',
                             snapshot.isDragging ? 'bg-blue-100 shadow-md border border-blue-300' : 'hover:bg-gray-50/50',
                             isSelected && 'hover:bg-gray-50'
                           )}
@@ -635,14 +645,18 @@ export default function TodoListElement(props: CommonElementProps) {
                               target.style.height = target.scrollHeight + 'px';
                             }}
                             className={cn(
-                              'flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden',
+                              'flex-1 border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden',
                               item.completed ? 'line-through text-gray-500' : 'text-gray-900'
                             )}
                             style={{
                               fontSize,
                               whiteSpace: 'pre-wrap',
                               wordBreak: 'break-word',
-                              minHeight: '24px'
+                              wordWrap: 'break-word',
+                              overflowWrap: 'break-word',
+                              minHeight: '24px',
+                              width: '100%',
+                              boxSizing: 'border-box'
                             }}
                             placeholder="Tarea..."
                             rows={1}
@@ -681,7 +695,7 @@ export default function TodoListElement(props: CommonElementProps) {
 
       {/* FOOTER: Agregar Nueva Tarea */}
       <CardFooter className="p-3 pt-1.5 border-t border-gray-200/50">
-        <div className="flex items-center gap-1 w-full">
+        <div className="flex items-start gap-1 w-full min-h-[36px]">
           <textarea
             ref={(el) => {
               if (el) {
@@ -717,8 +731,17 @@ export default function TodoListElement(props: CommonElementProps) {
               }
             }}
             placeholder="Agregar tarea..."
-            className="flex-grow border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden"
-            style={{ fontSize, whiteSpace: 'pre-wrap', wordBreak: 'break-word', minHeight: '28px' }}
+            className="flex-1 border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden"
+            style={{
+              fontSize,
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              wordWrap: 'break-word',
+              overflowWrap: 'break-word',
+              minHeight: '28px',
+              width: '100%',
+              boxSizing: 'border-box'
+            }}
             onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
             onFocusCapture={() => onEditElement(id)}
           />
@@ -734,6 +757,7 @@ export default function TodoListElement(props: CommonElementProps) {
           </Button>
         </div>
       </CardFooter>
+      </div>
     </Card>
   );
 }

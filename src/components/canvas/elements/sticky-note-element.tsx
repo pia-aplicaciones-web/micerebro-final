@@ -437,7 +437,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
   return (
     <Card
         className={cn(
-          'flex flex-col relative group overflow-visible',
+          'flex flex-col relative group overflow-hidden',
           'rounded-lg shadow-md border-none'
         )}
         style={{
@@ -551,7 +551,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
       </div>
 
       {/* Contenido editable */}
-      <div className="relative flex-grow w-full h-full">
+      <div className="relative flex-grow w-full h-full overflow-hidden">
         <div
           ref={editorRef}
           contentEditable={!isPreview}
@@ -559,13 +559,14 @@ export default function StickyNoteElement(props: CommonElementProps) {
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
           onFocus={() => onEditElement(id)}
-          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
+          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto box-border"
           style={{
             color: currentPalette.text,
             fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
             fontSize: fontSize,
             lineHeight: '1.6',
             minHeight: 'calc(100% - 1rem)',
+            maxHeight: '100%',
             boxSizing: 'border-box'
           }}
         />
