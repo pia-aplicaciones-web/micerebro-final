@@ -442,6 +442,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
         )}
         style={{
           backgroundColor: currentPalette.bg,
+          width: '100%',
+          height: '100%',
         }}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) return;
@@ -545,7 +547,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
       </div>
 
       {/* Contenido editable */}
-      <div className="relative flex-grow">
+      <div className="relative flex-grow w-full h-full">
         <div
           ref={editorRef}
           contentEditable={!isPreview}
@@ -553,13 +555,14 @@ export default function StickyNoteElement(props: CommonElementProps) {
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
           onFocus={() => onEditElement(id)}
-          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6"
+          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
           style={{
             color: currentPalette.text,
             fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
             fontSize: fontSize,
             lineHeight: '1.6',
-            minHeight: 'calc(100% - 1rem)'
+            minHeight: 'calc(100% - 1rem)',
+            boxSizing: 'border-box'
           }}
         />
         {/* Indicador de estado de guardado */}
