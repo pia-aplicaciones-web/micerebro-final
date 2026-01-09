@@ -162,7 +162,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: notepadSize.height,
           userId,
           properties: { ...baseProperties, position: notepadPos, size: notepadSize, format: notepadFormat, zIndex: -1 },
-          content: { title: 'Nuevo Cuaderno', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
+          content: { title: 'Nuevo Cuaderno', pages: ['<div><br></div>'], currentPage: 0 },
           zIndex: -1,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
@@ -243,11 +243,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         // Tamaño basado en las imágenes: aproximadamente 400x600px (portrait)
         const yellowNotepadSize = { width: 400, height: 600 };
         const yellowNotepadPos = getCenteredPosition(yellowNotepadSize.width, yellowNotepadSize.height);
-        newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { pages: Array(2).fill(''), currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { pages: [''], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'notes':
         const notesSize = { width: 794, height: 567 }; // 21cm x 15cm (horizontal)
         const notesPos = getCenteredPosition(notesSize.width, notesSize.height);
-        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { pages: Array(2).fill('<div><br></div>'), currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { pages: ['<div><br></div>'], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'mini-notes':
         const miniNotesSize = { width: 227, height: 378 }; // 6cm x 10cm
         const miniNotesPos = getCenteredPosition(miniNotesSize.width, miniNotesSize.height);
