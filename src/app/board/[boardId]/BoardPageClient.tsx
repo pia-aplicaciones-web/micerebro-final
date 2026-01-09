@@ -244,8 +244,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     setIsEditCommentDialogOpen(false);
   }, []); // Array de dependencias vacío significa que solo se ejecuta una vez al montar
 
-  // Dictado global - CURSOR MANDA
-  const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
+  // Dictado global - Solo activar cuando se presiona el botón
+  const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText(false);
+
+  // Solo usar dictado cuando está activamente escuchando (presionado el botón)
   useDictation(isListening, transcript, interimTranscript);
 
   // Funciones auxiliares
