@@ -201,6 +201,27 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     setPopoverOpen(null);
   };
 
+  const applyFontSize = (size: string) => {
+    // Intentar aplicar a contentEditable primero
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      document.execCommand('fontSize', false, '4'); // Usar fontSize 4 como base
+      // Luego ajustar el tamaño específico
+      const range = selection.getRangeAt(0);
+      const spans = range.commonAncestorContainer.querySelectorAll('font[size="4"]');
+      spans.forEach(span => {
+        (span as HTMLElement).style.fontSize = size;
+        (span as HTMLElement).removeAttribute('size');
+      });
+
+      // Disparar evento input para guardar
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement) {
+        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  };
+
   const applyTextColor = (e: React.MouseEvent, color: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -524,28 +545,17 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         </Tooltip>
         <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
           <div className="space-y-1">
-            {['12px', '14px', '16px', '18px', '20px', '24px', '32px'].map((size) => (
+            {['10px', '12px', '14px', '16px', '18px', '20px', '22px', '24px'].map((size) => (
               <button
                 key={size}
                 className="w-full text-left px-2 py-1 text-sm hover:bg-[#ADD8E6] rounded"
                   onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+
+                  // Aplicar tamaño de fuente
+                  applyFontSize(size);
                   setFontSize(size);
-
-                  // Aplicar al elemento seleccionado si existe
-                  if (selectedElement && onUpdateElement) {
-                    onUpdateElement(selectedElement.id, {
-                      properties: {
-                        ...selectedElement.properties,
-                        fontSize: size
-                      }
-                    });
-                  }
-
-                  // También aplicar estilo inline al elemento activo para vista inmediata
-                  const activeElement = document.activeElement as HTMLElement;
-                  if (activeElement && activeElement.isContentEditable) {
                     activeElement.style.fontSize = size;
                     activeElement.dispatchEvent(new Event('input', { bubbles: true }));
                   }
