@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
+import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { updateInnerHTMLPreservingCursor } from '@/lib/cursor-helper';
@@ -26,6 +27,9 @@ export default function TextElement(props: CommonElementProps) {
 
   const editorRef = useRef<HTMLDivElement>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Hook para pegar texto plano
+  const { handlePaste } = usePastePlainText();
 
   const safeProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const { fontSize, fontWeight, textAlign, fontStyle } = safeProperties;
@@ -106,6 +110,7 @@ export default function TextElement(props: CommonElementProps) {
         onChange={handleContentChange}
         onBlur={handleBlur}
         onDoubleClick={handleDoubleClick}
+        onPaste={handlePaste}
         onClick={(e) => {
           // Asegurar que el cursor se posicione correctamente en elementos de texto
           if (isEditing) {

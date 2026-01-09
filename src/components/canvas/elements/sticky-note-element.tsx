@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
+import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 
@@ -205,6 +206,9 @@ export default function StickyNoteElement(props: CommonElementProps) {
 
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
+
+  // Hook para pegar texto plano
+  const { handlePaste } = usePastePlainText();
 
   const handleAddContent = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -610,6 +614,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
           onFocus={() => onEditElement(id)}
+          onPaste={handlePaste}
           className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
           style={{
             color: currentPalette.text,

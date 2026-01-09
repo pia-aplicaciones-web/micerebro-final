@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
+import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { useDictationBinding } from '@/hooks/use-dictation-binding';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
@@ -113,6 +114,9 @@ export default function TodoListElement(props: CommonElementProps) {
     interimTranscript: '',
     isSelected: isSelected || false,
   });
+
+  // Hook para pegar texto plano
+  const { handlePaste } = usePastePlainText();
 
   // Conectar dictation a los inputs cuando están enfocados
   const handleInputFocus = useCallback((element: HTMLElement) => {
@@ -638,6 +642,7 @@ export default function TodoListElement(props: CommonElementProps) {
                               target.style.height = 'auto';
                               target.style.height = target.scrollHeight + 'px';
                             }}
+                            onPaste={handlePaste}
                             onInput={(e) => {
                               // Auto-expandir cuando cambie por dictado
                               const target = e.currentTarget as HTMLTextAreaElement;
@@ -715,6 +720,7 @@ export default function TodoListElement(props: CommonElementProps) {
               target.style.height = 'auto';
               target.style.height = target.scrollHeight + 'px';
             }}
+            onPaste={handlePaste}
             onInput={(e) => {
               // Sincronizar estado con el valor actual cuando cambie (incluyendo dictado)
               const currentValue = e.currentTarget.value;
