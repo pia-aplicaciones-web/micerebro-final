@@ -316,6 +316,38 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, [isPreview, typedContent, onUpdate, id, saveContent]);
 
+  const handleDeletePage = useCallback(() => {
+    if (isPreview) return;
+
+    const currentPages = typedContent.pages || [];
+    const totalPages = currentPages.length;
+
+    // No permitir eliminar si es la única página
+    if (totalPages <= 1) {
+      return;
+    }
+
+    // Confirmar eliminación
+    if (!confirm(`¿Eliminar la página ${currentPageIndex + 1}? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    saveContent();
+
+    // Crear nuevo array sin la página actual
+    const newPages = currentPages.filter((_, index) => index !== currentPageIndex);
+
+    // Ajustar el currentPage si es necesario
+    let newCurrentPage = currentPageIndex;
+    if (newCurrentPage >= newPages.length) {
+      newCurrentPage = newPages.length - 1;
+    }
+
+    onUpdate(id, {
+      content: { ...typedContent, pages: newPages, currentPage: newCurrentPage },
+    });
+  }, [isPreview, typedContent, currentPageIndex, onUpdate, id, saveContent]);
+
   // Función para aplicar auto-paginación
   const handleApplyAutoPagination = useCallback(() => {
     if (!autoPageDialog) return;
@@ -922,6 +954,16 @@ export default function NotepadElement(props: CommonElementProps) {
                     variant="ghost"
                     size="icon"
                     className="size-7 ml-2"
+                    title="Eliminar Página Actual"
+                    onClick={handleDeletePage}
+                    disabled={(typedContent.pages?.length || 0) <= 1}
+                >
+                    <Minus className="size-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 ml-1"
                     title="Agregar Página"
                     onClick={handleAddPage}
                     disabled={(typedContent.pages?.length || 0) >= 20}
