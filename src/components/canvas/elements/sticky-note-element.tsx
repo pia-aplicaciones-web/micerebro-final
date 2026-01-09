@@ -559,7 +559,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
           onFocus={() => onEditElement(id)}
-          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto box-border"
+          className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-hidden box-border"
           style={{
             color: currentPalette.text,
             fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
