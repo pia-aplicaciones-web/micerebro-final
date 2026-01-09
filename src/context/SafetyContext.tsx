@@ -47,7 +47,7 @@ export function SafetyProvider({ children }: { children: ReactNode }) {
     // Intentar cargar configuración desde localStorage
     if (typeof window !== 'undefined') {
       try {
-        const saved = localStorage.getItem('canvasmind-safety-config');
+        const saved = localStorage.getItem('micerebro-safety-config');
         return saved ? { ...defaultConfig, ...JSON.parse(saved) } : defaultConfig;
       } catch {
         return defaultConfig;
@@ -60,7 +60,7 @@ export function SafetyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('canvasmind-safety-config', JSON.stringify(config));
+        localStorage.setItem('micerebro-safety-config', JSON.stringify(config));
       } catch (error) {
         console.warn('No se pudo guardar configuración de seguridad:', error);
       }

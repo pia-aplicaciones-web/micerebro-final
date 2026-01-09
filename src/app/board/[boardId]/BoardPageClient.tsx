@@ -192,7 +192,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
     // Crear un diálogo con la información copiable
     const userId = user.uid;
-    const firebaseUrl = 'https://console.firebase.google.com/project/canvasmind-app/storage/canvasmind-app.firebasestorage.app/files';
+    const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
 
     // Copiar URL al portapapeles
     navigator.clipboard?.writeText(firebaseUrl).then(() => {
@@ -219,7 +219,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 📝 PASOS DETALLADOS:
 
 1. ✅ URL ya copiada - pégala en tu navegador
-2. En Firebase Console, panel izquierdo → "canvasmind-app.firebasestorage.app"
+2. En Firebase Console, panel izquierdo → "micerebroapp.firebasestorage.app"
 3. Busca carpeta "users" y ábrela
 4. Busca carpeta "${userId}" y ábrela
 5. Abre carpeta "images"

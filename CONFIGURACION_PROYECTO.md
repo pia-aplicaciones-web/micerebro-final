@@ -69,7 +69,7 @@ npm run deploy:vercel:preview  # Deploy a preview
 ```json
 {
   "version": 2,
-  "name": "canvasmind-app",
+  "name": "micerebroapp",
   "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",

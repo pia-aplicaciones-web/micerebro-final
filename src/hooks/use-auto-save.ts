@@ -89,7 +89,7 @@ export function useAutoSave({
   const isSafeModeEnabled = (() => {
     try {
       if (typeof window !== 'undefined') {
-        const safetyConfig = localStorage.getItem('canvasmind-safety-config');
+        const safetyConfig = localStorage.getItem('micerebro-safety-config');
         if (safetyConfig) {
           const config = JSON.parse(safetyConfig);
           return config.safeMode || config.readOnlyMode;
