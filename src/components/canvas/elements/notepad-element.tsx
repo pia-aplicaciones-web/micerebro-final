@@ -1,6 +1,7 @@
 'use client';
 import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { CommonElementProps, NotepadContent, CanvasElementProperties } from '@/lib/types';
 import {
   MoreVertical, X, Minus, Maximize, GripVertical,
@@ -202,13 +203,96 @@ export default function NotepadElement(props: CommonElementProps) {
     await handleTitleBlurAutoSave();
   }, [isPreview, handleTitleBlurAutoSave]);
   
-  const handlePaste = useCallback((e: React.ClipboardEvent) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData('text/plain');
-    if (pastedText) {
-        document.execCommand('insertText', false, pastedText);
+  // Función para calcular líneas disponibles por formato
+  const getLinesPerPage = useCallback((format: string) => {
+    switch (format) {
+      case '10x15': return 28; // Aprox. 28 líneas en formato pequeño
+      case '20x15': return 28; // Aprox. 28 líneas en formato mediano
+      case 'letter':
+      default: return 42; // Aprox. 42 líneas en formato letter (8.5x11)
     }
   }, []);
+
+  // Estado para el diálogo de auto-paginación
+  const [autoPageDialog, setAutoPageDialog] = useState<{
+    isOpen: boolean;
+    pages: string[];
+    totalLines: number;
+    linesPerPage: number;
+  } | null>(null);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    e.preventDefault();
+
+    // Limpiar estilos HTML y obtener texto plano
+    const clipboardData = e.clipboardData;
+    let pastedText = clipboardData.getData('text/plain');
+
+    // Si no hay texto plano, intentar limpiar HTML
+    if (!pastedText) {
+      const htmlContent = clipboardData.getData('text/html');
+      if (htmlContent) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        pastedText = tempDiv.textContent || tempDiv.innerText || '';
+      }
+    }
+
+    if (!pastedText) return;
+
+    // Limpiar y normalizar el texto
+    pastedText = pastedText
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remover caracteres de control
+      .trim();
+
+    if (!pastedText) return;
+
+    // Contar líneas del texto pegado
+    const lines = pastedText.split('\n');
+    const totalLines = lines.length;
+
+    // Obtener formato actual y calcular líneas por página
+    const notepadFormat = (properties as any)?.format || 'letter';
+    const linesPerPage = getLinesPerPage(notepadFormat);
+
+    // Verificar si necesita auto-paginación (2 líneas antes del límite)
+    const threshold = linesPerPage - 2;
+
+    if (totalLines <= threshold) {
+      // Texto pequeño, pegar normalmente
+      document.execCommand('insertText', false, pastedText);
+    } else {
+      // Texto grande, mostrar diálogo de auto-paginación
+      const pages: string[] = [];
+      let currentPageLines: string[] = [];
+      let currentLineCount = 0;
+
+      for (const line of lines) {
+        currentPageLines.push(line);
+        currentLineCount++;
+
+        // Si llegamos al límite de líneas por página, crear nueva página
+        if (currentLineCount >= threshold) {
+          pages.push(currentPageLines.join('\n'));
+          currentPageLines = [];
+          currentLineCount = 0;
+        }
+      }
+
+      // Agregar la última página si tiene contenido
+      if (currentPageLines.length > 0) {
+        pages.push(currentPageLines.join('\n'));
+      }
+
+      // Mostrar diálogo de confirmación
+      setAutoPageDialog({
+        isOpen: true,
+        pages,
+        totalLines,
+        linesPerPage: threshold
+      });
+    }
+  }, [properties, getLinesPerPage]);
   
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -231,6 +315,38 @@ export default function NotepadElement(props: CommonElementProps) {
       });
     }
   }, [isPreview, typedContent, onUpdate, id, saveContent]);
+
+  // Función para aplicar auto-paginación
+  const handleApplyAutoPagination = useCallback(() => {
+    if (!autoPageDialog) return;
+
+    // Crear páginas nuevas a partir del contenido dividido
+    const newPages = [...(typedContent.pages || [])];
+
+    // Reemplazar la página actual con la primera porción
+    newPages[currentPageIndex] = autoPageDialog.pages[0];
+
+    // Agregar las páginas adicionales
+    for (let i = 1; i < autoPageDialog.pages.length; i++) {
+      newPages.push(autoPageDialog.pages[i]);
+    }
+
+    // Actualizar el contenido con las nuevas páginas
+    onUpdate(id, {
+      content: {
+        ...typedContent,
+        pages: newPages,
+        currentPage: currentPageIndex // Mantener en la página actual
+      }
+    });
+
+    // Cerrar diálogo
+    setAutoPageDialog(null);
+  }, [autoPageDialog, typedContent, currentPageIndex, onUpdate, id]);
+
+  const handleCancelAutoPagination = useCallback(() => {
+    setAutoPageDialog(null);
+  }, []);
 
   const handleRestoreOriginalSize = useCallback(() => {
     if (isPreview) return;
@@ -837,6 +953,59 @@ export default function NotepadElement(props: CommonElementProps) {
             onClose={() => setIsPasswordDialogOpen(false)}
           />
         )}
+
+        {/* Diálogo de Auto-Paginación */}
+        <Dialog open={autoPageDialog?.isOpen || false} onOpenChange={(open) => !open && handleCancelAutoPagination()}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>📄 Auto-Paginación de Texto</DialogTitle>
+              <DialogDescription>
+                El texto pegado tiene {autoPageDialog?.totalLines} líneas, que excede el límite de {autoPageDialog?.linesPerPage} líneas por página.
+                Se dividirá automáticamente en {autoPageDialog?.pages.length} páginas.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">📊 Distribución de Páginas:</h4>
+                <div className="space-y-2">
+                  {autoPageDialog?.pages.map((pageContent, index) => {
+                    const linesInPage = pageContent.split('\n').length;
+                    return (
+                      <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Página {index + 1}:</span>
+                          <span className="text-sm text-gray-600">{linesInPage} líneas</span>
+                        </div>
+                        <div className="text-xs text-gray-500 max-w-[300px] truncate">
+                          {pageContent.substring(0, 100)}...
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <h4 className="font-semibold text-amber-900 mb-2">⚠️ Importante:</h4>
+                <ul className="text-sm text-amber-800 space-y-1">
+                  <li>• La página actual será reemplazada con el contenido de la Página 1</li>
+                  <li>• Se crearán {((autoPageDialog?.pages.length || 1) - 1)} páginas adicionales</li>
+                  <li>• El contenido existente de otras páginas no se verá afectado</li>
+                </ul>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={handleCancelAutoPagination}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleApplyAutoPagination}>
+                  Aplicar Auto-Paginación
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
     </Card>
   );
 }
