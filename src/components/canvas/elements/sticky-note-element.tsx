@@ -454,6 +454,17 @@ export default function StickyNoteElement(props: CommonElementProps) {
       >
       {/* Header con iconos en la esquina superior izquierda */}
       <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        {/* Botón de cerrar siempre visible */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 p-1 hover:bg-black/10 rounded opacity-100"
+          onClick={handleClose}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Cerrar nota adhesiva"
+        >
+          <X className="h-4 w-4 text-gray-700" />
+        </Button>
         <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded">
           <GripVertical className="h-4 w-4 text-gray-700" />
         </div>
@@ -535,15 +546,6 @@ export default function StickyNoteElement(props: CommonElementProps) {
             </DropdownMenu>
           </>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 p-1 hover:bg-black/10 rounded"
-          onClick={handleClose}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <X className="h-4 w-4 text-gray-700" />
-        </Button>
       </div>
 
       {/* Contenido editable */}
