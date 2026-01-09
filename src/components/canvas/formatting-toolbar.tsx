@@ -29,6 +29,8 @@ import {
   Clock,
   Highlighter,
   MapPin,
+  List,
+  ListOrdered,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -374,6 +376,43 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       if (activeElement && activeElement.isContentEditable) {
         activeElement.focus();
         document.execCommand('insertUnorderedList', false);
+        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }
+  };
+
+  const handleOrderedList = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Insertar lista ordenada (numerada)
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const container = range.commonAncestorContainer;
+      if (container.nodeType === Node.ELEMENT_NODE) {
+        const element = container as HTMLElement;
+        // Si ya está en una lista, salir de la lista
+        if (element.tagName === 'UL' || element.tagName === 'OL' || element.closest('ul, ol')) {
+          document.execCommand('insertOrderedList', false);
+        } else {
+          // Insertar nueva lista
+          document.execCommand('insertOrderedList', false);
+        }
+      } else {
+        // Insertar nueva lista
+        document.execCommand('insertOrderedList', false);
+      }
+      // Disparar evento input para guardar
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement) {
+        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    } else {
+      // Si no hay selección, insertar lista en el cursor
+      const activeElement = document.activeElement as HTMLElement;
+      if (activeElement && activeElement.isContentEditable) {
+        activeElement.focus();
+        document.execCommand('insertOrderedList', false);
         activeElement.dispatchEvent(new Event('input', { bubbles: true }));
       }
     }
@@ -808,6 +847,36 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         </TooltipTrigger>
         <TooltipContent>
           <p>Tachado</p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* 10. Lista con viñetas - Botón blanco */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className={whiteButtonClassName}
+            onMouseDown={handleList}
+          >
+            <List className={iconClassName} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Lista con viñetas</p>
+        </TooltipContent>
+      </Tooltip>
+
+      {/* 11. Lista numerada - Botón blanco */}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            className={whiteButtonClassName}
+            onMouseDown={handleOrderedList}
+          >
+            <ListOrdered className={iconClassName} />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Lista numerada</p>
         </TooltipContent>
       </Tooltip>
 
