@@ -6,6 +6,7 @@ import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Input } from '@/components/ui/input';
 import { TwitterPicker } from 'react-color';
 import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -202,20 +203,34 @@ export default function StickyNoteElement(props: CommonElementProps) {
     }
   };
 
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+
   const handleAddContent = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Crear una nueva etiqueta/tag para la nota adhesiva
-    const newTag = `etiqueta${((properties?.tags as string[])?.length || 0) + 1}`;
-    const currentTags = (properties?.tags as string[]) || [];
-    const updatedTags = [...currentTags, newTag];
+    setIsAddingTag(true);
+    setNewTagName('');
+  };
 
-    // Actualizar las propiedades con la nueva etiqueta
-    onUpdate(id, {
-      properties: {
-        ...properties,
-        tags: updatedTags
-      }
-    });
+  const handleConfirmAddTag = () => {
+    if (newTagName.trim()) {
+      const currentTags = (properties?.tags as string[]) || [];
+      const updatedTags = [...currentTags, newTagName.trim()];
+
+      onUpdate(id, {
+        properties: {
+          ...properties,
+          tags: updatedTags
+        }
+      });
+    }
+    setIsAddingTag(false);
+    setNewTagName('');
+  };
+
+  const handleCancelAddTag = () => {
+    setIsAddingTag(false);
+    setNewTagName('');
   };
 
   // REGLA #4: Manejar rotación
@@ -547,6 +562,44 @@ export default function StickyNoteElement(props: CommonElementProps) {
           </>
         )}
       </div>
+
+      {/* Diálogo para agregar etiqueta */}
+      {isAddingTag && (
+        <div className="absolute top-12 left-2 z-20 bg-white border border-gray-200 rounded-lg shadow-lg p-3 min-w-[200px]">
+          <div className="flex items-center gap-2">
+            <Input
+              value={newTagName}
+              onChange={(e) => setNewTagName(e.target.value)}
+              placeholder="Nombre de la etiqueta"
+              className="flex-1 h-8 text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleConfirmAddTag();
+                } else if (e.key === 'Escape') {
+                  handleCancelAddTag();
+                }
+              }}
+              autoFocus
+            />
+            <Button
+              size="sm"
+              onClick={handleConfirmAddTag}
+              disabled={!newTagName.trim()}
+              className="h-8 px-2"
+            >
+              ✓
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleCancelAddTag}
+              className="h-8 px-2"
+            >
+              ✕
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Contenido editable */}
       <div className="relative flex-grow w-full h-full">
