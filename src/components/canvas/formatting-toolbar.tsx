@@ -208,7 +208,10 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       document.execCommand('fontSize', false, '4'); // Usar fontSize 4 como base
       // Luego ajustar el tamaño específico
       const range = selection.getRangeAt(0);
-      const spans = range.commonAncestorContainer.querySelectorAll('font[size="4"]');
+      const container = range.commonAncestorContainer;
+      const spans = (container.nodeType === Node.ELEMENT_NODE)
+        ? (container as Element).querySelectorAll('font[size="4"]')
+        : [];
       spans.forEach(span => {
         (span as HTMLElement).style.fontSize = size;
         (span as HTMLElement).removeAttribute('size');
@@ -556,10 +559,6 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
                   // Aplicar tamaño de fuente
                   applyFontSize(size);
                   setFontSize(size);
-                    activeElement.style.fontSize = size;
-                    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-                  }
-
                   setPopoverOpen(null);
                 }}
               >

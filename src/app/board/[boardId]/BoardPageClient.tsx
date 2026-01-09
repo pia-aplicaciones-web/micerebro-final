@@ -245,7 +245,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   }, []); // Array de dependencias vacío significa que solo se ejecuta una vez al montar
 
   // Dictado global - Solo activar cuando se presiona el botón
-  const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText(false);
+  const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
 
   // Solo usar dictado cuando está activamente escuchando (presionado el botón)
   useDictation(isListening, transcript, interimTranscript);
