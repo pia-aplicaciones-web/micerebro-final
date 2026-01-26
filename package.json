@@ -56,7 +56,7 @@
     "html-to-image": "^1.11.13",
     "html-to-text": "^9.0.5",
     "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.4",
+    "jspdf": "^4.0.0",
     "konva": "^10.0.12",
     "lucide-react": "^0.475.0",
     "next": "^15.2.6",
@@ -71,7 +71,6 @@
     "react-hook-form": "^7.54.2",
     "react-hotkeys-hook": "^5.2.1",
     "react-konva": "^19.2.1",
-    "react-photo-collage": "^1.0.9",
     "react-resizable": "^3.1.1",
     "react-rnd": "^10.4.11",
     "react-speech-recognition": "^4.0.1",
@@ -89,7 +88,10 @@
     "@types/react": "^18.3.12",
     "@types/react-color": "^3.0.13",
     "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.53.1",
+    "@typescript-eslint/parser": "^8.53.1",
     "eslint": "^9.39.2",
+    "eslint-plugin-jsdoc": "^62.3.1",
     "typescript": "^5"
   }
 }

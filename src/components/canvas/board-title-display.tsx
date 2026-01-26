@@ -13,12 +13,43 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import TextToolsMenu from './text-tools-menu';
 
 interface BoardTitleDisplayProps {
   name: string;
   onUpdateName?: (newName: string) => void;
   onDeleteBoard?: () => void;
 }
+
+const handleTextFormat = (command: string, value?: string) => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'DIV')) {
+      activeElement.focus();
+      if (value) {
+        document.execCommand(command, false, value);
+      } else {
+        document.execCommand(command, false);
+      }
+      // Disparar evento input para guardar
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    return;
+  }
+
+  if (value) {
+    document.execCommand(command, false, value);
+  } else {
+    document.execCommand(command, false);
+  }
+
+  // Disparar evento input para guardar cambios
+  const activeElement = document.activeElement as HTMLElement;
+  if (activeElement) {
+    activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+};
 
 export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }: BoardTitleDisplayProps) {
   const [isEditing, setIsEditing] = useState(false);
@@ -78,6 +109,8 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
             minWidth: '400px',
           }}
         />
+        {/* Herramientas de edición de texto */}
+      <TextToolsMenu onFormat={handleTextFormat} />
         {onDeleteBoard && (
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
@@ -130,6 +163,8 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
       >
         {name || 'Sin título'}
       </h1>
+      {/* Herramientas de edición de texto */}
+      <TextToolsMenu onFormat={handleTextFormat} />
       {onDeleteBoard && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogTrigger asChild>

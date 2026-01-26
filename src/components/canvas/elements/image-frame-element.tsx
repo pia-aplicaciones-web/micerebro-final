@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import type { CommonElementProps, ImageFrameContent } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GripVertical, X, RotateCw, ZoomIn, ZoomOut, Move, Minus, Maximize, Trash2 } from 'lucide-react';
+import { GripVertical, RotateCw, ZoomIn, ZoomOut, Move, Minus, Maximize, Trash2, Upload } from 'lucide-react';
+import { compressImage, uploadFile } from '@/lib/upload-helper';
+import { useToast } from '@/hooks/use-toast';
 
 function isImageFrameContent(content: unknown): content is ImageFrameContent {
   return typeof content === 'object' && content !== null;
@@ -30,11 +32,17 @@ export default function ImageFrameElement(props: CommonElementProps) {
     : { url: '', zoom: 1, panX: 0, panY: 0, rotation: 0 };
 
   const [isPanning, setIsPanning] = useState(false);
+  const [isPanEnabled, setIsPanEnabled] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [isDragOver, setIsDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   const { url, zoom = 1, panX = 0, panY = 0, rotation = 0 } = frameContent;
+
+  useEffect(() => {
+    setIsPanEnabled(!!url);
+  }, [url]);
 
   // Zoom con scroll
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -47,12 +55,12 @@ export default function ImageFrameElement(props: CommonElementProps) {
 
   // Pan start
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0 || !url) return;
+    if (e.button !== 0 || !url || !isPanEnabled) return;
     e.preventDefault();
     e.stopPropagation();
     setIsPanning(true);
     setStartPos({ x: e.clientX - panX, y: e.clientY - panY });
-  }, [panX, panY, url]);
+  }, [panX, panY, url, isPanEnabled]);
 
   // Pan move
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
@@ -74,8 +82,51 @@ export default function ImageFrameElement(props: CommonElementProps) {
     onUpdate(id, { content: { ...frameContent, rotation: newRotation } as any });
   }, [id, frameContent, rotation, onUpdate]);
 
+  const handleUploadToFrame = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      try {
+        if (props.userId && props.storage) {
+          const result = await uploadFile(file, props.userId, props.storage);
+          if (result.success) {
+            onUpdate(id, { content: { url: result.url, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+            setIsPanEnabled(true);
+            toast({ title: 'Imagen subida al marco' });
+            return;
+          }
+          toast({ variant: 'destructive', title: 'Error', description: result.error });
+          return;
+        }
+
+        const compressedFile = await compressImage(file, 200);
+        const sizeKB = compressedFile.size / 1024;
+        if (sizeKB > 200) {
+          toast({ variant: 'destructive', title: 'Imagen demasiado grande', description: `Tamaño final: ${sizeKB.toFixed(2)}KB` });
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newUrl = event.target?.result as string;
+          onUpdate(id, { content: { url: newUrl, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+          setIsPanEnabled(true);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Error al subir imagen al marco:', error);
+        toast({ variant: 'destructive', title: 'Error al subir imagen' });
+      }
+    };
+    input.click();
+  }, [id, onUpdate, props.userId, props.storage, toast]);
+
   // DROP - Solo acepta imágenes arrastradas
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragOver(false);
@@ -83,12 +134,36 @@ export default function ImageFrameElement(props: CommonElementProps) {
     // 1) Archivos directos
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newUrl = event.target?.result as string;
-        onUpdate(id, { content: { url: newUrl, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
-      };
-      reader.readAsDataURL(file);
+      try {
+        if (props.userId && props.storage) {
+          const result = await uploadFile(file, props.userId, props.storage);
+          if (result.success) {
+            onUpdate(id, { content: { url: result.url, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+            setIsPanEnabled(true);
+            return;
+          }
+          toast({ variant: 'destructive', title: 'Error', description: result.error });
+          return;
+        }
+
+        const compressedFile = await compressImage(file, 200);
+        const sizeKB = compressedFile.size / 1024;
+        if (sizeKB > 200) {
+          toast({ variant: 'destructive', title: 'Imagen demasiado grande', description: `Tamaño final: ${sizeKB.toFixed(2)}KB` });
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const newUrl = event.target?.result as string;
+          onUpdate(id, { content: { url: newUrl, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+          setIsPanEnabled(true);
+        };
+        reader.readAsDataURL(compressedFile);
+      } catch (error) {
+        console.error('Error al procesar imagen al soltar:', error);
+        toast({ variant: 'destructive', title: 'Error al cargar imagen' });
+      }
       return;
     }
 
@@ -96,6 +171,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
     const uriList = e.dataTransfer.getData('text/uri-list');
     if (uriList && (uriList.startsWith('http') || uriList.startsWith('data:'))) {
       onUpdate(id, { content: { url: uriList, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+      setIsPanEnabled(true);
       return;
     }
 
@@ -103,6 +179,7 @@ export default function ImageFrameElement(props: CommonElementProps) {
     const plain = e.dataTransfer.getData('text/plain');
     if (plain && (plain.startsWith('http') || plain.startsWith('data:'))) {
       onUpdate(id, { content: { url: plain, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+      setIsPanEnabled(true);
       return;
     }
 
@@ -110,8 +187,9 @@ export default function ImageFrameElement(props: CommonElementProps) {
     const customImage = e.dataTransfer.getData('application/x-image');
     if (customImage) {
       onUpdate(id, { content: { url: customImage, zoom: 1, panX: 0, panY: 0, rotation: 0 } as any });
+      setIsPanEnabled(true);
     }
-  }, [id, onUpdate]);
+  }, [id, onUpdate, props.userId, props.storage, toast]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -208,13 +286,32 @@ export default function ImageFrameElement(props: CommonElementProps) {
         onSelectElement(id, e.shiftKey || e.ctrlKey || e.metaKey);
       }}
     >
-      {/* Header - SIN botón subir */}
+      {/* Header - Botón subir mini */}
       <div className="drag-handle flex items-center justify-between px-2 py-1.5 bg-gray-50 border-b border-gray-200 cursor-grab active:cursor-grabbing">
         <div className="flex items-center gap-2">
           <GripVertical className="h-4 w-4 text-gray-400" />
           <span className="text-xs font-medium text-gray-600">Marco</span>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant={isPanEnabled ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => { e.stopPropagation(); setIsPanEnabled((prev) => !prev); }}
+            title={isPanEnabled ? 'Mover activo' : 'Activar mover'}
+            disabled={!url}
+          >
+            <Move className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => { e.stopPropagation(); handleUploadToFrame(); }}
+            title="Subir imagen al marco"
+          >
+            <Upload className="h-3 w-3" />
+          </Button>
           <Button
             variant="ghost"
             size="icon"

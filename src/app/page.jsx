@@ -1,14 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { getFirestore, collection, getDocs, addDoc, serverTimestamp, limit, orderBy, doc, setDoc, getDoc, query } from 'firebase/firestore';
+import { collection, getDocs, addDoc, serverTimestamp, limit, orderBy, doc, setDoc, getDoc, query } from 'firebase/firestore';
 import { Loader2, LogIn, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { signInWithGoogle, signInWithEmail, createUserWithEmail } from '@/lib/auth';
-import { handleGoogleSignInResult } from '@/firebase/auth';
-import { initFirebase } from '@/lib/firebase';
-import { getFirebaseFirestore } from '@/lib/firebase';
+import { signInWithGoogle, signInWithEmail, createUserWithEmail, handleGoogleSignInResult } from '@/lib/auth';
+import { initFirebase, getFirebaseFirestore } from '@/lib/firebase';
 
 export default function HomePage() {
   const { toast } = useToast();

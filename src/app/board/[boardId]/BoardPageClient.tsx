@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Loader2, ChevronRight, ChevronLeft, Menu, Mic } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
@@ -24,6 +25,7 @@ import Canvas from '@/components/canvas/canvas';
 import ToolsSidebar from '@/components/canvas/tools-sidebar';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
+import { Button } from '@/components/ui/button';
 
 // Diálogos
 import AddImageFromUrlDialog from '@/components/canvas/elements/add-image-from-url-dialog';
@@ -34,7 +36,7 @@ import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
-import { SafetyIndicator } from '@/components/SafetyControls';
+import DictationModalMobile from '@/components/canvas/dictation-modal-mobile';
 
 
 // Debug Menu (temporal)
@@ -63,6 +65,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const storage = getFirebaseStorage();
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   
   // Guía: no crear usuarios anónimos ni cargar sin usuario real de AuthContext
   
@@ -168,6 +171,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isImageCropDialogOpen, setIsImageCropDialogOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const [uploadedFileToProcess, setUploadedFileToProcess] = useState<File | null>(null);
+  const [isDictationModalMobileOpen, setIsDictationModalMobileOpen] = useState(false);
   
   // Estados de Selección
   const [selectedElement, setSelectedElement] = useState<WithId<CanvasElement> | null>(null);
@@ -267,6 +271,23 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   }, []);
 
   const { addElement } = useElementManager(boardId, getViewportCenter, getNextZIndex);
+
+  const handleSaveDictatedText = useCallback(async (text: string, title: string) => {
+    if (!text.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para guardar' });
+      return;
+    }
+    const viewportCenter = getViewportCenter();
+    await addElement('notepad', {
+      content: { title, pages: [`<div>${text.replace(/\n/g, '<br/>')}</div>`] },
+      properties: { 
+        position: viewportCenter,
+        size: { width: 378, height: 567 }, // Tamaño de un notepad estándar
+      },
+    });
+    toast({ title: 'Cuaderno de dictado creado' });
+    setIsDictationModalMobileOpen(false);
+  }, [addElement, getViewportCenter, toast]);
 
   // Buscar elemento gallery
   const galleryElement = useMemo(() => {
@@ -514,14 +535,24 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
-      // Crear URL temporal para preview y crop
-      const imageUrl = URL.createObjectURL(file);
-      setImageToCrop(imageUrl);
-      setUploadedFileToProcess(file);
-      setIsImageCropDialogOpen(true);
+      try {
+        const result = await uploadFile(file, userId, storage);
+        if (result.success) {
+          await addElement('image', {
+            content: { url: result.url },
+            properties: { size: { width: 300, height: 200 } },
+          });
+          toast({ title: 'Imagen subida' });
+        } else {
+          toast({ variant: 'destructive', title: 'Error', description: result.error });
+        }
+      } catch (error) {
+        console.error('Error al subir imagen:', error);
+        toast({ variant: 'destructive', title: 'Error al subir imagen' });
+      }
     };
     input.click();
-  }, [user, storage]);
+  }, [user, storage, addElement, toast]);
 
   const handleCropImage = useCallback(() => {
     const input = document.createElement('input');
@@ -779,12 +810,102 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         {/* Nombre del tablero en esquina superior izquierda */}
         <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
 
-        {/* Indicador de modo seguro - Solo en desarrollo */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-4 right-4 z-50">
-            <SafetyIndicator />
-          </div>
+        {isMobile && (
+          <>
+            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-[1001]">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="p-0 w-64 md:w-80">
+                <ToolsSidebar
+                  elements={elements || []}
+                  boards={boards || []}
+                  boardId={boardId}
+                  user={user}
+                  onUploadImage={handleUploadImage}
+                  onAddImageFromUrl={() => {
+                    setIsImageUrlDialogOpen(true);
+                    setShouldOpenCropAfterUrl(false);
+                  }}
+                  onCropImage={handleCropImage}
+                  onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+                  onPanToggle={() => canvasRef.current?.activatePanMode()}
+                  onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
+                  onDeleteBoard={handleDeleteBoard}
+                  onDeleteAllUserImages={deleteAllUserImages}
+                  isListening={isListening}
+                  onToggleDictation={toggleListening}
+                  onOpenNotepad={handleOpenNotepad}
+                  onLocateElement={handleLocateElement}
+                  onAddComment={handleAddMarker}
+                  updateElement={updateElement}
+                  selectedElementIds={selectedElementIds}
+                  addElement={addElement}
+                  selectElement={handleSelectElement}
+                  clearCanvas={() => clearCanvas(elements)}
+                  onExportBoardToPng={handleExportToPng}
+                  onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
+                  isFormatToolbarOpen={isFormatToolbarOpen}
+                  onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+                  canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
+                  canvasScale={canvasRef.current?.getTransform().scale || 1}
+                  isGalleryPanelOpen={isGalleryOpen}
+                  onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
+                />
+              </SheetContent>
+            </Sheet>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="fixed top-4 right-4 z-[1001] rounded-full shadow-lg"
+              title="Dictar en móvil"
+              onClick={() => setIsDictationModalMobileOpen(true)}
+            >
+              <Mic className="h-6 w-6" />
+            </Button>
+          </>
         )}
+
+        {!isMobile && (
+          <ToolsSidebar
+            elements={elements || []}
+            boards={boards || []}
+            boardId={boardId}
+            user={user}
+            onUploadImage={handleUploadImage}
+            onAddImageFromUrl={() => {
+              setIsImageUrlDialogOpen(true);
+              setShouldOpenCropAfterUrl(false);
+            }}
+            onCropImage={handleCropImage}
+            onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+            onPanToggle={() => canvasRef.current?.activatePanMode()}
+            onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
+            onDeleteBoard={handleDeleteBoard}
+            onDeleteAllUserImages={deleteAllUserImages}
+            isListening={isListening}
+            onToggleDictation={toggleListening}
+            onOpenNotepad={handleOpenNotepad}
+            onLocateElement={handleLocateElement}
+            onAddComment={handleAddMarker}
+            updateElement={updateElement}
+            selectedElementIds={selectedElementIds}
+            addElement={addElement}
+            selectElement={handleSelectElement}
+            clearCanvas={() => clearCanvas(elements)}
+            onExportBoardToPng={handleExportToPng}
+            onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
+            isFormatToolbarOpen={isFormatToolbarOpen}
+            onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+            canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
+            canvasScale={canvasRef.current?.getTransform().scale || 1}
+            isGalleryPanelOpen={isGalleryOpen}
+            onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
+          />
+        )}
+
 
         <Canvas
           ref={canvasRef}
@@ -821,56 +942,42 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           isPreview={false}
         />
         
-        <ToolsSidebar
-          elements={elements || []}
-          boards={boards || []}
-          boardId={boardId}
-          user={user}
-          onUploadImage={handleUploadImage}
-          onAddImageFromUrl={() => {
-            setIsImageUrlDialogOpen(true);
-            setShouldOpenCropAfterUrl(false);
-          }}
-          onCropImage={handleCropImage}
-          onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-          onPanToggle={() => canvasRef.current?.activatePanMode()}
-          onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
-          onDeleteBoard={handleDeleteBoard}
-          onDeleteAllUserImages={deleteAllUserImages}
-          isListening={isListening}
-          onToggleDictation={toggleListening}
-          onOpenNotepad={handleOpenNotepad}
-          onLocateElement={handleLocateElement}
-          onAddComment={handleAddMarker}
-          updateElement={updateElement}
-          selectedElementIds={selectedElementIds}
-          addElement={addElement}
-          selectElement={handleSelectElement}
-          clearCanvas={() => clearCanvas(elements)}
-          onExportBoardToPng={handleExportToPng}
-          onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
-          isFormatToolbarOpen={isFormatToolbarOpen}
-          onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-          canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
-          canvasScale={canvasRef.current?.getTransform().scale || 1}
-          isGalleryPanelOpen={isGalleryOpen}
-          onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
-        />
+        {isMobile ? (
+          <Sheet open={isFormatToolbarOpen} onOpenChange={setIsFormatToolbarOpen}>
+            <SheetContent side="bottom" className="p-0 h-auto">
+              <FormattingToolbar
+                isOpen={isFormatToolbarOpen}
+                onClose={() => setIsFormatToolbarOpen(false)}
+                elements={selectedElement ? [selectedElement] : []}
+                onAddComment={handleAddMarker}
+                onEditComment={handleEditComment}
+                isMobileSheet={isMobile}
+                onLocateElement={handleLocateElement}
+                onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
+                addElement={addElement}
+                isPanningActive={isPanningActive}
+                selectedElement={selectedElement}
+                onUpdateElement={updateElement}
+              />
+            </SheetContent>
+          </Sheet>
+        ) : (
+          <FormattingToolbar
+            isOpen={isFormatToolbarOpen}
+            onClose={() => setIsFormatToolbarOpen(false)}
+            elements={selectedElement ? [selectedElement] : []}
+            onAddComment={handleAddMarker}
+            onEditComment={handleEditComment}
+            isMobileSheet={isMobile}
+            onLocateElement={handleLocateElement}
+            onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
+            addElement={addElement}
+            isPanningActive={isPanningActive}
+            selectedElement={selectedElement}
+            onUpdateElement={updateElement}
+          />
+        )}
 
-        <FormattingToolbar
-          isOpen={isFormatToolbarOpen}
-          onClose={() => setIsFormatToolbarOpen(false)}
-          elements={selectedElement ? [selectedElement] : []}
-          onAddComment={handleAddMarker}
-          onEditComment={handleEditComment}
-          isMobileSheet={isMobile}
-          onLocateElement={handleLocateElement}
-          onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
-          addElement={addElement}
-          isPanningActive={isPanningActive}
-          selectedElement={selectedElement}
-          onUpdateElement={updateElement}
-        />
 
         <ChangeFormatDialog
           isOpen={changeFormatDialogOpen}
@@ -984,6 +1091,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             <path d="m9 18 6-6-6-6"/>
           </svg>
         </button>
+
+        {isMobile && (
+          <DictationModalMobile
+            isOpen={isDictationModalMobileOpen}
+            onClose={handleSaveDictatedText}
+          />
+        )}
 
       </div>
 

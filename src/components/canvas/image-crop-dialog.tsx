@@ -129,7 +129,14 @@ const ImageCropDialog: React.FC<ImageCropDialogProps> = ({
   }, [croppedAreaPixels, rotation, imageSrc, getCroppedImg, onCropComplete, onClose]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          onClose();
+        }
+      }}
+    >
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Recortar Imagen</DialogTitle>

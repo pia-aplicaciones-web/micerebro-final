@@ -845,6 +845,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('image-frame')}>
+                <Frame className="mr-2 h-4 w-4" />
+                <span>Marco de foto</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onCropImage}>
                 <Crop className="mr-2 h-4 w-4" />
@@ -914,18 +918,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('moodboard')}>
                 Moodboard
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('photo-collage')}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Collage
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('photo-collage-free')}>
-                <ImageIcon className="mr-2 h-4 w-4" />
-                Collage Libre
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('collage-editable')}>
-                <Grid3X3 className="mr-2 h-4 w-4" />
-                Collage Editable
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuSub>

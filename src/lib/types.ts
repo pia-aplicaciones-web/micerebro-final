@@ -32,9 +32,6 @@ export type ElementType =
   'photo-grid-adaptive' |
   'photo-grid-free' |
   'pomodoro-timer' |
-  'photo-collage' |
-  'photo-collage-free' |
-  'collage-editable' |
   'libreta';
 
 // Interfaz para propiedades de elementos del canvas
@@ -338,6 +335,18 @@ export interface PhotoGridFreeCanvasElement extends BaseVisualProperties {
   content: PhotoGridFreeContent;
 }
 
+export interface ImageFrameCanvasElement extends BaseVisualProperties {
+  type: 'image-frame';
+  hidden?: boolean;
+  content: ImageFrameContent;
+}
+
+export interface PomodoroTimerCanvasElement extends BaseVisualProperties {
+  type: 'pomodoro-timer';
+  hidden?: boolean;
+  content: { time: number; isRunning: boolean; };
+}
+
 export type CanvasElement =
   | ImageCanvasElement
   | TextCanvasElement
@@ -347,12 +356,16 @@ export type CanvasElement =
   | TodoCanvasElement
   | MoodboardCanvasElement
   | GalleryCanvasElement
+  | PhotoIdeasGuideCanvasElement
   | YellowNotepadCanvasElement
   | WeeklyPlannerCanvasElement
+  | VerticalWeeklyPlannerCanvasElement
   | PhotoGridCanvasElement
   | PhotoGridHorizontalCanvasElement
   | PhotoGridAdaptiveCanvasElement
-  | PhotoGridFreeCanvasElement;
+  | PhotoGridFreeCanvasElement
+  | ImageFrameCanvasElement
+  | PomodoroTimerCanvasElement;
 
 export type WithId<T> = T & { id: string };
 

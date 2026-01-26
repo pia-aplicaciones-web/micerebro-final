@@ -27,8 +27,6 @@ import PhotoGridElement from '@/components/canvas/elements/photo-grid-element';
 import PhotoGridHorizontalElement from '@/components/canvas/elements/photo-grid-horizontal-element';
 import PhotoGridAdaptiveElement from '@/components/canvas/elements/photo-grid-adaptive-element';
 import PhotoGridFreeElement from '@/components/canvas/elements/photo-grid-free-element';
-import PhotoCollageElement from '@/components/canvas/elements/photo-collage-element';
-import PhotoCollageFreeElement from '@/components/canvas/elements/photo-collage-free-element';
 import LibretaElement from '@/components/canvas/elements/libreta-element';
 
 import { useCanvasDragAndDrop } from '@/lib/hooks/useCanvasDragAndDrop';
@@ -65,8 +63,6 @@ const ELEMENT_COMPONENTS = {
   'photo-grid-horizontal': PhotoGridHorizontalElement,
   'photo-grid-adaptive': PhotoGridAdaptiveElement,
   'photo-grid-free': PhotoGridFreeElement,
-  'photo-collage': PhotoCollageElement,
-  'photo-collage-free': PhotoCollageFreeElement,
   libreta: LibretaElement,
 };
 
@@ -114,6 +110,7 @@ const BoardContent: React.FC<BoardContentProps> = ({
     addSelection,
     updateSelectionBounds,
   });
+
 
 
 
@@ -211,8 +208,6 @@ const BoardContent: React.FC<BoardContentProps> = ({
           const point = clientToCanvas(e.clientX, e.clientY);
           if (e.deltaY < 0) zoomIn(point);
           else zoomOut(point);
-        } else {
-          panCanvas(0, -e.deltaY);
         }
       }}
       onClick={(e) => {

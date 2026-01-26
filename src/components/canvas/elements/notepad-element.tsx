@@ -5,9 +5,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import type { CommonElementProps, NotepadContent, CanvasElementProperties } from '@/lib/types';
 import {
   MoreVertical, X, Minus, Maximize, GripVertical,
-  FileImage, Settings,
+  FileImage, Settings, Settings2,
   Info, Eraser, CalendarDays, FileSignature, Calendar,
-  ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock
+  ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock, Sparkles, Copy,
+  Volume2, Pause, Square
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -79,6 +81,22 @@ export default function NotepadElement(props: CommonElementProps) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isUnlockedForEditing, setIsUnlockedForEditing] = useState(false);
+  const [isImprovingText, setIsImprovingText] = useState(false);
+  const [isImproveDialogOpen, setIsImproveDialogOpen] = useState(false);
+  const [improveOptions, setImproveOptions] = useState<Record<string, string>>({});
+  const [selectedImproveKey, setSelectedImproveKey] = useState('correccion');
+  const [selectedTextForImprove, setSelectedTextForImprove] = useState('');
+  const [isImproveWholePage, setIsImproveWholePage] = useState(false);
+  const selectionRangeRef = useRef<Range | null>(null);
+  const [isSelectAllDialogOpen, setIsSelectAllDialogOpen] = useState(false);
+  const [allPagesText, setAllPagesText] = useState('');
+  const selectAllRef = useRef<HTMLTextAreaElement | null>(null);
+  const [customInstruction, setCustomInstruction] = useState(''); // Instrucción personalizada para "Otro"
+  const [isReading, setIsReading] = useState(false); // Estado de lectura de voz
+  const [isPaused, setIsPaused] = useState(false); // Estado de pausa
+  const [speechRate, setSpeechRate] = useState(0.85); // Velocidad de lectura (0.5-1.5)
+  const [selectedVoiceName, setSelectedVoiceName] = useState('Paulina'); // Voz seleccionada
+  const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false); // Popover de configuración
   
   // Hook de autoguardado robusto para el contenido del cuaderno
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
@@ -163,6 +181,208 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, [typedContent.title, toast]);
 
+  const escapeHtml = useCallback((text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }, []);
+
+  const captureSelectionText = useCallback(() => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || !contentRef.current) return '';
+    const range = selection.getRangeAt(0);
+    if (!contentRef.current.contains(range.commonAncestorContainer)) return '';
+    const text = selection.toString();
+    if (!text.trim()) return '';
+    selectionRangeRef.current = range.cloneRange();
+    return text;
+  }, []);
+
+  const fetchImproveOptions = useCallback(async (text: string, customInstr?: string) => {
+    setIsImprovingText(true);
+    try {
+      const response = await fetch('/api/gemini/organize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, customInstruction: customInstr }),
+      });
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        const message = errorBody?.error || 'Error al mejorar el texto';
+        toast({ variant: 'destructive', title: message });
+        return false;
+      }
+      const data = await response.json();
+      const nextOptions = {
+        correccion: data.correccion || '',
+        reescritura: data.reescritura || '',
+        agrupar: data.agrupar || '',
+        ordenar: data.ordenar || '',
+        resumir: data.resumir || '',
+        desarrollar: data.desarrollar || '',
+        mejorar_todo: data.mejorar_todo || '',
+        otro: data.otro || '', // Respuesta personalizada
+      };
+      const hasAny = Object.values(nextOptions).some((value) => (value || '').trim().length > 0);
+      if (!hasAny) {
+        toast({ variant: 'destructive', title: 'Respuesta vacía de Gemini' });
+      }
+      setImproveOptions(nextOptions);
+      return true;
+    } catch (error) {
+      console.error('Error al mejorar texto:', error);
+      toast({ variant: 'destructive', title: 'Error al mejorar texto' });
+      return false;
+    } finally {
+      setIsImprovingText(false);
+    }
+  }, [toast]);
+
+  // Función para ejecutar mejora cuando se selecciona una opción
+  const handleSelectImproveOption = useCallback(async (key: string) => {
+    setSelectedImproveKey(key);
+    if (!selectedTextForImprove) return;
+    // Si ya tenemos resultado para esta opción, no volver a consultar
+    if (improveOptions[key]) return;
+    // Consultar a Gemini
+    await fetchImproveOptions(selectedTextForImprove);
+  }, [selectedTextForImprove, improveOptions, fetchImproveOptions]);
+
+  // Función para enviar instrucción personalizada
+  const handleSendCustomInstruction = useCallback(async () => {
+    if (!selectedTextForImprove || !customInstruction.trim()) {
+      toast({ variant: 'destructive', title: 'Escribe una instrucción' });
+      return;
+    }
+    setSelectedImproveKey('otro');
+    await fetchImproveOptions(selectedTextForImprove, customInstruction);
+  }, [selectedTextForImprove, customInstruction, fetchImproveOptions, toast]);
+
+  const handleImproveText = useCallback(() => {
+    if (isPreview || !contentRef.current) return;
+    if (typedContent.password && !isUnlockedForEditing) {
+      setIsPasswordDialogOpen(true);
+      return;
+    }
+    const selectedText = captureSelectionText();
+    const fullText = contentRef.current.innerText || contentRef.current.textContent || '';
+    if (selectedText) {
+      setIsImproveWholePage(false);
+      setSelectedTextForImprove(selectedText);
+      setImproveOptions({}); // Limpiar opciones anteriores
+      setIsImproveDialogOpen(true);
+      // NO llamar a fetchImproveOptions automáticamente
+      return;
+    }
+    if (!fullText.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para mejorar' });
+      return;
+    }
+    setIsImproveWholePage(true);
+    setSelectedTextForImprove(fullText);
+    setSelectedImproveKey('mejorar_todo');
+    setImproveOptions({}); // Limpiar opciones anteriores
+    setIsImproveDialogOpen(true);
+    // NO llamar a fetchImproveOptions automáticamente
+  }, [isPreview, typedContent.password, isUnlockedForEditing, captureSelectionText, toast]);
+
+  const handleRetryImprove = useCallback(async () => {
+    if (!selectedTextForImprove) return;
+    await fetchImproveOptions(selectedTextForImprove);
+  }, [selectedTextForImprove, fetchImproveOptions]);
+
+  // INSERTAR: Agrega el texto DESPUÉS de la selección (no reemplaza)
+  const handleInsertImprovedText = useCallback(() => {
+    if (!contentRef.current) return;
+    const newText = improveOptions[selectedImproveKey];
+    if (!newText) {
+      toast({ variant: 'destructive', title: 'No hay texto para insertar' });
+      return;
+    }
+    if (isImproveWholePage) {
+      // Si es toda la página, agregar al final
+      const currentContent = contentRef.current.innerText || '';
+      contentRef.current.innerText = currentContent + '\n\n' + newText;
+      contentRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+      setIsImproveDialogOpen(false);
+      toast({ title: 'Texto agregado al final' });
+      return;
+    }
+    if (!selectionRangeRef.current) return;
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(selectionRangeRef.current);
+    const range = selectionRangeRef.current;
+    // Mover al final de la selección (NO borrar)
+    range.collapse(false); // false = colapsar al final
+    const textNode = document.createTextNode('\n' + newText);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    contentRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    setIsImproveDialogOpen(false);
+    toast({ title: 'Texto agregado después de la selección' });
+  }, [improveOptions, selectedImproveKey, toast, isImproveWholePage]);
+
+  // REEMPLAZAR: Reemplaza el texto seleccionado
+  const handleReplaceImprovedText = useCallback(() => {
+    if (!contentRef.current) return;
+    const newText = improveOptions[selectedImproveKey];
+    if (!newText) {
+      toast({ variant: 'destructive', title: 'No hay texto para reemplazar' });
+      return;
+    }
+    if (isImproveWholePage) {
+      contentRef.current.innerText = newText;
+      contentRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+      setIsImproveDialogOpen(false);
+      toast({ title: 'Texto reemplazado' });
+      return;
+    }
+    if (!selectionRangeRef.current) return;
+    const selection = window.getSelection();
+    selection?.removeAllRanges();
+    selection?.addRange(selectionRangeRef.current);
+    const range = selectionRangeRef.current;
+    range.deleteContents();
+    const textNode = document.createTextNode(newText);
+    range.insertNode(textNode);
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
+    contentRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    setIsImproveDialogOpen(false);
+    toast({ title: 'Texto reemplazado' });
+  }, [improveOptions, selectedImproveKey, toast, isImproveWholePage]);
+
+  const safeProperties = (typeof properties === 'object' && properties !== null) ? properties : {};
+  const formatType = (safeProperties as CanvasElementProperties)?.format || 'letter';
+
+  const handleDuplicateNotepad = useCallback(async () => {
+    if (!props.addElement) {
+      toast({ variant: 'destructive', title: 'Duplicar no disponible' });
+      return;
+    }
+    const newTitle = typedContent.title ? `${typedContent.title} (copia)` : 'Copia de cuaderno';
+    const newContent: NotepadContent = {
+      ...typedContent,
+      title: newTitle,
+      pages: [...(typedContent.pages || ['<div><br></div>'])],
+      currentPage: typedContent.currentPage || 0,
+    };
+    await props.addElement('notepad', {
+      content: newContent,
+      properties: { format: formatType },
+    });
+    toast({ title: 'Cuaderno duplicado' });
+  }, [props.addElement, typedContent, formatType, toast]);
+
   useEffect(() => {
     if (contentRef.current) {
         const isFocused = document.activeElement === contentRef.current;
@@ -206,10 +426,10 @@ export default function NotepadElement(props: CommonElementProps) {
   // Función para calcular líneas disponibles por formato
   const getLinesPerPage = useCallback((format: string) => {
     switch (format) {
-      case '10x15': return 28; // Aprox. 28 líneas en formato pequeño
-      case '20x15': return 28; // Aprox. 28 líneas en formato mediano
+      case '10x15': return 33; // 33 líneas en formato pequeño
+      case '20x15': return 33; // 33 líneas en formato mediano
       case 'letter':
-      default: return 42; // Aprox. 42 líneas en formato letter (8.5x11)
+      default: return 33; // 33 líneas en formato letter (8.5x11)
     }
   }, []);
 
@@ -255,10 +475,10 @@ export default function NotepadElement(props: CommonElementProps) {
     const notepadFormat = (properties as any)?.format || 'letter';
     const linesPerPage = getLinesPerPage(notepadFormat);
 
-    // Verificar si necesita auto-paginación (2 líneas antes del límite)
-    const threshold = linesPerPage - 2;
+    // Usar las líneas por página completas (33 líneas)
+    const maxLinesPerPage = linesPerPage; // Usar todas las líneas disponibles
 
-    if (totalLines <= threshold) {
+    if (totalLines <= maxLinesPerPage) {
       // Texto pequeño, pegar normalmente
       document.execCommand('insertText', false, pastedText);
     } else {
@@ -271,8 +491,8 @@ export default function NotepadElement(props: CommonElementProps) {
         currentPageLines.push(line);
         currentLineCount++;
 
-        // Si llegamos al límite de líneas por página, crear nueva página
-        if (currentLineCount >= threshold) {
+        // Crear nueva página cuando se alcance el límite de líneas (dejando 2 líneas de margen)
+        if (currentLineCount >= maxLinesPerPage) {
           pages.push(currentPageLines.join('\n'));
           currentPageLines = [];
           currentLineCount = 0;
@@ -289,7 +509,7 @@ export default function NotepadElement(props: CommonElementProps) {
         isOpen: true,
         pages,
         totalLines,
-        linesPerPage: threshold
+        linesPerPage: maxLinesPerPage
       });
     }
   }, [properties, getLinesPerPage]);
@@ -664,6 +884,14 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, [minimized, typedContent.title]);
 
+  useEffect(() => {
+    if (!isSelectAllDialogOpen) return;
+    if (selectAllRef.current) {
+      selectAllRef.current.focus();
+      selectAllRef.current.select();
+    }
+  }, [isSelectAllDialogOpen, allPagesText]);
+
   const execCommand = useCallback((e: React.MouseEvent, command: string, value?: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -676,20 +904,138 @@ export default function NotepadElement(props: CommonElementProps) {
   const handleRemoveFormat = useCallback((e: React.MouseEvent) => execCommand(e, 'removeFormat'), [execCommand]);
   const handleInsertShortDate = useCallback((e: React.MouseEvent) => execCommand(e, 'insertHTML', `<span style="color: #a0a1a6;">-- ${format(new Date(), 'dd/MM/yy')} </span>`), [execCommand]);
   
+  const getAllPagesText = useCallback(() => {
+    const pages = typedContent.pages || [];
+    if (pages.length === 0) return '';
+    return pages.map((pageHtml, index) => {
+      const temp = document.createElement('div');
+      temp.innerHTML = pageHtml || '';
+      const text = temp.innerText || temp.textContent || '';
+      const header = `--- Página ${index + 1} ---`;
+      return `${header}\n${text.trim()}`;
+    }).join('\n\n');
+  }, [typedContent.pages]);
+
+  // Voces disponibles para selección
+  const voiceOptions = ['Paulina', 'Google español (Latinoamérica)', 'Luciana'];
+
+  const getReadableText = useCallback((pages: string[], currentPageIndex: number, contentRef: React.RefObject<HTMLDivElement>): string => {
+    const selection = window.getSelection();
+    let selectedText = '';
+    if (selection && selection.rangeCount > 0 && contentRef.current && contentRef.current.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      selectedText = selection.toString().trim();
+    }
+
+    if (selectedText) {
+      return selectedText;
+    }
+
+    // No explicit selection, get text from current cursor position or start of current page
+    const allPagesTextArray: string[] = [];
+    
+    // Process current page
+    let currentPageRawText = (contentRef.current?.innerText || contentRef.current?.textContent || '').trim();
+    let textFromCurrentPosition = '';
+
+    if (selection && selection.rangeCount > 0 && contentRef.current && contentRef.current.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      const range = selection.getRangeAt(0);
+      const preSelectionRange = range.cloneRange();
+      preSelectionRange.selectNodeContents(contentRef.current);
+      preSelectionRange.setEnd(range.startContainer, range.startOffset);
+      textFromCurrentPosition = currentPageRawText.substring(preSelectionRange.toString().length);
+    } else {
+      // No specific cursor position in current page, read from start
+      textFromCurrentPosition = currentPageRawText;
+    }
+    
+    if (textFromCurrentPosition) {
+      allPagesTextArray.push(textFromCurrentPosition);
+    }
+
+    // Process subsequent pages
+    for (let i = currentPageIndex + 1; i < pages.length; i++) {
+      const pageHtml = pages[i];
+      const temp = document.createElement('div');
+      temp.innerHTML = pageHtml || '';
+      const pageText = (temp.innerText || temp.textContent || '').trim();
+      if (pageText) {
+        allPagesTextArray.push(pageText);
+      }
+    }
+
+    return allPagesTextArray.filter(t => t).join('. ');
+  }, []);
+
+  // Función para leer todas las páginas
+  const handleReadAloud = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      toast({ variant: 'destructive', title: 'Tu navegador no soporta lectura de voz' });
+      return;
+    }
+    // Si está pausado, reanudar
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      return;
+    }
+    // Si ya está leyendo, pausar
+    if (isReading) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+      return;
+    }
+    
+    const pages = typedContent.pages || [];
+    const currentPageIndex = typedContent.currentPage || 0; // Obtener el índice de la página actual
+
+    const textToRead = getReadableText(pages, currentPageIndex, contentRef);
+
+    if (!textToRead.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para leer desde la posición actual' });
+      return;
+    }
+    // Cancelar cualquier lectura previa
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    // Buscar voz seleccionada
+    const voices = window.speechSynthesis.getVoices();
+    let selectedVoice: SpeechSynthesisVoice | null = null;
+    
+    // Buscar la voz por el nombre seleccionado y el idioma español
+    selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));
+
+    const fallbackVoice = voices.find(v => v.lang.startsWith('es'));
+    utterance.voice = selectedVoice || fallbackVoice || null;
+    utterance.lang = 'es-ES'; // Cambiar a es-ES para un español más neutro por defecto
+    utterance.rate = speechRate;
+    utterance.pitch = 1; // Tono medio
+    utterance.volume = 1; // Volumen medio
+    utterance.onstart = () => { setIsReading(true); setIsPaused(false); };
+    utterance.onend = () => { setIsReading(false); setIsPaused(false); };
+    utterance.onerror = () => { setIsReading(false); setIsPaused(false); };
+    window.speechSynthesis.speak(utterance);
+  }, [typedContent.pages, typedContent.currentPage, isReading, isPaused, toast, speechRate, selectedVoiceName, getReadableText, contentRef]);
+
+  // Detener lectura
+  const handleStopReading = useCallback(() => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    setIsReading(false);
+    setIsPaused(false);
+  }, []);
+
   const handleSelectAllText = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (contentRef.current) {
-      contentRef.current.focus();
-      const range = document.createRange();
-      range.selectNodeContents(contentRef.current);
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
+    const text = getAllPagesText();
+    if (!text.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para seleccionar' });
+      return;
     }
-  }, []);
+    setAllPagesText(text);
+    setIsSelectAllDialogOpen(true);
+  }, [getAllPagesText, toast]);
 
   const handleDelete = useCallback(() => {
     setIsDeleteDialogOpen(true);
@@ -724,8 +1070,15 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, []);
 
-  const safeProperties = (typeof properties === 'object' && properties !== null) ? properties : {};
-  const formatType = (safeProperties as CanvasElementProperties)?.format || 'letter';
+  const improveOptionLabels: Record<string, string> = {
+    correccion: 'Corrección ortográfica',
+    reescritura: 'Reescritura clara',
+    agrupar: 'Agrupar ideas',
+    ordenar: 'Ordenar por temas',
+    resumir: 'Resumir',
+    desarrollar: 'Desarrollar idea',
+    mejorar_todo: 'Mejorar todo',
+  };
   
   // Color de fondo: #f8f0ad para elementos específicos, blanco para otros
   const isSpecialNotepad = id === 'oyDN2LIr8z7VyYA5727F' || id === 'FdQ656GJ94TePuHpotbY' || id === 'Iz0UWQ5gQwXlkX1kGBf1' || id === 'kRfKpBDg946Y99668Tih';
@@ -792,6 +1145,76 @@ export default function NotepadElement(props: CommonElementProps) {
             />
             {!isPreview && (!typedContent.password || isUnlockedForEditing) && (
                 <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      title={isImprovingText ? 'Mejorando...' : 'Mejorar texto'}
+                      onClick={handleImproveText}
+                      disabled={isImprovingText}
+                    >
+                      <Sparkles className="size-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      title="Seleccionar todo"
+                      onClick={handleSelectAllText}
+                    >
+                      <FileSignature className="size-4" />
+                    </Button>
+                    <Button
+                      variant={isReading ? 'secondary' : 'ghost'}
+                      size="icon"
+                      className="size-7"
+                      title={isReading ? (isPaused ? 'Reanudar' : 'Pausar') : 'Leer en voz alta'}
+                      onClick={handleReadAloud}
+                    >
+                      {isReading && !isPaused ? <Pause className="size-4" /> : <Volume2 className="size-4" />}
+                    </Button>
+                    {isReading && (
+                      <Button variant="ghost" size="icon" className="size-7" title="Detener" onClick={handleStopReading}>
+                        <Square className="size-4" />
+                      </Button>
+                    )}
+                    <Popover open={isVoiceSettingsOpen} onOpenChange={setIsVoiceSettingsOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="ghost" size="icon" className="size-7" title="Configurar voz">
+                          <Settings2 className="size-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-56 p-3" align="start">
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-xs font-medium">Voz</label>
+                            <select
+                              className="w-full mt-1 p-1.5 text-sm border rounded"
+                              value={selectedVoiceName}
+                              onChange={(e) => setSelectedVoiceName(e.target.value)}
+                            >
+                              {voiceOptions.map(v => <option key={v} value={v}>{v}</option>)}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium">Velocidad: {speechRate.toFixed(2)}</label>
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="1.5"
+                              step="0.05"
+                              value={speechRate}
+                              onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
+                              className="w-full mt-1"
+                            />
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Lenta</span>
+                              <span>Rápida</span>
+                            </div>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <Button variant="ghost" size="icon" className="size-7" title="Info" onClick={() => setIsInfoOpen(!isInfoOpen)}><Info className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Limpiar Formato" onClick={handleRemoveFormat}><Eraser className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
@@ -807,6 +1230,10 @@ export default function NotepadElement(props: CommonElementProps) {
                           <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleExportNotepadToPng(e)}} disabled={isExportingPng}>
                               <FileImage className="mr-2 h-4 w-4" />
                               <span>{isExportingPng ? 'Exportando...' : 'Exportar a PNG: alta resolución'}</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDuplicateNotepad();}}>
+                              <Copy className="mr-2 h-4 w-4" />
+                              <span>Duplicar cuaderno</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onMouseDown={(e) => {
@@ -1043,6 +1470,126 @@ export default function NotepadElement(props: CommonElementProps) {
                 </Button>
                 <Button onClick={handleApplyAutoPagination}>
                   Aplicar Auto-Paginación
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo de Mejorar Texto */}
+        <Dialog open={isImproveDialogOpen} onOpenChange={setIsImproveDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>✨ Mejorar texto con IA</DialogTitle>
+              <DialogDescription>
+                Elige qué quieres hacer con tu texto. Gemini lo procesará cuando hagas clic.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500 mb-1 font-medium">Opciones predefinidas:</div>
+                {Object.entries(improveOptionLabels).map(([key, label]) => (
+                  <Button
+                    key={key}
+                    variant={selectedImproveKey === key && improveOptions[key] ? 'default' : 'outline'}
+                    className="w-full justify-start"
+                    onClick={() => handleSelectImproveOption(key)}
+                    disabled={isImprovingText}
+                  >
+                    {isImprovingText && selectedImproveKey === key ? '⏳ ' : ''}{label}
+                  </Button>
+                ))}
+
+                {/* Sección "Otro" - instrucción personalizada */}
+                <div className="border-t pt-3 mt-3">
+                  <div className="text-xs text-gray-500 mb-2 font-medium">Pedir otra cosa:</div>
+                  <textarea
+                    className="w-full p-2 border rounded text-sm resize-none"
+                    rows={3}
+                    placeholder="Escribe cualquier instrucción para Gemini..."
+                    value={customInstruction}
+                    onChange={(e) => setCustomInstruction(e.target.value)}
+                    disabled={isImprovingText}
+                  />
+                  <Button
+                    variant={selectedImproveKey === 'otro' ? 'default' : 'outline'}
+                    className="w-full mt-2"
+                    onClick={handleSendCustomInstruction}
+                    disabled={isImprovingText || !customInstruction.trim()}
+                  >
+                    {isImprovingText && selectedImproveKey === 'otro' ? '⏳ Procesando...' : '🚀 Enviar instrucción'}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="md:col-span-2 space-y-3">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">
+                    {isImproveWholePage ? 'Texto completo' : 'Texto seleccionado'}
+                  </div>
+                  <div className="p-2 border rounded bg-gray-50 text-sm whitespace-pre-wrap max-h-[100px] overflow-y-auto">
+                    {selectedTextForImprove || '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Resultado de Gemini</div>
+                  <div className="p-3 border rounded min-h-[200px] bg-white text-sm whitespace-pre-wrap overflow-y-auto max-h-[300px]">
+                    {isImprovingText ? (
+                      <span className="text-gray-400 animate-pulse">⏳ Generando respuesta...</span>
+                    ) : improveOptions[selectedImproveKey] ? (
+                      improveOptions[selectedImproveKey]
+                    ) : (
+                      <span className="text-gray-400">👈 Elige una opción para comenzar</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t">
+              <Button variant="outline" onClick={handleRetryImprove} disabled={isImprovingText || !selectedTextForImprove}>
+                Intentar de nuevo
+              </Button>
+              <Button variant="outline" onClick={handleInsertImprovedText} disabled={isImprovingText || !improveOptions[selectedImproveKey]}>
+                Insertar (agregar)
+              </Button>
+              <Button onClick={handleReplaceImprovedText} disabled={isImprovingText || !improveOptions[selectedImproveKey]}>
+                Reemplazar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Diálogo Seleccionar todo el texto */}
+        <Dialog open={isSelectAllDialogOpen} onOpenChange={setIsSelectAllDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Seleccionar todo el texto</DialogTitle>
+              <DialogDescription>
+                Texto combinado de todas las páginas. Puedes copiarlo completo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <textarea
+                ref={selectAllRef}
+                className="w-full min-h-[260px] border rounded p-3 text-sm"
+                value={allPagesText}
+                readOnly
+              />
+              <div className="flex justify-end">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(allPagesText);
+                      toast({ title: 'Texto copiado' });
+                    } catch {
+                      toast({ variant: 'destructive', title: 'No se pudo copiar' });
+                    }
+                  }}
+                >
+                  Copiar
                 </Button>
               </div>
             </div>

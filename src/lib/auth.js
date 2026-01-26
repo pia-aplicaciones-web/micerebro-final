@@ -2,6 +2,7 @@
 import {
   GoogleAuthProvider,
   signInWithPopup,
+  getRedirectResult,
   signOut as firebaseSignOut,
   signInAnonymously,
   createUserWithEmailAndPassword,
@@ -125,6 +126,33 @@ export const createUserWithEmail = async (email, password) => {
     throw error;
   }
 };
+
+/**
+ * Maneja el resultado de Google sign-in (tanto popup como redirect).
+ */
+export async function handleGoogleSignInResult(auth) {
+  try {
+    // Intentar obtener resultado de redirect (por si se usó redirect)
+    const redirectResult = await getRedirectResult(auth);
+    if (redirectResult) {
+      console.log('✅ Login con Google exitoso (redirect):', redirectResult.user.email);
+      return redirectResult;
+    }
+
+    // Si no hay resultado de redirect, significa que no se usó redirect o ya se procesó
+    return null;
+  } catch (error) {
+    console.error('❌ Error getting redirect result:', error);
+
+    // Si hay un error relacionado con sessionStorage, sugerir usar popup
+    if (error.message?.includes('sessionStorage') || error.message?.includes('initial state')) {
+      console.warn('⚠️ Problema con sessionStorage detectado.');
+      throw new Error('Problema con el almacenamiento del navegador. Intenta desde una pestaña de incógnito o usa otro navegador.');
+    }
+
+    throw error;
+  }
+}
 
 /**
  * Cierra la sesión del usuario actual

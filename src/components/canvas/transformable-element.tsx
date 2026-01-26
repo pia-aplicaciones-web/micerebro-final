@@ -40,9 +40,6 @@ import LibretaElement from './elements/libreta-element';
 import NotesElement from './elements/notes-element';
 import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
-import PhotoCollageElement from './elements/photo-collage-element';
-import PhotoCollageFreeElement from './elements/photo-collage-free-element';
-import CollageEditableElement from './elements/collage-editable-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -75,9 +72,6 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'notes': NotesElement,
   'mini': MiniElement,
   'countdown': CountdownElement,
-  'photo-collage': PhotoCollageElement,
-  'photo-collage-free': PhotoCollageFreeElement,
-  'collage-editable': CollageEditableElement,
 };
 
 type TransformableElementProps = {
@@ -494,6 +488,10 @@ export default function TransformableElement({
                 user,
                 storage,
                 toast
+              })}
+              {...(element.type === 'image-frame' && {
+                userId: user?.uid,
+                storage
               })}
           />
         </div>

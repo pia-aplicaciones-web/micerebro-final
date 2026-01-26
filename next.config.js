@@ -12,7 +12,7 @@ const nextConfig = {
   // typescript: {
   //   ignoreBuildErrors: false, // default behavior
   // },
-
+  
   // eslint: {
   //   ignoreDuringBuilds: false, // default behavior
   // },
