@@ -319,7 +319,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
-        side="right"
+        side="left"
         className={cn(
           "w-1/2 h-full bg-white flex flex-col p-4"
         )}
