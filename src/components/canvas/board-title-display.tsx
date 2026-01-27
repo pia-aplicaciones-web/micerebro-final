@@ -109,8 +109,6 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
             minWidth: '400px',
           }}
         />
-        {/* Herramientas de edición de texto */}
-      <TextToolsMenu onFormat={handleTextFormat} />
         {onDeleteBoard && (
           <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
             <AlertDialogTrigger asChild>
@@ -163,8 +161,6 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
       >
         {name || 'Sin título'}
       </h1>
-      {/* Herramientas de edición de texto */}
-      <TextToolsMenu onFormat={handleTextFormat} />
       {onDeleteBoard && (
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogTrigger asChild>
