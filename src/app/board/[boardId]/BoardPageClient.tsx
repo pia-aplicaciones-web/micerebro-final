@@ -796,17 +796,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       {/* Solo mostrar el tablero si la contraseña está verificada */}
       {isPasswordVerified && (
         <>
-          {isMobile && (
+          {isMobile && !isMobileMenuOpen && (
             <Button
               variant="ghost"
               className="fixed top-4 left-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
               onClick={handleToggleMobileMenu}
             >
-              {isMobileMenuOpen ? (
-                <CloseIcon className="h-8 w-8 text-black" />
-              ) : (
-                <Menu className="h-8 w-8 text-black" />
-              )}
+              <Menu className="h-8 w-8 text-black" />
             </Button>
           )}
           {isMobile && selectedElement && (
