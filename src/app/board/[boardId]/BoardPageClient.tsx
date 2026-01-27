@@ -95,6 +95,9 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+  
+  // Estado para dictado
+  const [isListening, setIsListening] = useState(false);
 
   // CRÍTICO: Cleanup del listener cuando el componente se desmonta o cambia boardId
   useEffect(() => {
@@ -881,6 +884,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             canvasScale={canvasRef.current?.getTransform().scale || 1}
             isGalleryPanelOpen={isGalleryOpen}
             onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
+            isListening={isListening}
+            onToggleDictation={() => setIsListening(prev => !prev)}
           />
         )}
 
