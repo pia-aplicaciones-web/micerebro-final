@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, ChevronRight, ChevronLeft, Menu, Mic } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react'; // Eliminado ChevronRight, ChevronLeft, Mic
 import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
@@ -26,6 +26,7 @@ import ToolsSidebar from '@/components/canvas/tools-sidebar';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
 import { Button } from '@/components/ui/button';
+import MobileMenu from '@/components/canvas/mobile-menu'; // Nuevo MobileMenu
 
 // Diálogos
 import AddImageFromUrlDialog from '@/components/canvas/elements/add-image-from-url-dialog';
@@ -36,14 +37,13 @@ import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
-import DictationModalMobile from '@/components/canvas/dictation-modal-mobile';
 
 
 // Debug Menu (temporal)
 // QuickAddTask movido al menú principal (tools-sidebar.tsx)
 // import QuickAddTask from '@/components/canvas/quick-add-task';
 
-// Hooks de dictado
+// Hooks de dictado (ya no son necesarios en mobile-menu)
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useDictation } from '@/hooks/use-dictation';
 
@@ -65,7 +65,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const storage = getFirebaseStorage();
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Cambiado a isMobileMenuOpen
   
   // Guía: no crear usuarios anónimos ni cargar sin usuario real de AuthContext
   
@@ -171,7 +171,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isImageCropDialogOpen, setIsImageCropDialogOpen] = useState(false);
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const [uploadedFileToProcess, setUploadedFileToProcess] = useState<File | null>(null);
-  const [isDictationModalMobileOpen, setIsDictationModalMobileOpen] = useState(false);
   
   // Estados de Selección
   const [selectedElement, setSelectedElement] = useState<WithId<CanvasElement> | null>(null);
@@ -286,7 +285,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       },
     });
     toast({ title: 'Cuaderno de dictado creado' });
-    setIsDictationModalMobileOpen(false);
   }, [addElement, getViewportCenter, toast]);
 
   // Buscar elemento gallery
@@ -538,10 +536,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       try {
         const result = await uploadFile(file, userId, storage);
         if (result.success) {
-          await addElement('image', {
-            content: { url: result.url },
-            properties: { size: { width: 300, height: 200 } },
-          });
+          await addElement('image', { content: { url: result.url }, properties: { size: { width: 300, height: 200 } } });
           toast({ title: 'Imagen subida' });
         } else {
           toast({ variant: 'destructive', title: 'Error', description: result.error });
@@ -805,67 +800,40 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         currentBoardName={board?.name || ''}
         onSave={(name) => { handleRenameBoard(name); setIsRenameBoardDialogOpen(false); }}
       />
-      
+
       <div className="h-screen w-screen relative overflow-hidden">
         {/* Nombre del tablero en esquina superior izquierda */}
         <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
 
         {isMobile && (
-          <>
-            <Sheet open={isMobileSidebarOpen} onOpenChange={setIsMobileSidebarOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="fixed top-4 left-4 z-[1001]">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="p-0 w-64 md:w-80">
-                <ToolsSidebar
-                  elements={elements || []}
-                  boards={boards || []}
-                  boardId={boardId}
-                  user={user}
-                  onUploadImage={handleUploadImage}
-                  onAddImageFromUrl={() => {
-                    setIsImageUrlDialogOpen(true);
-                    setShouldOpenCropAfterUrl(false);
-                  }}
-                  onCropImage={handleCropImage}
-                  onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-                  onPanToggle={() => canvasRef.current?.activatePanMode()}
-                  onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
-                  onDeleteBoard={handleDeleteBoard}
-                  onDeleteAllUserImages={deleteAllUserImages}
-                  isListening={isListening}
-                  onToggleDictation={toggleListening}
-                  onOpenNotepad={handleOpenNotepad}
-                  onLocateElement={handleLocateElement}
-                  onAddComment={handleAddMarker}
-                  updateElement={updateElement}
-                  selectedElementIds={selectedElementIds}
-                  addElement={addElement}
-                  selectElement={handleSelectElement}
-                  clearCanvas={() => clearCanvas(elements)}
-                  onExportBoardToPng={handleExportToPng}
-                  onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
-                  isFormatToolbarOpen={isFormatToolbarOpen}
-                  onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-                  canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
-                  canvasScale={canvasRef.current?.getTransform().scale || 1}
-                  isGalleryPanelOpen={isGalleryOpen}
-                  onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
-                />
-              </SheetContent>
-            </Sheet>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="fixed top-4 right-4 z-[1001] rounded-full shadow-lg"
-              title="Dictar en móvil"
-              onClick={() => setIsDictationModalMobileOpen(true)}
-            >
-              <Mic className="h-6 w-6" />
-            </Button>
-          </>
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+            <SheetTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="fixed top-4 right-4 z-[1001] bg-white border border-gray-200 shadow-md hover:bg-gray-100"
+              >
+                <Menu className="h-6 w-6 text-black" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="p-0 w-full md:w-80 bg-white bg-opacity-80 backdrop-blur-sm">
+              <MobileMenu
+                isOpen={isMobileMenuOpen}
+                onClose={() => setIsMobileMenuOpen(false)}
+                elements={elements || []}
+                boards={boards || []}
+                boardId={boardId}
+                user={user}
+                isListening={isListening}
+                onToggleDictation={toggleListening}
+                onOpenNotepad={handleOpenNotepad}
+                onLocateElement={handleLocateElement}
+                addElement={addElement}
+                onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
+                onDeleteBoard={handleDeleteBoard}
+              />
+            </SheetContent>
+          </Sheet>
         )}
 
         {!isMobile && (
@@ -941,7 +909,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           toast={toast}
           isPreview={false}
         />
-        
+
         {isMobile ? (
           <Sheet open={isFormatToolbarOpen} onOpenChange={setIsFormatToolbarOpen}>
             <SheetContent side="bottom" className="p-0 h-auto">
@@ -1091,13 +1059,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             <path d="m9 18 6-6-6-6"/>
           </svg>
         </button>
-
-        {isMobile && (
-          <DictationModalMobile
-            isOpen={isDictationModalMobileOpen}
-            onClose={handleSaveDictatedText}
-          />
-        )}
 
       </div>
 
