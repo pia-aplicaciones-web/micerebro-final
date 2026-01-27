@@ -1,5 +1,7 @@
 # 🚀 Configuración del Proyecto - Mi Cerebro App
 
+deploy iempre en alia: https://micerebroapp.vercel.app/ 
+
 ## 📋 Información General
 - **Nombre del proyecto:** micerebroapp
 - **Versión:** 0.1.1

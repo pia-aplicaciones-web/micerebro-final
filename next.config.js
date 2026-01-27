@@ -32,6 +32,16 @@ const nextConfig = {
     ];
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/movil/',
+        destination: '/movil/auto-load-board',
+        permanent: false,
+      },
+    ];
+  },
+
 
   // Habilitar detección de errores (mejor práctica)
   // typescript: {

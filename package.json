@@ -11,6 +11,8 @@
     "dev:clean": "rm -rf .next && next dev -p 3001",
     "build": "next build",
     "build:clean": "rm -rf .next && next build",
+    "deploy:vercel": "vercel --prod",
+    "deploy:vercel:preview": "vercel",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",

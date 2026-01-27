@@ -25,7 +25,6 @@ import ToolsSidebar from '@/components/canvas/tools-sidebar';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
 import { Button } from '@/components/ui/button';
-// import MobileMenu from '@/components/canvas/mobile-menu'; // Nuevo MobileMenu
 
 // Diálogos
 import AddImageFromUrlDialog from '@/components/canvas/elements/add-image-from-url-dialog';
@@ -43,8 +42,6 @@ import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
 // import QuickAddTask from '@/components/canvas/quick-add-task';
 
 // Hooks de dictado (ya no son necesarios en mobile-menu)
-import { useSpeechToText } from '@/hooks/use-speech-to-text';
-import { useDictation } from '@/hooks/use-dictation';
 
 interface BoardPageClientProps {
   boardId: string;
@@ -64,10 +61,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const storage = getFirebaseStorage();
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const handleToggleMobileMenu = useCallback(() => {
-    setIsMobileMenuOpen((prev) => !prev);
-  }, []);
   
   // Guía: no crear usuarios anónimos ni cargar sin usuario real de AuthContext
   

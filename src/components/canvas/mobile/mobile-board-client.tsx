@@ -93,6 +93,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
 
     const handleBoardLoading = async () => {
       if (!user?.uid) {
+        if (isBoardLoading) cleanup(); // Asegurar que isBoardLoading se reinicie
         return;
       }
 
@@ -121,7 +122,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     };
 
     handleBoardLoading();
-  }, [boardId, user?.uid, loadBoard, createBoard, board, router, toast]);
+  }, [boardId, user?.uid, loadBoard, createBoard, board, router, toast, isBoardLoading, cleanup]);
 
   // Estados para contraseña del tablero
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
