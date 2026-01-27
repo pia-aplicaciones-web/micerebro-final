@@ -25,7 +25,7 @@ const MobilePage = ({ params }) => {
             }
             if (boardToLoad?.id) {
               setResolvedBoardId(boardToLoad.id);
-              router.replace(`/movil/board/${boardToLoad.id}`);
+              router.replace(`/mobile/board/${boardToLoad.id}`);
             } else {
               console.error('Failed to load or create a board for the user.');
               setIsLoadingBoardResolution(false);

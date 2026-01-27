@@ -9,7 +9,7 @@ export function middleware(request: NextRequest) {
 
   // Redirigir usuarios móviles de la raíz a la ruta móvil específica
   if (isMobile && url.pathname === '/') {
-    url.pathname = '/movil/board/auto-load-board';
+    url.pathname = '/mobile/board/auto-load-board';
     return NextResponse.redirect(url);
   }
 
