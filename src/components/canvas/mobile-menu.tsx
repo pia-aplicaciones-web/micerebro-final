@@ -14,7 +14,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { BookCopy, LayoutDashboard, Mic, MicOff, Plus, ChevronDown } from 'lucide-react';
+import { BookCopy, LayoutDashboard, Plus, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
@@ -35,51 +35,10 @@ interface MobileMenuProps {
   user: AuthUser | null;
   onRenameBoard: () => void;
   onDeleteBoard: () => void;
-  isListening: boolean;
-  onToggleDictation: () => void;
   onOpenNotepad: (id: string) => void;
   onLocateElement: (id: string) => void;
   addElement: (type: ElementType, content?: any) => void;
 }
-
-const SidebarButton = forwardRef<
-  HTMLButtonElement,
-  React.ComponentPropsWithoutRef<typeof Button> & {
-    label: string;
-    icon?: React.ElementType;
-    isActive?: boolean;
-  }
->(({ label, icon: Icon, className, isActive, children, ...props }, ref) => {
-  const isDictationActive = className?.includes('bg-red-500');
-  return (
-    <Button
-      ref={ref}
-      variant="ghost"
-      className={cn(
-        'flex flex-col items-center justify-center h-auto py-[5px] px-[6px] w-[75px] text-[11px] gap-1',
-        'hover:bg-[#ADD8E6] focus-visible:bg-[#ADD8E6] active:bg-white',
-        'text-black border border-border rounded-md',
-        'bg-white',
-        isActive && 'bg-white border-accent-foreground',
-        !isDictationActive && 'text-black',
-        className
-      )}
-      style={{
-        backgroundColor: isDictationActive ? '#ef4444' : (isActive ? '#ffffff' : '#ffffff'),
-        color: '#000000',
-        border: `1px solid ${isDictationActive ? '#ef4444' : (isActive ? 'hsl(var(--border))' : 'hsl(var(--border))')}`,
-      }}
-      {...props}
-    >
-      {children || (Icon && <Icon className={cn('size-[19px] flex-shrink-0', isDictationActive ? 'text-white' : 'text-black')} style={isDictationActive ? undefined : { color: '#000000' }} />)}
-      <span className={cn('text-center leading-tight text-[10px] truncate text-black', isDictationActive ? 'text-white' : 'text-black')} style={{ color: '#000000', fontSize: '10px' }}>
-        {label}
-      </span>
-    </Button>
-  );
-});
-
-SidebarButton.displayName = 'SidebarButton';
 
 const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(({
   isOpen,
@@ -90,8 +49,6 @@ const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(({
   user,
   onRenameBoard,
   onDeleteBoard,
-  isListening,
-  onToggleDictation,
   onOpenNotepad,
   onLocateElement,
   addElement,
@@ -130,23 +87,6 @@ const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(({
   return (
     <SheetContent side="right" className="p-4 w-full md:w-80 bg-white bg-opacity-80 backdrop-blur-sm flex flex-col items-start space-y-4">
       <CreateBoardDialog isOpen={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen} />
-
-      {/* Botón Dictar */}
-      <SidebarButton
-        icon={isListening ? MicOff : Mic}
-        label={isListening ? 'Detener' : 'Dictar'}
-        title={isListening ? 'Detener dictado por voz' : 'Iniciar dictado por voz'}
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onToggleDictation();
-        }}
-        onMouseDown={(e) => e.preventDefault()}
-        className={cn(
-          'w-full justify-center',
-          isListening && 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse'
-        )}
-      />
 
       {/* Cuaderno */}
       <DropdownMenu>
