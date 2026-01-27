@@ -35,6 +35,7 @@ import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
+import MobileMenu from '@/components/canvas/mobile-menu';
 
 
 // Debug Menu (temporal)
@@ -176,6 +177,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [selectedCommentForEdit, setSelectedCommentForEdit] = useState<WithId<CanvasElement> | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleToggleMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen((prev) => !prev);
+  }, []);
 
   // Función para eliminar todas las imágenes del usuario
   const deleteAllUserImages = useCallback(async () => {
@@ -785,6 +791,39 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       {/* Solo mostrar el tablero si la contraseña está verificada */}
       {isPasswordVerified && (
         <>
+          {isMobile && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="fixed top-4 left-4 z-[1001]"
+              onClick={handleToggleMobileMenu}
+            >
+              {isMobileMenuOpen ? (
+                <CloseIcon className="h-6 w-6 text-black" />
+              ) : (
+                <Menu className="h-6 w-6 text-black" />
+              )}
+            </Button>
+          )}
+          {isMobile && (
+            <MobileMenu
+              isOpen={isMobileMenuOpen}
+              onClose={handleToggleMobileMenu}
+              elements={elements || []}
+              boards={boards || []}
+              boardId={boardId}
+              user={user}
+              onOpenNotepad={handleOpenNotepad}
+              onLocateElement={handleLocateElement}
+              addElement={addElement}
+              onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
+              onDeleteBoard={handleDeleteBoard}
+              onUploadImage={handleUploadImage}
+              onAddImageFromUrl={onAddImageFromUrl}
+              onCropImage={handleCropImage}
+              onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+            />
+          )}
           <RenameBoardDialog
         isOpen={isRenameBoardDialogOpen}
         onOpenChange={setIsRenameBoardDialogOpen}
@@ -869,41 +908,20 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           isPreview={false}
         />
 
-        {isMobile ? (
-          <Sheet open={isFormatToolbarOpen} onOpenChange={setIsFormatToolbarOpen}>
-            <SheetContent side="bottom" className="p-0 h-auto">
-              <FormattingToolbar
-                isOpen={isFormatToolbarOpen}
-                onClose={() => setIsFormatToolbarOpen(false)}
-                elements={selectedElement ? [selectedElement] : []}
-                onAddComment={handleAddMarker}
-                onEditComment={handleEditComment}
-                isMobileSheet={isMobile}
-                onLocateElement={handleLocateElement}
-                onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
-                addElement={addElement}
-                isPanningActive={isPanningActive}
-                selectedElement={selectedElement}
-                onUpdateElement={updateElement}
-              />
-            </SheetContent>
-          </Sheet>
-        ) : (
-          <FormattingToolbar
-            isOpen={isFormatToolbarOpen}
-            onClose={() => setIsFormatToolbarOpen(false)}
-            elements={selectedElement ? [selectedElement] : []}
-            onAddComment={handleAddMarker}
-            onEditComment={handleEditComment}
-            isMobileSheet={isMobile}
-            onLocateElement={handleLocateElement}
-            onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
-            addElement={addElement}
-            isPanningActive={isPanningActive}
-            selectedElement={selectedElement}
-            onUpdateElement={updateElement}
-          />
-        )}
+        <FormattingToolbar
+          isOpen={isFormatToolbarOpen}
+          onClose={() => setIsFormatToolbarOpen(false)}
+          elements={selectedElement ? [selectedElement] : []}
+          onAddComment={handleAddMarker}
+          onEditComment={handleEditComment}
+          isMobileSheet={isMobile}
+          onLocateElement={handleLocateElement}
+          onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
+          addElement={addElement}
+          isPanningActive={isPanningActive}
+          selectedElement={selectedElement}
+          onUpdateElement={updateElement}
+        />
 
 
         <ChangeFormatDialog
