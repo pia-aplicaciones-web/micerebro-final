@@ -409,8 +409,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             ))}
           </ul>
         </nav>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
