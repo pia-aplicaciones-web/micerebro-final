@@ -8,9 +8,6 @@ const nextConfig = {
   // Trailing slash para compatibilidad
   trailingSlash: true,
 
-  // output file tracing root para Vercel
-  outputFileTracingRoot: '/Users/imacm3-pia/Desktop/canvasmind_backup (1)/Copia de MicerebroAPP19Dic',
-  
   // Habilitar detección de errores (mejor práctica)
   // typescript: {
   //   ignoreBuildErrors: false, // default behavior
