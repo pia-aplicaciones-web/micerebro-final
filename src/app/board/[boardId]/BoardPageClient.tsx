@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Menu, X as CloseIcon } from 'lucide-react';
+import { Loader2, Menu, X as CloseIcon, Mic } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
@@ -799,7 +799,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           {isMobile && (
             <Button
               variant="ghost"
-              className="fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
+              className="fixed top-4 left-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
               onClick={handleToggleMobileMenu}
             >
               {isMobileMenuOpen ? (
@@ -807,6 +807,25 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               ) : (
                 <Menu className="h-8 w-8 text-black" />
               )}
+            </Button>
+          )}
+          {isMobile && selectedElement && (
+            <Button
+              variant="ghost"
+              className="fixed top-4 right-20 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
+              onClick={() => canvasRef.current?.onDuplicateElement(selectedElement.id)}
+            >
+              <BookCopy className="h-8 w-8 text-black" />
+            </Button>
+          )}
+          {isMobile && (
+            <Button
+              variant="ghost"
+              className="fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
+              // Lógica para dictado (placeholder por ahora)
+              onClick={() => console.log("Botón Dictar presionado")}
+            >
+              <Mic className="h-8 w-8 text-black" />
             </Button>
           )}
           {isMobile && (
