@@ -1,46 +1,26 @@
-// @ts-nocheck
 'use client';
 
-import React, { useState, forwardRef } from 'react';
+import React, { useState, forwardRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BookCopy,
-  RectangleHorizontal,
   StickyNote,
   Wrench,
   ImageIcon,
-  FileText,
-  Link,
   MoreHorizontal,
-  Move,
-  GripVertical,
   Plus,
-  Save,
   LogOut,
-  Trash2,
   Upload,
   Link as LinkIcon,
   EyeOff,
-  FileImage,
-  Images,
-  ChevronDown,
-  MessageCircle,
-  LayoutGrid,
-  LayoutDashboard,
-  List,
-  CalendarRange,
-  Palette,
-  Columns2,
-  MapPin,
-  Frame,
-  Grid3X3,
-  Maximize,
-  Mic,
-  MicOff,
   Highlighter,
   Menu,
   X as CloseIcon,
-  Crop
+  Frame,
+  LayoutDashboard,
+  List,
+  MapPin,
+  MessageCircle,
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -73,7 +53,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { ElementType, CanvasElement, Board, WithId, NotepadContent, PhotoGridContent, PhotoGridFreeContent, LibretaContent, TodoContent } from '@/lib/types';
+import type { ElementType, CanvasElement, Board, WithId, NotepadContent, TodoContent } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 type AuthUser = {
@@ -97,6 +77,8 @@ interface MobileMenuProps {
   onAddImageFromUrl: () => void;
   onCropImage: () => void;
   onAddImageFromUrlWithCrop: () => void;
+  onExportBoardToPng: () => void;
+  onDeleteAllUserImages: () => void;
 }
 
 const stickyNoteColors = [
@@ -108,7 +90,7 @@ const stickyNoteColors = [
   { name: 'purple', label: 'Morado', className: 'bg-purple-200' },
 ];
 
-const MobileMenu = ({
+const MobileMenu: React.FC<MobileMenuProps> = ({
   isOpen,
   onClose,
   elements,
@@ -124,7 +106,9 @@ const MobileMenu = ({
   onAddImageFromUrl,
   onCropImage,
   onAddImageFromUrlWithCrop,
-}: MobileMenuProps) => {
+  onExportBoardToPng,
+  onDeleteAllUserImages,
+}) => {
   const { toast } = useToast();
   const router = useRouter();
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
@@ -136,7 +120,7 @@ const MobileMenu = ({
     }));
   };
 
-  const handleAddElement = async (type: ElementType, props?: any) => {
+  const handleAddElement = useCallback(async (type: ElementType, props?: any) => {
     try {
       await addElement(type, props);
       toast({
@@ -152,7 +136,7 @@ const MobileMenu = ({
         description: error.message || `No se pudo crear el elemento ${type}.`,
       });
     }
-  };
+  }, [addElement, onClose, toast]);
 
   const handleSignOut = async () => {
     try {
@@ -170,17 +154,17 @@ const MobileMenu = ({
     }
   };
 
-  const menuItems = [
+  const menuItems = useMemo(() => [
     {
       label: 'Tableros',
       icon: LayoutDashboard,
       subMenu: [
-        { label: 'Nuevo Tablero', onClick: () => handleAddElement('board') }, // Asumiendo que 'board' es un tipo ElementType
+        { label: 'Nuevo Tablero', onClick: () => handleAddElement('board') },
         {
           label: 'Abrir Tablero...',
-          subMenu: boards.map((board) => ({
-            label: board.name || 'Sin nombre',
-            onClick: () => router.push(`/board/${board.id}`),
+          subMenu: boards.map((boardItem) => ({
+            label: boardItem.name || 'Sin nombre',
+            onClick: () => router.push(`/board/${boardItem.id}`),
           })),
         },
       ],
@@ -194,7 +178,64 @@ const MobileMenu = ({
         { label: 'Agregar Apuntes', onClick: () => handleAddElement('notes') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
-        // Aquí podrías añadir los elementos abiertos y cerrados, similar a ToolsSidebar
+        {
+          label: 'Elementos Abiertos',
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta'].includes(el.type) && el.hidden !== true).map(element => {
+            let title = 'Sin título';
+            switch (element.type) {
+              case 'notepad':
+                const notepadContent = element.content as NotepadContent;
+                title = notepadContent?.title || 'Cuaderno';
+                break;
+              case 'yellow-notepad':
+                title = 'Cuaderno Amarillo';
+                break;
+              case 'notes':
+                title = 'Apuntes';
+                break;
+              case 'libreta':
+                const libretaContent = element.content as NotepadContent; // Assuming NotepadContent for now
+                title = libretaContent?.title || 'Libreta';
+                break;
+              case 'mini':
+                title = 'Mini';
+                break;
+              default:
+                title = 'Elemento';
+            }
+            return { label: title, onClick: () => onLocateElement(element.id) };
+          }),
+        },
+        {
+          label: 'Cerrados',
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'todo'].includes(el.type) && el.hidden === true).map(element => {
+            let title = 'Sin título';
+            switch (element.type) {
+              case 'notepad':
+              case 'yellow-notepad':
+                const notepadContent = element.content as NotepadContent;
+                title = notepadContent?.title || 'Cuaderno';
+                break;
+              case 'notes':
+                title = 'Apuntes';
+                break;
+              case 'libreta':
+                const libretaContent = element.content as NotepadContent; // Assuming NotepadContent for now
+                title = libretaContent?.title || 'Libreta';
+                break;
+              case 'mini':
+                title = 'Mini';
+                break;
+              case 'todo':
+                const todoContent = element.content as TodoContent;
+                title = todoContent?.title || 'Lista de tareas';
+                break;
+              default:
+                title = 'Elemento';
+            }
+            return { label: title, onClick: () => onOpenNotepad(element.id), icon: EyeOff };
+          }),
+        },
       ],
     },
     {
@@ -221,7 +262,13 @@ const MobileMenu = ({
       icon: MapPin,
       subMenu: [
         { label: 'Nuevo Localizador', onClick: () => handleAddElement('locator') },
-        // Aquí podrías añadir los localizadores existentes
+        {
+          label: 'Localizadores',
+          subMenu: elements.filter(el => el.type === 'locator').map(loc => {
+            const label = (typeof loc.content === 'object' && loc.content && (loc.content as any).label) ? (loc.content as any).label : 'Localizador';
+            return { label: label, onClick: () => onLocateElement(loc.id), icon: MapPin };
+          }),
+        },
       ],
     },
     {
@@ -254,19 +301,19 @@ const MobileMenu = ({
           label: 'Eliminar Tablero',
           onClick: () => {
             onClose();
-            // TODO: Integrar AlertDialog aquí
-            console.log('TODO: Implementar diálogo de confirmación para eliminar tablero');
+            console.log('TODO: Integrar AlertDialog aquí');
             onDeleteBoard();
           },
         },
+        { label: 'Eliminar todas mis imágenes', onClick: () => { onDeleteAllUserImages(); onClose(); } },
+        { label: 'Exportar a PNG: alta resolución', onClick: () => { onExportBoardToPng(); onClose(); } },
         { label: 'Cerrar Sesión', onClick: handleSignOut },
       ],
     },
   ].filter(item => {
-    // Excluir elementos específicos
     const excludedLabels = ["GUIA DE FOTOS", "MI PLAN", "COLUMNA"];
     return !excludedLabels.includes(item.label);
-  });
+  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -274,91 +321,93 @@ const MobileMenu = ({
         side="bottom"
         className={cn(
           "fixed inset-0 w-full h-full bg-white bg-opacity-80 flex flex-col p-4",
-          "md:h-1/2 md:w-full md:bottom-0 md:left-0 md:translate-x-0 md:top-auto md:translate-y-0" // Media pantalla en formato vertical para pantallas medianas y superiores
+          "md:w-1/2 md:h-1/2 md:bottom-0 md:left-1/2 md:-translate-x-1/2 md:top-auto md:translate-y-0"
         )}
       >
-      <div className="flex justify-end mb-4">
-        <Button variant="ghost" size="icon" onClick={onClose}>
-          <CloseIcon className="h-6 w-6" />
-        </Button>
-      </div>
-      <nav className="flex-1">
-        <ul className="space-y-2">
-          {menuItems.map((item, index) => (
-            <li key={index}>
-              {item.subMenu ? (
-                <div>
-                  <button
-                    className="w-full flex items-center justify-between gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm"
-                    onClick={() => toggleSubMenu(item.label)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {item.icon && <item.icon className="w-4 h-4" />}
-                      {item.label}
-                    </span>
-                    <ChevronDown className={cn("w-4 h-4 text-black transition-transform", openSubMenus[item.label] && "rotate-180")} />
-                  </button>
-                  {openSubMenus[item.label] && (
-                    <ul className="pl-6 mt-2 space-y-1">
-                      {item.subMenu.map((subItem, subIndex) => (
-                        <li key={subIndex}>
-                          {subItem.subMenu ? (
-                            <div>
-                              <button
-                                className="w-full flex items-center justify-between gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm"
-                                onClick={() => toggleSubMenu(`${item.label}-${subItem.label}`)}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold">Menú</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}>
+            <CloseIcon className="h-6 w-6" />
+          </Button>
+        </div>
+        <nav className="flex-1 overflow-y-auto">
+          <ul className="space-y-2">
+            {menuItems.map((item, index) => (
+              <li key={index}>
+                {item.subMenu ? (
+                  <div>
+                    <button
+                      className="w-full flex items-center justify-between gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm"
+                      onClick={() => toggleSubMenu(item.label)}
+                    >
+                      <span className="flex items-center gap-2">
+                        {item.icon && <item.icon className="w-4 h-4" />}
+                        {item.label}
+                      </span>
+                      <ChevronDown className={cn("w-4 h-4 text-black transition-transform", openSubMenus[item.label] && "rotate-180")} />
+                    </button>
+                    {openSubMenus[item.label] && (
+                      <ul className="pl-6 mt-2 space-y-1">
+                        {item.subMenu.map((subItem, subIndex) => (
+                          <li key={subIndex}>
+                            {subItem.subMenu ? (
+                              <div>
+                                <button
+                                  className="w-full flex items-center justify-between gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm"
+                                  onClick={() => toggleSubMenu(`${item.label}-${subItem.label}`)}
+                                >
+                                  <span className="flex items-center gap-2">
+                                    {subItem.icon && <subItem.icon className="mr-2 h-4 w-4" />}
+                                    <span>{subItem.label}</span>
+                                  </span>
+                                  <ChevronDown className={cn("w-4 h-4 text-black transition-transform", openSubMenus[`${item.label}-${subItem.label}`] && "rotate-180")} />
+                                </button>
+                                {openSubMenus[`${item.label}-${subItem.label}`] && (
+                                  <ul className="pl-6 mt-2 space-y-1">
+                                    {subItem.subMenu.map((nestedItem, nestedIndex) => (
+                                      <li key={nestedIndex}>
+                                        <Button
+                                          variant="ghost"
+                                          className="w-full justify-start text-sm"
+                                          onClick={nestedItem.onClick}
+                                        >
+                                          {nestedItem.icon && <nestedItem.icon className="mr-2 h-4 w-4" />}
+                                          <span>{nestedItem.label}</span>
+                                        </Button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </div>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                className="w-full justify-start text-sm"
+                                onClick={subItem.onClick}
                               >
-                                <span className="flex items-center gap-2">
-                                  {subItem.icon && <subItem.icon className="mr-2 h-4 w-4" />}
-                                  <span>{subItem.label}</span>
-                                </span>
-                                <ChevronDown className={cn("w-4 h-4 text-black transition-transform", openSubMenus[`${item.label}-${subItem.label}`] && "rotate-180")} />
-                              </button>
-                              {openSubMenus[`${item.label}-${subItem.label}`] && (
-                                <ul className="pl-6 mt-2 space-y-1">
-                                  {subItem.subMenu.map((nestedItem, nestedIndex) => (
-                                    <li key={nestedIndex}>
-                                      <Button
-                                        variant="ghost"
-                                        className="w-full justify-start text-sm"
-                                        onClick={nestedItem.onClick}
-                                      >
-                                        {nestedItem.icon && <nestedItem.icon className="mr-2 h-4 w-4" />}
-                                        <span>{nestedItem.label}</span>
-                                      </Button>
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          ) : (
-                            <Button
-                              variant="ghost"
-                              className="w-full justify-start text-sm"
-                              onClick={subItem.onClick}
-                            >
-                              {subItem.icon && <subItem.icon className="mr-2 h-4 w-4" />}
-                              <span>{subItem.label}</span>
-                            </Button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ) : (
-                <button
-                  className={cn("w-full flex items-center gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm", item.className)}
-                  onClick={item.onClick}
-                >
-                  {item.icon && <item.icon className="w-4 h-4" />}
-                  {item.label}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </nav>
+                                {subItem.icon && <subItem.icon className="mr-2 h-4 w-4" />}
+                                <span>{subItem.label}</span>
+                              </Button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ) : (
+                  <Button
+                    variant="ghost"
+                    className={cn("w-full flex items-center gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm", item.className)}
+                    onClick={item.onClick}
+                  >
+                    {item.icon && <item.icon className="w-4 h-4" />}
+                    <span>{item.label}</span>
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </nav>
       </DialogContent>
     </Dialog>
   );
