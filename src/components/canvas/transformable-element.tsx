@@ -314,6 +314,13 @@ export default function TransformableElement({
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (isDraggingOrResizing) return; // No manejar toques si ya estamos arrastrando/redimensionando
 
+    // Permitir que los eventos lleguen a los elementos editables
+    const target = e.target as HTMLElement;
+    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    if (isEditable) {
+      return; // Permitir que el navegador maneje el foco y el cursor
+    }
+
     const currentTime = Date.now();
     if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
       // Doble toque detectado
@@ -327,7 +334,7 @@ export default function TransformableElement({
     setIsTouchActive(true);
     setTouchStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
     setTouchStartTime(currentTime);
-    onSelectElement(element.id, false); // Seleccionar elemento al tocar
+    onSelectElement(element.id, false); // Seleccionar elemento al tocar (si no es editable directamente)
   }, [isDraggingOrResizing, lastTapTime, onSelectElement, element.id]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
@@ -374,6 +381,12 @@ export default function TransformableElement({
   const isGroupedFrame = false;
 
   const handleMouseDown = (e: MouseEvent) => {
+    // Permitir que los eventos lleguen a los elementos editables
+    const target = e.target as HTMLElement;
+    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    if (isEditable) {
+      return; // Permitir que el navegador maneje el foco y el cursor
+    }
     onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
   };
 
