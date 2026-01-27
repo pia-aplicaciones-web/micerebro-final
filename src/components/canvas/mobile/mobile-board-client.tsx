@@ -134,7 +134,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     return zIndexes.length ? Math.max(...zIndexes) + 1 : 2;
   }, [elements]);
 
-  const { addElement, setSelectedElementIds } = useElementManager(boardId, getViewportCenter, getNextZIndex); // Añadido setSelectedElementIds
+  const { addElement } = useElementManager(boardId, getViewportCenter, getNextZIndex);
 
   // === Handlers para las funciones del MobileMenu ===
   const handleSelectElement = useCallback((elementId: string | null) => {
