@@ -33,32 +33,13 @@ interface MobileMenuProps {
   boards: WithId<Board>[];
   boardId: string;
   user: AuthUser | null;
-  onUploadImage: () => void;
-  onAddImageFromUrl: () => void;
-  onCropImage: () => void;
-  onAddImageFromUrlWithCrop: () => void;
-  onPanToggle: () => void;
   onRenameBoard: () => void;
   onDeleteBoard: () => void;
-  onDeleteAllUserImages: () => void;
   isListening: boolean;
   onToggleDictation: () => void;
   onOpenNotepad: (id: string) => void;
   onLocateElement: (id: string) => void;
-  onAddComment: () => void;
-  updateElement: (id: string, updates: Partial<CanvasElement>) => void;
-  selectedElementIds: string[];
   addElement: (type: ElementType, content?: any) => void;
-  selectElement?: (elementId: string) => void;
-  clearCanvas: () => void;
-  onExportBoardToPng: () => void;
-  onFormatToggle: () => void;
-  isFormatToolbarOpen: boolean;
-  onOpenGlobalSearch: () => void;
-  canvasScrollPosition: number;
-  canvasScale: number;
-  isGalleryPanelOpen: boolean;
-  onToggleGalleryPanel: () => void;
 }
 
 const SidebarButton = forwardRef<
