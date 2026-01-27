@@ -986,12 +986,8 @@ export default function NotepadElement(props: CommonElementProps) {
     const voices = window.speechSynthesis.getVoices();
     let selectedVoice: SpeechSynthesisVoice | null = null;
     
-    // Buscar la voz por el nombre seleccionado y el idioma español
-    if (selectedVoiceName === 'Agustina') {
-      selectedVoice = voices.find(v => v.name === 'Autonoe' && v.lang.startsWith('es'));
-    } else {
-      selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));
-    }
+    // Buscar la voz por el nombre seleccionado y el idioma español\n    if (selectedVoiceName === 'Agustina') {\n      selectedVoice = voices.find(v => v.name === 'Autonoe'); // Eliminar startsWith('es') para Agustina/Autonoe\n    } else {\n      selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));\n    }\n\n    console.log(\"Voces disponibles:\", voices.map(v => v.name + \" (\" + v.lang + \")\")); // DEBUG\n    console.log(\"Voz seleccionada (intentado):\
+
 
     const fallbackVoice = voices.find(v => v.lang.startsWith('es'));
     utterance.voice = selectedVoice || fallbackVoice || null;
