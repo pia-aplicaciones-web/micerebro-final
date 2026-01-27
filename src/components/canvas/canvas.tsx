@@ -167,45 +167,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     }
   };
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && canvasContainerRef.current) {
-      // Un solo toque para pan/scroll
-      setDragState({
-        isPanning: true,
-        startPoint: { x: e.touches[0].clientX, y: e.touches[0].clientY },
-        initialScroll: {
-          x: canvasContainerRef.current.scrollLeft,
-          y: canvasContainerRef.current.scrollTop,
-        },
-      });
-    } else if (e.touches.length === 2) {
-      // Dos toques para zoom (gesto de pinza)
-      // Implementación posterior
-    }
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (dragState?.isPanning && e.touches.length === 1 && canvasContainerRef.current) {
-      e.preventDefault(); // Prevenir el scroll nativo de la página
-      const dx = e.touches[0].clientX - dragState.startPoint.x;
-      const dy = e.touches[0].clientY - dragState.startPoint.y;
-      
-      const sensitivityFactor = 0.7; // Reducir sensibilidad del movimiento
-      const adjustedDx = dx * sensitivityFactor;
-      const adjustedDy = dy * sensitivityFactor;
-
-      canvasContainerRef.current.scrollLeft = dragState.initialScroll.x - adjustedDx;
-      canvasContainerRef.current.scrollTop = dragState.initialScroll.y - adjustedDy;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (dragState?.isPanning) {
-      saveLastView();
-    }
-    setDragState(null);
-  };
-
   // Handle drop de imágenes desde galería
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -554,9 +515,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           backgroundSize: `${20 * scale}px ${20 * scale}px`,
         }}
         onMouseDown={handleMouseDown}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
       >
