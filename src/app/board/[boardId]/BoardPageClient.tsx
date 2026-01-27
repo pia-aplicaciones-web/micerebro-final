@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Menu, X as CloseIcon, Mic } from 'lucide-react';
+import { Loader2, Menu, X as CloseIcon, Mic, BookCopy } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
