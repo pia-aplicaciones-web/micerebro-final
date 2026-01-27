@@ -1,12 +1,14 @@
 import React from 'react';
+import MobileBoardClient from '@/components/canvas/mobile/mobile-board-client';
 
-const MobilePage = () => {
+const MobilePage = ({ params }) => {
+  // Extraer boardId de los parámetros si la ruta fuera /movil/[boardId]
+  // Por ahora, asumimos un boardId fijo o se obtendrá de otra forma
+  // Para propósitos de prueba, puedes pasar un ID de tablero quemado o hacer que el componente MobileBoardClient lo maneje internamente
+  const boardId = params?.boardId || 'default-board-id'; // Reemplazar 'default-board-id' con lógica real
+
   return (
-    <div>
-      <h1>¡Bienvenido a la vista móvil de Mi Cerebro!</h1>
-      <p>Esta es una página dedicada a dispositivos móviles.</p>
-      {/* Aquí puedes renderizar tu MobileMenu o un diseño específico para móviles */}
-    </div>
+    <MobileBoardClient boardId={boardId} />
   );
 };
 
