@@ -54,3 +54,18 @@ public/index.html
 .vscode/
 .idea/
 .vercel
+
+# Archivos de scripts y mantenimiento
+archivos_2024_-icloud.sh
+detector_basura.sh
+detector_residuos.sh
+icloud_descarg-inmediata.sh
+limpiar_memoria_virtual.sh
+mantenimiento_imac.txt
+micerebro Instrucciones/
+monitorear_descargas_icloud.sh
+mover_archivos_2024.sh
+optimizar_icloud.sh
+
+# API endpoints de Gemini (excluidos temporalmente)
+src/app/api/
