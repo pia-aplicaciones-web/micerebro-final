@@ -902,7 +902,7 @@ export default function NotepadElement(props: CommonElementProps) {
   }, [typedContent.pages]);
 
   // Voces disponibles para selección
-  const voiceOptions = ['Paulina', 'Google español (Latinoamérica)', 'Luciana'];
+  const voiceOptions = ['Paulina', 'Google español (Latinoamérica)', 'Luciana', 'Agustina'];
 
   const getReadableText = useCallback((pages: string[], currentPageIndex: number, contentRef: React.RefObject<HTMLDivElement>): string => {
     const selection = window.getSelection();
@@ -987,7 +987,11 @@ export default function NotepadElement(props: CommonElementProps) {
     let selectedVoice: SpeechSynthesisVoice | null = null;
     
     // Buscar la voz por el nombre seleccionado y el idioma español
-    selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));
+    if (selectedVoiceName === 'Agustina') {
+      selectedVoice = voices.find(v => v.name === 'Autonoe' && v.lang.startsWith('es'));
+    } else {
+      selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));
+    }
 
     const fallbackVoice = voices.find(v => v.lang.startsWith('es'));
     utterance.voice = selectedVoice || fallbackVoice || null;
