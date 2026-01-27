@@ -805,15 +805,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               <Menu className="h-8 w-8 text-black" />
             </Button>
           )}
-          {isMobile && selectedElement && (
-            <Button
-              variant="ghost"
-              className="fixed top-4 right-20 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
-              onClick={() => canvasRef.current?.onDuplicateElement(selectedElement.id)}
-            >
-              <BookCopy className="h-8 w-8 text-black" />
-            </Button>
-          )}
           {isMobile && (
             <Button
               variant="ghost"
