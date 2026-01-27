@@ -88,12 +88,10 @@ interface MobileMenuProps {
   boards: WithId<Board>[];
   boardId: string;
   user: AuthUser | null;
-  isListening: boolean;
-  onToggleDictation: () => void;
   onOpenNotepad: (id: string) => void;
   onLocateElement: (id: string) => void;
   addElement: (type: ElementType, content?: any) => Promise<any>;
-  onRenameBoard: () => void;
+  onOpenRenameBoardDialog: () => void;
   onDeleteBoard: () => void;
   onUploadImage: () => void;
   onAddImageFromUrl: () => void;
@@ -117,12 +115,10 @@ const MobileMenu = ({
   boards,
   boardId,
   user,
-  isListening,
-  onToggleDictation,
   onOpenNotepad,
   onLocateElement,
   addElement,
-  onRenameBoard,
+  onOpenRenameBoardDialog,
   onDeleteBoard,
   onUploadImage,
   onAddImageFromUrl,
@@ -190,17 +186,6 @@ const MobileMenu = ({
       ],
     },
     {
-      label: isListening ? 'Detener Dictado' : 'Iniciar Dictado',
-      icon: isListening ? MicOff : Mic,
-      onClick: (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onToggleDictation();
-        onClose();
-      },
-      className: isListening ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse' : '',
-    },
-    {
       label: 'Cuadernos',
       icon: BookCopy,
       subMenu: [
@@ -264,7 +249,7 @@ const MobileMenu = ({
       label: 'Más opciones',
       icon: MoreHorizontal,
       subMenu: [
-        { label: 'Renombrar Tablero', onClick: () => { onRenameBoard(); onClose(); } },
+        { label: 'Renombrar Tablero', onClick: () => { onOpenRenameBoardDialog(); onClose(); } },
         {
           label: 'Eliminar Tablero',
           onClick: () => {

@@ -7,7 +7,8 @@ import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage } from '@/lib/firebase';
+import { getFirebaseStorage, getFirebaseFirestore } from '@/lib/firebase';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
@@ -88,13 +89,39 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
 
   // Efecto para cargar el tablero cuando boardId y userId estén disponibles
   useEffect(() => {
-    if (user?.uid && boardId && boardId !== 'new') {
-      loadBoard(boardId, user.uid);
-    } else if (boardId === 'new' && user?.uid && !board) {
-      // Si es un tablero nuevo, pero el usuario está autenticado, crear uno
-      createBoard(user.uid);
-    }
-  }, [boardId, user?.uid, loadBoard, createBoard, board]);
+    const db = getFirebaseFirestore();
+
+    const handleBoardLoading = async () => {
+      if (!user?.uid) {
+        return;
+      }
+
+      if (boardId === 'auto-load-board') {
+        try {
+          const boardsRef = collection(db, 'boards');
+          const q = query(boardsRef, where('userId', '==', user.uid), orderBy('createdAt', 'asc'));
+          const querySnapshot = await getDocs(q);
+
+          if (!querySnapshot.empty) {
+            const firstBoardId = querySnapshot.docs[0].id;
+            router.replace(`/movil/${firstBoardId}`);
+          } else {
+            const newBoardId = await createBoard(user.uid);
+            router.replace(`/movil/${newBoardId}`);
+          }
+        } catch (err) {
+          console.error("Error al auto-cargar/crear tablero:", err);
+          toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar o crear un tablero automáticamente.' });
+        }
+      } else if (boardId === 'new' && user?.uid && !board) {
+        createBoard(user.uid);
+      } else if (boardId && boardId !== 'new' && user?.uid) {
+        loadBoard(boardId, user.uid);
+      }
+    };
+
+    handleBoardLoading();
+  }, [boardId, user?.uid, loadBoard, createBoard, board, router, toast]);
 
   // Estados para contraseña del tablero
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
@@ -138,7 +165,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   useEffect(() => { elementsRef.current = elements; }, [elements]);
 
   const getNextZIndex = useCallback(() => {
-    const els = elements.current;
+    const els = elements;
     if (!els?.length) return 1;
     const zIndexes = els.filter(e => typeof e.zIndex === 'number').map(e => e.zIndex!);
     return zIndexes.length ? Math.max(...zIndexes) + 1 : 2;
@@ -537,7 +564,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onOpenNotepad={handleOpenNotepad}
               onLocateElement={handleLocateElement}
               addElement={addElement}
-              onRenameBoard={handleRenameBoard}
+              onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
               onDeleteBoard={handleDeleteBoard}
               onUploadImage={handleUploadImage}
               onAddImageFromUrl={handleAddImageFromUrl}
