@@ -181,7 +181,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Mini', onClick: () => handleAddElement('mini') },
         {
           label: 'Elementos Abiertos',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta'].includes(el.type) && el.hidden !== true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true).map(element => {
             let title = 'Sin título';
             switch (element.type) {
               case 'notepad':
@@ -227,6 +227,10 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               case 'mini':
                 title = 'Mini';
                 break;
+              case 'dictado':
+                const dictadoContent = element.content as any;
+                title = dictadoContent?.title || 'Dictado';
+                break;
               case 'todo':
                 const todoContent = element.content as TodoContent;
                 title = todoContent?.title || 'Lista de tareas';
@@ -242,11 +246,16 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
     {
       label: 'Notas Adhesivas',
       icon: StickyNote,
-      subMenu: stickyNoteColors.map(color => ({
-        label: color.label,
-        onClick: () => handleAddElement('sticky', { color: color.name }),
-        icon: () => <div className={cn('w-4 h-4 rounded-sm mr-2 border border-slate-300', color.className)} />
-      }))
+      subMenu: [
+        ...stickyNoteColors.map(color => ({
+          label: color.label,
+          onClick: () => handleAddElement('sticky', { color: color.name }),
+          icon: () => <div className={cn('w-4 h-4 rounded-sm mr-2 border border-slate-300', color.className)} />
+        })),
+        { label: 'Nota Grande', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'grande' } }) },
+        { label: 'Nota Redonda', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'redonda' } }) },
+        { label: 'Nota Transparente', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } }) },
+      ]
     },
     {
       label: 'Lista de Tareas',

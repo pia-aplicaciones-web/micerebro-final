@@ -76,9 +76,9 @@ export function validateAndRepairElement(element: unknown): WithId<CanvasElement
 
   const defaults = DEFAULT_DIMENSIONS[el.type] || DEFAULT_DIMENSIONS['default'];
 
-  // Reparar coordenadas
-  const x = typeof el.x === 'number' && !isNaN(el.x) ? el.x : 100;
-  const y = typeof el.y === 'number' && !isNaN(el.y) ? el.y : 100;
+  // Reparar coordenadas - REGLA CRÍTICA: NUNCA permitir coordenadas negativas
+  const x = Math.max(0, typeof el.x === 'number' && !isNaN(el.x) ? el.x : 100);
+  const y = Math.max(0, typeof el.y === 'number' && !isNaN(el.y) ? el.y : 100);
   
   // Reparar dimensiones
   let width = typeof el.width === 'number' && el.width > 0 ? el.width : defaults.width;
@@ -353,10 +353,10 @@ export function validateUpdateProps(updates: Record<string, unknown>): Record<st
     if (value === undefined) continue;
     if (typeof value === 'number' && isNaN(value)) continue;
 
-    // Validar coordenadas
+    // Validar coordenadas - REGLA CRÍTICA: NUNCA permitir coordenadas negativas
     if (key === 'x' || key === 'y') {
       if (typeof value === 'number' && !isNaN(value)) {
-        safe[key] = Math.max(-5000, Math.min(value, 50000)); // Limitar rango
+        safe[key] = Math.max(0, Math.min(value, 50000)); // Limitar rango, mínimo 0
       }
       continue;
     }

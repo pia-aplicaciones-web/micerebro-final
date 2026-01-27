@@ -72,6 +72,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'notes': NotesElement,
   'mini': MiniElement,
   'countdown': CountdownElement,
+  'dictado': DictadoElement,
 };
 
 type TransformableElementProps = {
@@ -177,6 +178,9 @@ export default function TransformableElement({
   // REGLA #2: Estado para diálogo de confirmación de eliminación
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false);
+  // Estado para rastrear movimiento inicial y evitar arrastres accidentales
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
+  const DRAG_THRESHOLD = 8; // Pixels mínimos para considerar arrastre real
   
   // Extraer posición y tamaño de properties para uso consistente
   const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
@@ -201,12 +205,33 @@ export default function TransformableElement({
   
   
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
-    const newPosition = { x: d.x, y: d.y };
+    // Validar umbral de movimiento para evitar arrastres accidentales
+    if (dragStartPos) {
+      const dx = Math.abs(d.x - dragStartPos.x);
+      const dy = Math.abs(d.y - dragStartPos.y);
+      const totalMovement = Math.sqrt(dx * dx + dy * dy);
+      
+      // Si el movimiento es menor al umbral, cancelar el arrastre (solo fue un clic)
+      if (totalMovement < DRAG_THRESHOLD) {
+        setDragStartPos(null);
+        return; // No actualizar posición, solo fue una selección
+      }
+    }
+    
+    // REGLA CRÍTICA: NUNCA permitir elementos fuera del margen 0,0
+    const newPosition = { 
+      x: Math.max(0, d.x), 
+      y: Math.max(0, d.y) 
+    };
     const safeProperties = (typeof element.properties === 'object' && element.properties !== null ? element.properties : {}) as CanvasElementProperties;
+    
+    // Limpiar posición de inicio de arrastre
+    setDragStartPos(null);
     
     // Intento de anclar a contenedor si se suelta sobre uno
     const containers = allElements?.filter(el => (el.type as any) === 'container') || [];
     // Usar esquina superior izquierda para detectar contenedor (regla especial)
+    // newPosition ya está validado para no ser negativo
     const elementRect = {
       x: newPosition.x,
       y: newPosition.y,
@@ -272,13 +297,17 @@ export default function TransformableElement({
       y: newPosition.y,
       properties: props,
     });
-  }, [element, updateElement, allElements, safeSize.width, safeSize.height]);
+  }, [element, updateElement, allElements, safeSize.width, safeSize.height, dragStartPos]);
 
   const onResizeStop = useCallback((e: MouseEvent | TouchEvent, direction: string, ref: HTMLElement, delta: ResizableDelta, newPosition: Position) => {
     const safeProperties = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
     
     const newSize = { width: parseFloat(ref.style.width), height: parseFloat(ref.style.height) };
-    const finalPosition = element.parentId ? newPosition : { x: newPosition.x, y: newPosition.y };
+    // REGLA CRÍTICA: NUNCA permitir elementos fuera del margen 0,0
+    const finalPosition = element.parentId ? newPosition : { 
+      x: Math.max(0, newPosition.x), 
+      y: Math.max(0, newPosition.y) 
+    };
     const updates: Partial<CanvasElement> = { 
       properties: { 
         ...safeProperties, 
@@ -387,7 +416,10 @@ export default function TransformableElement({
     if (isEditable) {
       return; // Permitir que el navegador maneje el foco y el cursor
     }
-    onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
+    // Solo seleccionar si no estamos en proceso de arrastre
+    if (!isDraggingOrResizing) {
+      onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
+    }
   };
 
   const handleDragStart = useCallback((e: RndDragEvent) => {

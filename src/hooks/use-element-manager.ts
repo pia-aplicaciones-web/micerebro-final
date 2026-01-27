@@ -15,7 +15,7 @@ import {
   getDoc,
 } from 'firebase/firestore';
 import type { ElementType, CanvasElement, WithId, CanvasElementProperties, StickyCanvasElement, ElementContent } from '@/lib/types';
-import { startOfWeek } from 'date-fns';
+import { startOfWeek, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuthContext } from '@/context/AuthContext';
 
@@ -188,7 +188,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
       //   }; break;
       case 'sticky':
         const stickyColor = props?.color || 'yellow';
-        const stickySize = { width: 224, height: 224 };
+        const stickyVariant = (props?.properties as any)?.variant || props?.variant;
+        // Tamaño según variante: grande = 300x300, normal = 224x224
+        const stickySize = stickyVariant === 'grande' 
+          ? { width: 300, height: 300 }
+          : { width: 224, height: 224 };
         const stickyPos = getCenteredPosition(stickySize.width, stickySize.height);
         const stickyElement: Omit<StickyCanvasElement, 'id'> = {
           type: 'sticky',
@@ -197,7 +201,13 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           width: stickySize.width,
           height: stickySize.height,
           userId,
-          properties: { ...baseProperties, position: stickyPos, size: stickySize, color: stickyColor } as CanvasElementProperties,
+          properties: { 
+            ...baseProperties, 
+            position: stickyPos, 
+            size: stickySize, 
+            color: stickyColor,
+            ...(stickyVariant && { variant: stickyVariant })
+          } as CanvasElementProperties,
           content: (typeof props?.content === 'string' ? props.content : 'Escribe algo...'),
           zIndex,
           createdAt: serverTimestamp(),
@@ -503,6 +513,29 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           properties: { ...baseProperties, position: miniPos, size: miniSize },
           content: { text: '', searchQuery: '' },
           zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      case 'dictado':
+        // Tamaño fijo: 6.7 pulgadas en diagonal (170mm x 96mm = 642px x 362px en 96 DPI)
+        const dictadoSize = { width: 642, height: 362 };
+        const dictadoPos = getCenteredPosition(dictadoSize.width, dictadoSize.height);
+        const dictadoTimestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
+        newElementData = {
+          type,
+          x: dictadoPos.x,
+          y: dictadoPos.y,
+          width: dictadoSize.width,
+          height: dictadoSize.height,
+          userId,
+          properties: { ...baseProperties, position: dictadoPos, size: dictadoSize, zIndex: -1 },
+          content: { 
+            title: `Dictado ${dictadoTimestamp}`,
+            content: '<div><br></div>',
+            createdAt: dictadoTimestamp
+          },
+          zIndex: -1,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };

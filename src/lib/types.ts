@@ -32,7 +32,8 @@ export type ElementType =
   'photo-grid-adaptive' |
   'photo-grid-free' |
   'pomodoro-timer' |
-  'libreta';
+  'libreta' |
+  'dictado';
 
 // Interfaz para propiedades de elementos del canvas
 export interface CanvasElementProperties {
@@ -93,6 +94,12 @@ export interface NotepadContent {
   pages?: string[];
   password?: string;
   isLocked?: boolean;
+}
+
+export interface DictadoContent {
+  title?: string;
+  content?: string;
+  createdAt?: string; // Timestamp de creación
 }
 
 export interface YellowNotepadContent {

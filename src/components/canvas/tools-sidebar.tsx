@@ -292,7 +292,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
@@ -656,6 +656,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Mini</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>Dictado</span>
+              </DropdownMenuItem>
               {elementsOnCanvas.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -697,6 +701,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             break;
                           case 'mini':
                             title = 'Mini';
+                            break;
+                          case 'dictado':
+                            const dictadoContentOpen = element.content as any;
+                            title = dictadoContentOpen?.title || 'Dictado';
                             break;
                           default:
                             title = 'Elemento';
@@ -751,6 +759,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                           case 'mini':
                             title = 'Mini';
                             break;
+                          case 'dictado':
+                            const dictadoContentHidden = element.content as any;
+                            title = dictadoContentHidden?.title || 'Dictado';
+                            break;
                           case 'todo':
                             const todoContent = element.content as TodoContent;
                             title = todoContent?.title || 'Lista de tareas';
@@ -784,6 +796,19 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   <span className="capitalize">{color.label}</span>
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'grande' } })}>
+                <div className="w-4 h-4 rounded-sm mr-2 border border-slate-300 bg-yellow-200" />
+                <span>Nota Grande</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'redonda' } })}>
+                <div className="w-4 h-4 rounded-full mr-2 border border-slate-300 bg-yellow-200" />
+                <span>Nota Redonda</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } })}>
+                <div className="w-4 h-4 rounded-sm mr-2 border-2 border-gray-400 bg-yellow-200/50" />
+                <span>Nota Transparente</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

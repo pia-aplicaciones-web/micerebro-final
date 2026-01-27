@@ -116,11 +116,14 @@ export default function StickyNoteElement(props: CommonElementProps) {
   const colorValue = (typeof safeProperties.color === 'string' ? safeProperties.color : 'yellow') || 'yellow';
   const currentPalette = getColorPalette(colorValue);
 
+  // Variantes de notas: 'grande', 'redonda', 'transparente', o undefined (normal)
+  const variant = safeProperties.variant as 'grande' | 'redonda' | 'transparente' | undefined;
+
   // REGLA #4: Rotación para notas adhesivas
   const rotation = safeProperties.rotation || 0;
 
-  // Tamaño de fuente del menú format
-  const fontSize = safeProperties.fontSize || '16px';
+  // Tamaño de fuente del menú format - más grande para variante 'grande'
+  const fontSize = variant === 'grande' ? '20px' : (safeProperties.fontSize || '16px');
 
   const editorRef = useRef<HTMLDivElement>(null);
   const [isCapturing, setIsCapturing] = useState(false);
@@ -453,17 +456,26 @@ export default function StickyNoteElement(props: CommonElementProps) {
   }, [isPreview, minimized, properties, onUpdate, id]);
 
 
+  // Estilos según variante
+  const cardClassName = cn(
+    'flex flex-col relative group overflow-hidden',
+    variant === 'redonda' ? 'rounded-full' : 'rounded-lg',
+    variant === 'transparente' ? 'border-2 border-gray-400' : 'border-none',
+    'shadow-md'
+  );
+
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: variant === 'transparente' 
+      ? `${currentPalette.bg}80` // 80% opacidad
+      : currentPalette.bg,
+    width: '100%',
+    height: '100%',
+  };
+
   return (
     <Card
-        className={cn(
-          'flex flex-col relative group overflow-hidden',
-          'rounded-lg shadow-md border-none'
-        )}
-        style={{
-          backgroundColor: currentPalette.bg,
-          width: '100%',
-          height: '100%',
-        }}
+        className={cardClassName}
+        style={cardStyle}
         onMouseDown={(e) => {
           if ((e.target as HTMLElement).closest('.drag-handle')) return;
           e.stopPropagation();
