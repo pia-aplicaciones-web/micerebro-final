@@ -21,6 +21,7 @@ import {
   List,
   MapPin,
   MessageCircle,
+  ChevronDown
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
