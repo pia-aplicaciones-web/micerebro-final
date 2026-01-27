@@ -27,7 +27,7 @@ const nextConfig = {
       {
         source: '/',
         has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
-        destination: '/movil/auto-load-board',
+        destination: '/movil/board/auto-load-board',
       },
     ];
   },
@@ -36,7 +36,7 @@ const nextConfig = {
     return [
       {
         source: '/movil/',
-        destination: '/movil/auto-load-board',
+        destination: '/movil/board/auto-load-board',
         permanent: false,
       },
     ];
