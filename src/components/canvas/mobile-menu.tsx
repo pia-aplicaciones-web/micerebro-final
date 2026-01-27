@@ -319,9 +319,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
-        side="bottom"
+        side="left"
         className={cn(
-          "fixed inset-x-0 bottom-0 w-full h-[50vh] bg-white bg-opacity-100 flex flex-col p-4"
+          "w-1/2 h-full bg-white flex flex-col p-4"
         )}
       >
         <div className="flex justify-between items-center mb-4">

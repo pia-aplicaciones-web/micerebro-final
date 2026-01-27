@@ -799,7 +799,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           {isMobile && (
             <Button
               variant="ghost"
-              className="fixed top-4 left-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
+              className="fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
               onClick={handleToggleMobileMenu}
             >
               {isMobileMenuOpen ? (
