@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
-import CreateBoardDialog from '@/components/canvas/create-board-dialog'; // Reutilizar el diálogo existente
+import CreateBoardDialog from '@/components/canvas/create-board-dialog';
 
 type AuthUser = {
   uid?: string;
@@ -88,32 +88,13 @@ const MobileMenu = forwardRef<HTMLDivElement, MobileMenuProps>(({
   boards,
   boardId,
   user,
-  onUploadImage,
-  onAddImageFromUrl,
-  onCropImage,
-  onAddImageFromUrlWithCrop,
-  onPanToggle,
   onRenameBoard,
   onDeleteBoard,
-  onDeleteAllUserImages,
   isListening,
   onToggleDictation,
   onOpenNotepad,
   onLocateElement,
-  onAddComment,
-  updateElement,
-  selectedElementIds,
   addElement,
-  selectElement,
-  clearCanvas,
-  onExportBoardToPng,
-  onFormatToggle,
-  isFormatToolbarOpen,
-  onOpenGlobalSearch,
-  canvasScrollPosition,
-  canvasScale,
-  isGalleryPanelOpen,
-  onToggleGalleryPanel,
 }, ref) => {
   const router = useRouter();
   const { toast } = useToast();
