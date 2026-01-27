@@ -800,13 +800,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="fixed top-4 left-4 z-[1001] bg-white rounded-full w-12 h-12"
+              className="fixed top-4 left-4 z-[1001] bg-white rounded-full w-14 h-14"
               onClick={handleToggleMobileMenu}
             >
               {isMobileMenuOpen ? (
-                <CloseIcon className="h-12 w-12 text-black" />
+                <CloseIcon className="h-10 w-10 text-black" />
               ) : (
-                <Menu className="h-12 w-12 text-black" />
+                <Menu className="h-10 w-10 text-black" />
               )}
             </Button>
           )}

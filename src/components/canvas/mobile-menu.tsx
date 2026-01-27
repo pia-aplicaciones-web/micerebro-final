@@ -321,8 +321,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       <SheetContent
         side="bottom"
         className={cn(
-          "fixed inset-0 w-full h-full bg-white bg-opacity-100 flex flex-col p-4",
-          "md:max-h-[50vh] md:w-full md:bottom-0 md:left-0 md:top-auto md:translate-y-0 md:relative md:mx-auto md:my-auto"
+          "fixed inset-x-0 bottom-0 w-full h-[50vh] bg-white bg-opacity-100 flex flex-col p-4"
         )}
       >
         <div className="flex justify-between items-center mb-4">
