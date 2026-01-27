@@ -563,6 +563,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     input.click();
   }, []);
 
+  const handleAddImageFromUrl = useCallback(() => {
+    setIsImageUrlDialogOpen(true);
+    setShouldOpenCropAfterUrl(false);
+  }, []);
+
   const handleAddImageFromUrlWithCrop = useCallback(() => {
     setIsImageUrlDialogOpen(true);
     setShouldOpenCropAfterUrl(true);
@@ -819,9 +824,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
               onDeleteBoard={handleDeleteBoard}
               onUploadImage={handleUploadImage}
-              onAddImageFromUrl={onAddImageFromUrl}
+              onAddImageFromUrl={handleAddImageFromUrl}
               onCropImage={handleCropImage}
               onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+              onExportBoardToPng={handleExportToPng}
+              onDeleteAllUserImages={deleteAllUserImages}
             />
           )}
           <RenameBoardDialog
