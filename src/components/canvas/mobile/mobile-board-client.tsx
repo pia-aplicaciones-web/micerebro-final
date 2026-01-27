@@ -68,6 +68,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     createBoard,
     updateElement,
     deleteElement,
+    selectedElementIds,
+    setSelectedElementIds,
     isLoading: isBoardLoading,
     error,
     cleanup,
@@ -84,217 +86,57 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     cleanupRef.current = cleanup;
   }, [loadBoard, createBoard, cleanup]);
 
+  // Estados para contraseña del tablero
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isPasswordVerified, setIsPasswordVerified] = useState(true); // Default a true si no hay contraseña
+  const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
+
   const { boards, handleRenameBoard, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
+  const canvasRef = useRef<any>(null); // Ref para el Canvas
+
+  // Estados de UI
+  const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
+  const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [shouldOpenCropAfterUrl, setShouldOpenCropAfterUrl] = useState(false);
+  const [changeFormatDialogOpen, setChangeFormatDialogOpen] = useState(false);
+  const [isPanningActive, setIsPanningActive] = useState(false);
+  const [isRenameBoardDialogOpen, setIsRenameBoardDialogOpen] = useState(false);
+  const [isImageCropDialogOpen, setIsImageCropDialogOpen] = useState(false);
+  const [imageToCrop, setImageToCrop] = useState<string>("");
+  const [uploadedFileToProcess, setUploadedFileToProcess] = useState<File | null>(null);
+  
+  // Estados de Selección
+  const [selectedElement, setSelectedElement] = useState<WithId<CanvasElement> | null>(null);
+  const [activatedElementId, setActivatedElementId] = useState<string | null>(null);
+  const [selectedNotepadForFormat, setSelectedNotepadForFormat] = useState<WithId<CanvasElement> | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
+  const [isEditCommentDialogOpen, setIsEditCommentDialogOpen] = useState(false);
+  const [selectedCommentForEdit, setSelectedCommentForEdit] = useState<WithId<CanvasElement> | null>(null);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+  const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Mantener para compatibilidad, aunque el Sidebar no se use
+
   const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
   useDictation(isListening, transcript, interimTranscript);
-  const { addElement } = useElementManager(boardId, () => ({ x: 0, y: 0 }), () => 1); // Simplificado para móviles
 
-  const handleAddImageFromUrl = useCallback(() => {
-    // Implementar lógica de agregar imagen desde URL para móvil
-    toast({ title: 'Añadir imagen desde URL (móvil)', description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  const handleUploadImage = useCallback(() => {
-    // Implementar lógica de subir imagen para móvil
-    toast({ title: 'Subir imagen (móvil)', description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  const handleCropImage = useCallback(() => {
-    // Implementar lógica de recortar imagen para móvil
-    toast({ title: 'Recortar imagen (móvil)', description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  const handleAddImageFromUrlWithCrop = useCallback(() => {
-    // Implementar lógica de agregar imagen desde URL con crop para móvil
-    toast({ title: 'Añadir imagen con crop (móvil)', description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  const handleOpenNotepad = useCallback((id: string) => {
-    toast({ title: `Abrir cuaderno ${id} (móvil)`, description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  const handleLocateElement = useCallback((id: string) => {
-    toast({ title: `Localizar elemento ${id} (móvil)`, description: 'Funcionalidad por implementar' });
-  }, [toast]);
-
-  // Refs para prevenir múltiples cargas
-  const hasLoadedRef = useRef(false);
-  const isLoadingRef = useRef(false);
-  const currentBoardIdRef = useRef<string | null>(null);
-  const currentUserIdRef = useRef<string | null>(null);
-
-  // Cargar tablero
-  useEffect(() => {
-    if (typeof window === 'undefined' || !boardId) return;
-    if (authLoading) return;
-
-    // Permitir acceso a usuarios invitados (boards que empiezan con 'guest_')
-    const isGuestBoard = boardId.startsWith('guest_');
-    if (!user?.uid && !isGuestBoard) {
-      router.replace('/');
-      return;
-    }
-
-    const effectiveUserId = user?.uid || (isGuestBoard ? 'guest' : null);
-
-    // Guard: Prevenir llamadas múltiples si ya está cargando o ya se cargó este tablero
-    if (isLoadingRef.current) {
-      console.log('⏸️ Ya hay una carga en progreso, ignorando...');
-      return;
-    }
-
-    // Guard: Si ya se cargó este mismo tablero para este usuario, no volver a cargar
-    if (hasLoadedRef.current && currentBoardIdRef.current === boardId && currentUserIdRef.current === effectiveUserId) {
-      console.log('⏸️ Tablero ya cargado:', boardId);
-      return;
-    }
-
-    // Guard: Si auth está cargando, esperar
-    if (authLoading) {
-      console.log('⏸️ Auth aún cargando, esperando...');
-      return;
-    }
-
-    // Marcar como cargando ANTES de hacer la llamada
-    isLoadingRef.current = true;
-    hasLoadedRef.current = true;
-    currentBoardIdRef.current = boardId;
-    currentUserIdRef.current = effectiveUserId;
-
-    console.log('📂 Cargando tablero:', boardId, 'para usuario:', effectiveUserId);
-
-    const loadPromise = boardId === 'new'
-      ? createBoardRef.current?.(effectiveUserId)
-      : loadBoardRef.current?.(boardId, effectiveUserId);
-
-    if (!loadPromise) {
-      console.error('❌ No se pudo obtener función de carga');
-      isLoadingRef.current = false;
-      hasLoadedRef.current = false;
-      return;
-    }
-
-    loadPromise
-      .then((result: any) => {
-        isLoadingRef.current = false;
-        if (boardId === 'new' && result) {
-          console.log('✅ Tablero creado:', result);
-          router.push(`/board/${result}/`);
-        } else {
-          console.log('✅ Tablero cargado');
-        }
-      })
-      .catch(async (err: any) => {
-        console.error('❌ Error cargando tablero:', err);
-        isLoadingRef.current = false;
-        hasLoadedRef.current = false;
-        currentBoardIdRef.current = null;
-        currentUserIdRef.current = null;
-
-        const isPermDenied = err?.code === 'permission-denied' || /permission|denied/i.test(err?.message || '');
-        if (isPermDenied) {
-          try {
-            const newBoardId = await createBoardRef.current?.(effectiveUserId);
-            if (newBoardId) {
-              router.replace(`/board/${newBoardId}/`);
-              return;
-            }
-          } catch (createErr) {
-            console.error('❌ Error creando tablero tras permiso denegado:', createErr);
-          }
-        }
-      });
-
-    return () => {
-      // Solo hacer cleanup si el componente se desmonta
-      // No resetear los refs aquí porque pueden causar problemas
-    };
-  }, [boardId, user?.uid, authLoading, router]);
-
-  // Cleanup al desmontar
-  useEffect(() => {
-    return () => {
-      cleanupRef.current?.();
-      // Resetear refs solo al desmontar completamente
-      hasLoadedRef.current = false;
-      isLoadingRef.current = false;
-      currentBoardIdRef.current = null;
-      currentUserIdRef.current = null;
-    };
+  // Funciones auxiliares para el Canvas
+  const getViewportCenter = useCallback(() => {
+    if (canvasRef.current) return canvasRef.current.getViewportCenter();
+    return { x: 400, y: 400 }; // Valor por defecto si el canvas no está montado
   }, []);
 
-  // Buscar elemento gallery
-  const galleryElement = useMemo(() => {
-    return elements.find(el => el.type === 'gallery');
+  const elementsRef = useRef(elements);
+  useEffect(() => { elementsRef.current = elements; }, [elements]);
+
+  const getNextZIndex = useCallback(() => {
+    const els = elements.current;
+    if (!els?.length) return 1;
+    const zIndexes = els.filter(e => typeof e.zIndex === 'number').map(e => e.zIndex!);
+    return zIndexes.length ? Math.max(...zIndexes) + 1 : 2;
   }, [elements]);
 
-  // Filtrar elementos para el canvas (SIEMPRE excluir gallery del canvas)
-  const canvasElements = useMemo(() => {
-    return elements.filter(el => el.type !== 'gallery' && (el.type as any) !== 'photo-ideas-guide');
-  }, [elements]);
+  const { addElement, setSelectedElementIds } = useElementManager(boardId, getViewportCenter, getNextZIndex); // Añadido setSelectedElementIds
 
-  // Crear gallery si no existe (solo una vez por tablero)
-  const galleryCreatedRef = useRef(false);
-  useEffect(() => {
-    // Solo crear gallery si no existe y estamos en un tablero válido
-    const shouldCreateGallery = !galleryCreatedRef.current &&
-                               !galleryElement &&
-                               user?.uid &&
-                               boardId !== 'new' &&
-                               boardId;
-
-    if (shouldCreateGallery) {
-      galleryCreatedRef.current = true;
-      console.log('Creando elemento gallery único...');
-
-      // Limpiar cualquier gallery existente antes de crear uno nuevo
-      const existingGalleries = elements.filter(el => el.type === 'gallery');
-      if (existingGalleries.length > 0) {
-        console.log('Eliminando galleries existentes antes de crear uno nuevo:', existingGalleries.length);
-        existingGalleries.forEach(gallery => {
-          deleteElement(gallery.id);
-        });
-
-        // Esperar un poco antes de crear el nuevo para evitar conflictos
-        setTimeout(() => {
-          addElement('gallery', {
-            content: { title: 'Mi galería', images: [] },
-            properties: { size: { width: 378, height: 800 } },
-            x: -400,
-            y: 100,
-            width: 378,
-            height: 800,
-            hidden: true, // Gallery siempre oculto en canvas
-            zIndex: -1,
-          }).then(() => {
-            console.log('Gallery único creado exitosamente');
-          }).catch((error) => {
-            console.error('Error creando gallery único:', error);
-            galleryCreatedRef.current = false;
-          });
-        }, 100);
-      } else {
-        // No hay galleries existentes, crear directamente
-      addElement('gallery', {
-        content: { title: 'Mi galería', images: [] },
-        properties: { size: { width: 378, height: 800 } },
-        x: -400,
-        y: 100,
-        width: 378,
-        height: 800,
-          hidden: true, // Gallery siempre oculto en canvas
-        zIndex: -1,
-      }).then(() => {
-          console.log('Gallery único creado exitosamente');
-      }).catch((error) => {
-          console.error('Error creando gallery único:', error);
-          galleryCreatedRef.current = false;
-      });
-      }
-    }
-  }, [galleryElement, addElement, user?.uid, boardId, elements, deleteElement]);
-
-  // Handlers para el MobileMenu y el Canvas (migrados de BoardPageClient)
+  // === Handlers para las funciones del MobileMenu ===
   const handleSelectElement = useCallback((elementId: string | null) => {
     setSelectedElementIds(elementId ? [elementId] : []);
   }, [setSelectedElementIds]);
@@ -392,6 +234,11 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
       URL.revokeObjectURL(imageToCrop);
     }
   }, [imageToCrop]);
+
+  const handleAddImageFromUrl = useCallback(() => {
+    setIsImageUrlDialogOpen(true);
+    setShouldOpenCropAfterUrl(false);
+  }, []);
 
   const handleOpenNotepad = useCallback((id: string) => {
     const el = elements.find(e => e.id === id);
@@ -497,6 +344,44 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     }
   }, [addElement, getViewportCenter, toast, elements]);
 
+  // Manejador para el envío de contraseña del tablero
+  const handlePasswordSubmit = useCallback(async (password: string) => {
+    setIsVerifyingPassword(true);
+    try {
+      // Aquí deberías implementar la lógica real para verificar la contraseña del tablero
+      // Por ahora, simulamos una verificación asíncrona
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // NOTA: Para propósitos de demostración/desarrollo, la contraseña se asume en `board.password`.
+      // En una aplicación real, no se debería almacenar la contraseña en texto plano en `board`.
+      // Se debería usar un mecanismo de autenticación seguro, como tokens o verificación en el backend.
+      if (board?.password && password === board.password) {
+        setIsPasswordVerified(true);
+        setIsPasswordDialogOpen(false);
+        toast({ title: 'Acceso concedido', description: 'Contraseña correcta.' });
+      } else if (!board?.password) {
+        // Si no hay contraseña configurada en el tablero, simplemente conceder acceso
+        setIsPasswordVerified(true);
+        setIsPasswordDialogOpen(false);
+        toast({ title: 'Tablero sin contraseña', description: 'Acceso concedido.' });
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Contraseña incorrecta.' });
+      }
+    } catch (error) {
+      console.error('Error al verificar contraseña:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un error al verificar la contraseña.' });
+    } finally {
+      setIsVerifyingPassword(false);
+    }
+  }, [board?.password, toast]);
+
+  // Efecto para mostrar el diálogo de contraseña si el tablero tiene una y no está verificada
+  useEffect(() => {
+    if (board?.password && !isPasswordVerified && !isPasswordDialogOpen) {
+      setIsPasswordDialogOpen(true);
+    }
+  }, [board?.password, isPasswordVerified, isPasswordDialogOpen]);
+
+
   // Buscar elemento gallery
   const galleryElement = useMemo(() => {
     return elements.find(el => el.type === 'gallery');
@@ -593,16 +478,16 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   return (
     <>
       {/* Diálogo de contraseña del tablero */}
-      {/* {isPasswordDialogOpen && board && (
+      {isPasswordDialogOpen && board && (
         <BoardPasswordDialog
           boardName={board.name}
           onPasswordSubmit={handlePasswordSubmit}
           isLoading={isVerifyingPassword}
         />
-      )} */}
+      )}
 
       {/* Solo mostrar el tablero si la contraseña está verificada (o no hay) */}
-      {/* {isPasswordVerified && ( */}
+      {isPasswordVerified && (
         <>
           <RenameBoardDialog
         isOpen={isRenameBoardDialogOpen}
@@ -743,7 +628,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
             />
           </div>
         </>
-      {/* )} */}
+      )}
     </>
   );
 }
