@@ -2,7 +2,6 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Loader2, Menu, X as CloseIcon } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 
@@ -26,7 +25,7 @@ import ToolsSidebar from '@/components/canvas/tools-sidebar';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
 import { Button } from '@/components/ui/button';
-import MobileMenu from '@/components/canvas/mobile-menu'; // Nuevo MobileMenu
+// import MobileMenu from '@/components/canvas/mobile-menu'; // Nuevo MobileMenu
 
 // Diálogos
 import AddImageFromUrlDialog from '@/components/canvas/elements/add-image-from-url-dialog';
@@ -808,48 +807,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         {/* Nombre del tablero en esquina superior izquierda */}
         <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
 
-        {isMobile && (
-          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="fixed top-4 right-4 z-[1001] bg-white border border-gray-200 shadow-md hover:bg-gray-100"
-                onClick={handleToggleMobileMenu}
-              >
-                {isMobileMenuOpen ? (
-                  <CloseIcon className="h-6 w-6 text-black" />
-                ) : (
-                  <Menu className="h-6 w-6 text-black" />
-                )}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="p-0 w-full md:w-80 bg-white bg-opacity-80 backdrop-blur-sm">
-              <MobileMenu
-                isOpen={isMobileMenuOpen}
-                onClose={handleToggleMobileMenu}
-                elements={elements || []}
-                boards={boards || []}
-                boardId={boardId}
-                user={user}
-                isListening={isListening}
-                onToggleDictation={toggleListening}
-                onOpenNotepad={handleOpenNotepad}
-                onLocateElement={handleLocateElement}
-                addElement={addElement}
-                onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
-                onDeleteBoard={handleDeleteBoard}
-                onUploadImage={handleUploadImage}
-                onAddImageFromUrl={() => {
-                  setIsImageUrlDialogOpen(true);
-                  setShouldOpenCropAfterUrl(false);
-                }}
-                onCropImage={handleCropImage}
-                onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-              />
-            </SheetContent>
-          </Sheet>
-        )}
 
         {!isMobile && (
           <ToolsSidebar

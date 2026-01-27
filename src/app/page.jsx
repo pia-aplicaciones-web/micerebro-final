@@ -47,16 +47,6 @@ export default function HomePage() {
     handleRedirectResult();
   }, []);
 
-  // Detección y redirección a /movil/ en el lado del cliente
-  useEffect(() => {
-    // Solo ejecutar en el cliente
-    if (typeof window !== 'undefined') {
-      const isMobileDevice = window.innerWidth < 768; // Asumiendo 768px como breakpoint móvil
-      if (isMobileDevice && window.location.pathname === '/') {
-        window.location.href = '/movil/';
-      }
-    }
-  }, []); // Se ejecuta una sola vez al montar el componente
 
   // Función para redirigir al tablero
   const redirectToBoard = useCallback(async (user) => {

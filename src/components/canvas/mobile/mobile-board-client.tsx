@@ -12,8 +12,8 @@ import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
 import { useToast } from '@/hooks/use-toast';
-import { useSpeechToText } from '@/hooks/use-speech-to-text';
-import { useDictation } from '@/hooks/use-dictation';
+// import { useSpeechToText } from '@/hooks/use-speech-to-text';
+// import { useDictation } from '@/hooks/use-dictation';
 
 // Utilidades y Tipos
 import { uploadFile } from '@/lib/upload-helper';
@@ -86,6 +86,16 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     cleanupRef.current = cleanup;
   }, [loadBoard, createBoard, cleanup]);
 
+  // Efecto para cargar el tablero cuando boardId y userId estén disponibles
+  useEffect(() => {
+    if (user?.uid && boardId && boardId !== 'new') {
+      loadBoard(boardId, user.uid);
+    } else if (boardId === 'new' && user?.uid && !board) {
+      // Si es un tablero nuevo, pero el usuario está autenticado, crear uno
+      createBoard(user.uid);
+    }
+  }, [boardId, user?.uid, loadBoard, createBoard, board]);
+
   // Estados para contraseña del tablero
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [isPasswordVerified, setIsPasswordVerified] = useState(true); // Default a true si no hay contraseña
@@ -115,8 +125,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Mantener para compatibilidad, aunque el Sidebar no se use
 
-  const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
-  useDictation(isListening, transcript, interimTranscript);
+  // const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
+  // useDictation(isListening, transcript, interimTranscript);
 
   // Funciones auxiliares para el Canvas
   const getViewportCenter = useCallback(() => {
@@ -522,8 +532,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               boards={boards || []}
               boardId={boardId}
               user={user}
-              isListening={isListening}
-              onToggleDictation={toggleListening}
+              // isListening={isListening}
+              // onToggleDictation={toggleListening}
               onOpenNotepad={handleOpenNotepad}
               onLocateElement={handleLocateElement}
               addElement={addElement}

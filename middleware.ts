@@ -14,5 +14,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/', // Aplicar este middleware a la ruta raíz y cualquier subruta si es necesario
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|movil).*)'], // Excluir rutas internas de Next.js y la ruta /movil/
 };
