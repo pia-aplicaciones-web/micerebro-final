@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { userAgent } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const userAgent = request.headers.get('user-agent');
-  const isMobile = Boolean(userAgent?.match(
-    /Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i
-  ));
+  const { device } = userAgent(request);
+  const isMobile = device.type === 'mobile'; // 'mobile', 'tablet', 'console', 'smarttv', 'wearable', 'embedded', or undefined
 
   if (isMobile && request.nextUrl.pathname === '/') {
     return NextResponse.redirect(new URL('/movil/', request.url));
