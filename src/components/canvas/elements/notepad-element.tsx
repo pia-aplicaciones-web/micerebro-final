@@ -672,7 +672,6 @@ export default function NotepadElement(props: CommonElementProps) {
   
   const handleCloseNotepad = useCallback((e: React.MouseEvent) => { 
     e.stopPropagation(); 
-    e.preventDefault();
     if (isPreview) return; 
     saveContent();
     onUpdate(id, { hidden: true }); 
@@ -1086,7 +1085,7 @@ export default function NotepadElement(props: CommonElementProps) {
                <div className="p-2 flex flex-row items-center gap-1 w-full cursor-grab active:cursor-grabbing drag-handle">
                   <div className="p-1"><GripVertical className="size-5 text-muted-foreground" /></div>
                   <p className="font-headline text-sm font-semibold truncate flex-grow">{typedContent.title || 'Sin título'}</p>
-                  <Button variant="ghost" size="icon" className="size-7" title="Maximizar" onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); toggleMinimize(e)}}>
+                  <Button variant="ghost" size="icon" className="size-7" title="Maximizar" onMouseDown={(e) => {e.stopPropagation(); toggleMinimize(e)}}>
                       <Maximize className="size-4" />
                   </Button>
               </div>
@@ -1190,7 +1189,7 @@ export default function NotepadElement(props: CommonElementProps) {
                     <Button variant="ghost" size="icon" className="size-7" title="Limpiar Formato" onClick={handleRemoveFormat}><Eraser className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Completa" onClick={handleInsertDate}><Calendar className="size-4"/></Button>
-                    <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
+                    <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7" title="Más opciones"><MoreVertical className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>
@@ -1234,7 +1233,7 @@ export default function NotepadElement(props: CommonElementProps) {
                       size="icon"
                       className="size-7 text-red-600 hover:bg-red-50"
                       title="Eliminar cuaderno"
-                      onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDelete();}}
+                      onMouseDown={(e) => {e.stopPropagation(); handleDelete();}}
                     >
                       <Trash2 className="size-4" />
                     </Button>
