@@ -47,21 +47,6 @@ export default function NotepadElement(props: CommonElementProps) {
   } = props;
   const prevZRef = useRef<number | null>(null);
 
-  // Regla: al seleccionar, traer al frente temporalmente; al deseleccionar, volver a su z-index original
-  useEffect(() => {
-    const currentZ = (properties as any)?.zIndex ?? -1;
-    if (isSelected) {
-      if (prevZRef.current === null) prevZRef.current = currentZ;
-      if (currentZ !== 9999) {
-        onUpdate(id, { zIndex: 9999, properties: { ...(properties || {}), zIndex: 9999 } });
-      }
-    } else {
-      if (prevZRef.current !== null && currentZ !== prevZRef.current) {
-        onUpdate(id, { zIndex: prevZRef.current, properties: { ...(properties || {}), zIndex: prevZRef.current } });
-      }
-      prevZRef.current = null;
-    }
-  }, [isSelected, id, onUpdate, properties]);
   
   const typedContent = (content || {}) as NotepadContent;
   const titleRef = useRef<HTMLDivElement>(null);
@@ -1084,27 +1069,13 @@ export default function NotepadElement(props: CommonElementProps) {
   const isSpecialNotepad = id === 'oyDN2LIr8z7VyYA5727F' || id === 'FdQ656GJ94TePuHpotbY' || id === 'Iz0UWQ5gQwXlkX1kGBf1' || id === 'kRfKpBDg946Y99668Tih';
   const notepadBackgroundColor = isSpecialNotepad ? '#f8f0ad' : '#ffffff';
 
-  // =====================================================
-  // CRÍTICO: Todos los hooks DEBEN estar ANTES de cualquier return condicional
-  // Esto incluye useCallback, useMemo, useEffect, etc.
-  // Error #300 de React ocurre si los hooks están después de un return
-  // =====================================================
-  
-  // REGLA ESPECIAL: Cuadernos - Al hacer click suben a primera capa para editar, luego vuelven atrás
   const handleNotepadClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.drag-handle')) {
       return; // No hacer nada si se hace click en el drag handle
     }
-    // Regla: cuadernos empiezan en zIndex -1 y suben temporalmente al frente (0)
-    const originalZIndex = typeof safeProperties?.zIndex === 'number' ? safeProperties.zIndex : -1;
-    const editingZIndex = 0;
-    onUpdate(id, { properties: { ...safeProperties, zIndex: editingZIndex }, zIndex: editingZIndex });
-    setTimeout(() => {
-      if (!isSelected) { // Solo volver si no está seleccionado
-        onUpdate(id, { properties: { ...safeProperties, zIndex: originalZIndex }, zIndex: originalZIndex });
-      }
-    }, 2000);
-  }, [id, safeProperties, onUpdate, isSelected]);
+    // Solo seleccionar el elemento
+    props.onSelectElement(id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
+  }, [id, props.onSelectElement]);
 
   // =====================================================
   // AHORA sí podemos hacer el return condicional para minimizado
