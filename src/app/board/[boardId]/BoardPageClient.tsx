@@ -814,8 +814,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
             onDeleteBoard={handleDeleteBoard}
             onDeleteAllUserImages={deleteAllUserImages}
-            isListening={isListening}
-            onToggleDictation={toggleListening}
             onOpenNotepad={handleOpenNotepad}
             onLocateElement={handleLocateElement}
             onAddComment={handleAddMarker}
