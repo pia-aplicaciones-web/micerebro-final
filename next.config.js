@@ -34,11 +34,6 @@ const nextConfig = {
         has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
         destination: '/movil/',
       },
-      {
-        source: '/',
-        has: [{ type: 'header', key: 'x-device-type', value: 'desktop' }],
-        destination: '/page', // Asume que src/app/page.jsx es tu página de escritorio
-      },
     ];
   },
 
