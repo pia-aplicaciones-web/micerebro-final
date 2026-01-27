@@ -176,6 +176,7 @@ export default function TransformableElement({
   // ✅ CRÍTICO: TODOS LOS HOOKS DEBEN IR ANTES DE CUALQUIER EARLY RETURN
   // REGLA #2: Estado para diálogo de confirmación de eliminación
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false);
   
   // Extraer posición y tamaño de properties para uso consistente
   const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
@@ -302,6 +303,61 @@ export default function TransformableElement({
     setIsDeleteDialogOpen(false);
   }, [deleteElement, element.id]);
 
+  const [isTouchActive, setIsTouchActive] = useState(false);
+  const [touchStartPos, setTouchStartPos] = useState<{ x: number, y: number } | null>(null);
+  const [touchStartTime, setTouchStartTime] = useState<number | null>(null);
+  const [lastTapTime, setLastTapTime] = useState<number>(0);
+  const TOUCH_SLOP = 10; // Pixels
+  const DOUBLE_TAP_DELAY = 300; // Milliseconds
+  const LONG_PRESS_DELAY = 500; // Milliseconds
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (isDraggingOrResizing) return; // No manejar toques si ya estamos arrastrando/redimensionando
+
+    const currentTime = Date.now();
+    if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
+      // Doble toque detectado
+      // onDoubleClickElement(element.id);
+      console.log("Doble toque en elemento: ", element.id);
+      setLastTapTime(0); // Reset para evitar triple toque accidental
+      return;
+    }
+    setLastTapTime(currentTime);
+
+    setIsTouchActive(true);
+    setTouchStartPos({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+    setTouchStartTime(currentTime);
+    onSelectElement(element.id, false); // Seleccionar elemento al tocar
+  }, [isDraggingOrResizing, lastTapTime, onSelectElement, element.id]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isTouchActive || !touchStartPos || isDraggingOrResizing) return;
+
+    const currentX = e.touches[0].clientX;
+    const currentY = e.touches[0].clientY;
+
+    // Si el movimiento excede un umbral, se considera arrastre
+    const dx = Math.abs(currentX - touchStartPos.x);
+    const dy = Math.abs(currentY - touchStartPos.y);
+
+    if (dx > TOUCH_SLOP || dy > TOUCH_SLOP) {
+      // Esto es un arrastre, no un toque simple
+      setIsTouchActive(false); // Desactivar la detección de toque simple/largo
+    }
+  }, [isTouchActive, touchStartPos, isDraggingOrResizing]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsTouchActive(false);
+    setTouchStartPos(null);
+    setTouchStartTime(null);
+  }, []);
+
+  const handleTouchCancel = useCallback(() => {
+    setIsTouchActive(false);
+    setTouchStartPos(null);
+    setTouchStartTime(null);
+  }, []);
+
   // ✅ EARLY RETURNS DESPUÉS DE TODOS LOS HOOKS
   const ElementComponent = ElementComponentMap[element.type as keyof typeof ElementComponentMap];
   
@@ -340,16 +396,25 @@ export default function TransformableElement({
     },
     size: { width: safeSize.width, height: safeSize.height },
     position: {
-      x: position.x - (canvasContainerRef.current?.scrollLeft || 0),
-      y: position.y - (canvasContainerRef.current?.scrollTop || 0),
+      x: position.x,
+      y: position.y,
     },
-    onDragStart: handleDragStart,
-    onDragStop: onDragStop,
-    onResizeStop: onResizeStop,
+    onDragStart: (e, data) => {
+      setIsDraggingOrResizing(true);
+      handleDragStart(e, data);
+    },
+    onDragStop: (e, data) => {
+      setIsDraggingOrResizing(false);
+      onDragStop(e, data);
+    },
+    onResizeStart: () => setIsDraggingOrResizing(true),
+    onResizeStop: (e, direction, ref, delta, newPosition) => {
+      setIsDraggingOrResizing(false);
+      onResizeStop(e, direction, ref, delta, newPosition);
+    },
     minWidth: 50,
     minHeight: 50,
-    dragHandleClassName: 'drag-handle',
-    className: cn("focus:outline-none"),
+      className: cn("focus:outline-none"),
     onMouseDown: handleMouseDown,
     enableResizing: true, // ACTIVADO - Mostrar handles de redimensionamiento
     scale: scale,
@@ -437,6 +502,10 @@ export default function TransformableElement({
           data-element-id={element.id}
           data-element-type={element.type}
           className="w-full h-full relative group"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         >
 
           <ElementComponent
@@ -481,7 +550,6 @@ export default function TransformableElement({
                   onUngroup={() => onUngroup(element.id)}
                   setIsDirty={() => {}}
                   scale={scale}
-                  offset={{ x: canvasContainerRef.current?.scrollLeft || 0, y: canvasContainerRef.current?.scrollTop || 0 }}
               boardId={boardId}
               isListening={isListening}
               liveTranscript={liveTranscript}
