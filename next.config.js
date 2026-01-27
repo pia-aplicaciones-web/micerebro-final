@@ -22,6 +22,17 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname, './'),
 
 
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
+        destination: '/movil/auto-load-board',
+      },
+    ];
+  },
+
+
   // Habilitar detección de errores (mejor práctica)
   // typescript: {
   //   ignoreBuildErrors: false, // default behavior
@@ -33,15 +44,6 @@ const nextConfig = {
   
 
 
-    async rewrites() {
-    return [
-      {
-        source: '/',
-        has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
-        destination: '/movil/',
-      },
-    ];
-  },
 
   // Webpack config mejorado para evitar problemas de chunks
   webpack: (config, { isServer, dev }) => {
