@@ -852,6 +852,22 @@ export default function NotepadElement(props: CommonElementProps) {
   }, [toast, id, isPreview, typedContent, onUpdate]);
 
   useEffect(() => {
+    // Cuando el notepad se activa para edición desde el canvas padre, forzar el foco
+    if (!isPreview && props.activatedElementId === id && contentRef.current) {
+      contentRef.current.focus();
+      // Opcional: Colocar el cursor al final del contenido al enfocar
+      const range = document.createRange();
+      const selection = window.getSelection();
+      if (contentRef.current.lastChild) {
+        range.setStartAfter(contentRef.current.lastChild);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+      }
+    }
+  }, [props.activatedElementId, id, isPreview]);
+
+  useEffect(() => {
     const titleEl = titleRef.current;
     if (titleEl && titleEl.innerText !== (typedContent.title || '')) {
       titleEl.innerText = typedContent.title || '';
@@ -1197,17 +1213,16 @@ export default function NotepadElement(props: CommonElementProps) {
                               <FileSignature className="mr-2 h-4 w-4" />
                               <span>Copiar texto como .txt ordenado</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleExportNotepadToPng(e)}} disabled={isExportingPng}>
+                          <DropdownMenuItem onMouseDown={(e) => {e.stopPropagation(); handleExportNotepadToPng(e)}} disabled={isExportingPng}>
                               <FileImage className="mr-2 h-4 w-4" />
                               <span>{isExportingPng ? 'Exportando...' : 'Exportar a PNG: alta resolución'}</span>
                           </DropdownMenuItem>
-                          <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDuplicateNotepad();}}>
+                          <DropdownMenuItem onMouseDown={(e) => {e.stopPropagation(); handleDuplicateNotepad();}}>
                               <Copy className="mr-2 h-4 w-4" />
                               <span>Duplicar cuaderno</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onMouseDown={(e) => {
-                              e.preventDefault(); 
                               e.stopPropagation(); 
                               setIsExportPdfDialogOpen(true);
                             }} 
@@ -1217,11 +1232,11 @@ export default function NotepadElement(props: CommonElementProps) {
                               <span>{isExportingPdf ? 'Exportando PDF...' : 'Exportar páginas a PDF'}</span>
                           </DropdownMenuItem>
                           {onChangeNotepadFormat && (
-                            <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); onChangeNotepadFormat(id)}}>
+                            <DropdownMenuItem onMouseDown={(e) => {e.stopPropagation(); onChangeNotepadFormat(id)}}>
                                 <Settings className="mr-2 h-4 w-4" /><span>Cambiar formato...</span>
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); setIsPasswordDialogOpen(true)}}>
+                          <DropdownMenuItem onMouseDown={(e) => {e.stopPropagation(); setIsPasswordDialogOpen(true)}}>
                             <Lock className="mr-2 h-4 w-4" />
                             <span>{typedContent.password ? 'Cambiar contraseña' : 'Configurar contraseña'}</span>
                           </DropdownMenuItem>
