@@ -78,7 +78,7 @@ type TransformableElementProps = {
   element: WithId<CanvasElement>;
   allElements: WithId<CanvasElement>[];
   scale: number;
-  offset?: Point;
+  canvasContainerRef: React.RefObject<HTMLDivElement>;
   isSelected: boolean;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
   unanchorElement: (id: string) => void;
@@ -139,7 +139,7 @@ export default function TransformableElement({
   element: initialElement,
   allElements,
   scale,
-  offset = { x: 0, y: 0 },
+  canvasContainerRef,
   isSelected,
   updateElement,
   unanchorElement,
@@ -330,7 +330,7 @@ export default function TransformableElement({
   }, [element.id]);
 
   
-  const rndProps = {
+  const rndProps = useMemo(() => ({
     style: {
       zIndex: zIndex,
       border: isSelected && (element.type as any) !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
@@ -339,7 +339,10 @@ export default function TransformableElement({
       transformOrigin: 'center center',
     },
     size: { width: safeSize.width, height: safeSize.height },
-    position: position,
+    position: {
+      x: position.x - (canvasContainerRef.current?.scrollLeft || 0),
+      y: position.y - (canvasContainerRef.current?.scrollTop || 0),
+    },
     onDragStart: handleDragStart,
     onDragStop: onDragStop,
     onResizeStop: onResizeStop,
@@ -351,81 +354,81 @@ export default function TransformableElement({
     enableResizing: true, // ACTIVADO - Mostrar handles de redimensionamiento
     scale: scale,
     bounds: element.parentId ? `[data-element-id="${element.parentId}"]` : undefined,
-      resizeHandleStyles: {
-        bottomRight: {
-          width: '20px',
-          height: '20px',
-          right: '-10px',
-          bottom: '-10px',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'nw-resize'
-        },
-        bottomLeft: {
-          width: '20px',
-          height: '20px',
-          left: '-10px',
-          bottom: '-10px',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ne-resize'
-        },
-        topRight: {
-          width: '20px',
-          height: '20px',
-          right: '-10px',
-          top: '-10px',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ne-resize'
-        },
-        topLeft: {
-          width: '20px',
-          height: '20px',
-          left: '-10px',
-          top: '-10px',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'nw-resize'
-        },
-        bottom: {
-          height: '10px',
-          left: '50%',
-          bottom: '-5px',
-          transform: 'translateX(-50%)',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ns-resize'
-        },
-        top: {
-          height: '10px',
-          left: '50%',
-          top: '-5px',
-          transform: 'translateX(-50%)',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ns-resize'
-        },
-        left: {
-          width: '10px',
-          top: '50%',
-          left: '-5px',
-          transform: 'translateY(-50%)',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ew-resize'
-        },
-        right: {
-          width: '10px',
-          top: '50%',
-          right: '-5px',
-          transform: 'translateY(-50%)',
-          backgroundColor: 'transparent',
-          border: 'none',
-          cursor: 'ew-resize'
-        },
-      }
-  };
+    resizeHandleStyles: {
+      bottomRight: {
+        width: '20px',
+        height: '20px',
+        right: '-10px',
+        bottom: '-10px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'nw-resize'
+      },
+      bottomLeft: {
+        width: '20px',
+        height: '20px',
+        left: '-10px',
+        bottom: '-10px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ne-resize'
+      },
+      topRight: {
+        width: '20px',
+        height: '20px',
+        right: '-10px',
+        top: '-10px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ne-resize'
+      },
+      topLeft: {
+        width: '20px',
+        height: '20px',
+        left: '-10px',
+        top: '-10px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'nw-resize'
+      },
+      bottom: {
+        height: '10px',
+        left: '50%',
+        bottom: '-5px',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ns-resize'
+      },
+      top: {
+        height: '10px',
+        left: '50%',
+        top: '-5px',
+        transform: 'translateX(-50%)',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ns-resize'
+      },
+      left: {
+        width: '10px',
+        top: '50%',
+        left: '-5px',
+        transform: 'translateY(-50%)',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ew-resize'
+      },
+      right: {
+        width: '10px',
+        top: '50%',
+        right: '-5px',
+        transform: 'translateY(-50%)',
+        backgroundColor: 'transparent',
+        border: 'none',
+        cursor: 'ew-resize'
+      },
+    }
+  }), [zIndex, isSelected, rotation, safeSize.width, safeSize.height, position, handleDragStart, onDragStop, onResizeStop, scale, element.parentId, element.type, canvasContainerRef.current]);
 
   return (
     <>
@@ -478,7 +481,7 @@ export default function TransformableElement({
                   onUngroup={() => onUngroup(element.id)}
                   setIsDirty={() => {}}
                   scale={scale}
-                  offset={offset}
+                  offset={{ x: canvasContainerRef.current?.scrollLeft || 0, y: canvasContainerRef.current?.scrollTop || 0 }}
               boardId={boardId}
               isListening={isListening}
               liveTranscript={liveTranscript}

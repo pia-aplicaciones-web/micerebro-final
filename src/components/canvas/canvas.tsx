@@ -536,52 +536,6 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const transformableElements = useMemo(() => elements, [elements]);
   const allElementsProp = useMemo(() => elements, [elements]);
   
-  // CRÍTICO: offset NO debe depender de scrollLeft/scrollTop directamente
-  // porque estos valores cambian constantemente durante el scroll, causando re-renders infinitos
-  // En su lugar, usar un ref y actualizarlo solo cuando sea necesario (debounced)
-  const offsetRef = useRef({ x: 0, y: 0 });
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Actualizar offset solo cuando el scroll cambia significativamente (debounced)
-  useEffect(() => {
-    const container = canvasContainerRef.current;
-    if (!container) return;
-    
-    const handleScroll = () => {
-      // Limpiar timeout anterior
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-      
-      // Actualizar offset después de un breve delay (debounce)
-      scrollTimeoutRef.current = setTimeout(() => {
-        const newOffset = {
-          x: container.scrollLeft || 0,
-          y: container.scrollTop || 0,
-        };
-        
-        // Solo actualizar si el cambio es significativo (más de 10px)
-        const dx = Math.abs(newOffset.x - offsetRef.current.x);
-        const dy = Math.abs(newOffset.y - offsetRef.current.y);
-        
-        if (dx > 10 || dy > 10) {
-          offsetRef.current = newOffset;
-          setOffset(newOffset);
-        }
-      }, 50); // Debounce de 50ms
-    };
-    
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    
-    return () => {
-      container.removeEventListener('scroll', handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
-    };
-  }, []); // Solo ejecutar una vez al montar
-
   return (
     <div className="relative w-full h-screen">
       <div
@@ -616,7 +570,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       element={element}
                       allElements={allElementsProp}
                       scale={scale}
-                      offset={offset}
+                      canvasContainerRef={canvasContainerRef}
                       isSelected={isSelected}
                       updateElement={updateElement}
                       unanchorElement={unanchorElement}
