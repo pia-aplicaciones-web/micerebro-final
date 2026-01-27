@@ -272,7 +272,7 @@ const MobileMenu = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          "fixed inset-0 w-full h-full bg-white bg-opacity-80 flex flex-col p-4",
+          "fixed inset-x-0 bottom-0 w-full h-1/2 bg-white bg-opacity-80 flex flex-col p-4",
           "md:w-1/2 md:h-1/2 md:bottom-0 md:left-1/2 md:-translate-x-1/2 md:top-auto md:translate-y-0" // Media pantalla en formato vertical para pantallas medianas y superiores
         )}
       >
