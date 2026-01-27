@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Loader2, Menu } from 'lucide-react'; // Eliminado ChevronRight, ChevronLeft, Mic
+import { Loader2, Menu, X as CloseIcon } from 'lucide-react';
 import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
@@ -65,7 +65,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const storage = getFirebaseStorage();
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Cambiado a isMobileMenuOpen
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const handleToggleMobileMenu = useCallback(() => {
+    setIsMobileMenuOpen((prev) => !prev);
+  }, []);
   
   // Guía: no crear usuarios anónimos ni cargar sin usuario real de AuthContext
   
@@ -812,14 +815,19 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                 variant="ghost"
                 size="icon"
                 className="fixed top-4 right-4 z-[1001] bg-white border border-gray-200 shadow-md hover:bg-gray-100"
+                onClick={handleToggleMobileMenu}
               >
-                <Menu className="h-6 w-6 text-black" />
+                {isMobileMenuOpen ? (
+                  <CloseIcon className="h-6 w-6 text-black" />
+                ) : (
+                  <Menu className="h-6 w-6 text-black" />
+                )}
               </Button>
             </SheetTrigger>
             <SheetContent side="right" className="p-0 w-full md:w-80 bg-white bg-opacity-80 backdrop-blur-sm">
               <MobileMenu
                 isOpen={isMobileMenuOpen}
-                onClose={() => setIsMobileMenuOpen(false)}
+                onClose={handleToggleMobileMenu}
                 elements={elements || []}
                 boards={boards || []}
                 boardId={boardId}
@@ -831,6 +839,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                 addElement={addElement}
                 onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
                 onDeleteBoard={handleDeleteBoard}
+                onUploadImage={handleUploadImage}
+                onAddImageFromUrl={() => {
+                  setIsImageUrlDialogOpen(true);
+                  setShouldOpenCropAfterUrl(false);
+                }}
+                onCropImage={handleCropImage}
+                onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
               />
             </SheetContent>
           </Sheet>

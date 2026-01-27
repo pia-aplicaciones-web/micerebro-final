@@ -8,6 +8,14 @@ const nextConfig = {
   // Trailing slash para compatibilidad
   trailingSlash: true,
 
+  allowedDevOrigins: [
+    'http://localhost:3002',
+    'http://192.168.100.190:3002',
+    'http://[2800:300:6f53:6290:bc24:415e:8d6c:b7d7]:3002'
+  ],
+  outputFileTracingRoot: require('path').join(__dirname, './'),
+
+
   // Habilitar detección de errores (mejor práctica)
   // typescript: {
   //   ignoreBuildErrors: false, // default behavior
@@ -17,10 +25,7 @@ const nextConfig = {
   //   ignoreDuringBuilds: false, // default behavior
   // },
   
-  // Configuración experimental para chunks
-  experimental: {
-    // outputFileTracingRoot removido por ser inválido en Next.js 15
-  },
+
 
   // Webpack config mejorado para evitar problemas de chunks
   webpack: (config, { isServer, dev }) => {
