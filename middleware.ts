@@ -4,15 +4,15 @@ import { userAgent } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const { device } = userAgent(request);
-  const isMobile = device.type === 'mobile'; // 'mobile', 'tablet', 'console', 'smarttv', 'wearable', 'embedded', or undefined
+  const isMobile = device.type === 'mobile';
+  const response = NextResponse.next();
 
-  if (isMobile && request.nextUrl.pathname === '/') {
-    return NextResponse.redirect(new URL('/movil/', request.url));
-  }
+  // Establecer un encabezado personalizado para el tipo de dispositivo
+  response.headers.set('x-device-type', isMobile ? 'mobile' : 'desktop');
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ['/'], // Aplicar este middleware solo a la ruta raíz
+  matcher: '/', // Aplicar este middleware a la ruta raíz y cualquier subruta si es necesario
 };

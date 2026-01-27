@@ -9,9 +9,9 @@ const nextConfig = {
   trailingSlash: true,
 
   allowedDevOrigins: [
-    'http://localhost:3002',
-    'http://192.168.100.190:3002',
-    'http://[2800:300:6f53:6290:bc24:415e:8d6c:b7d7]:3002'
+    'http://localhost:3003',
+    'http://192.168.100.190:3003',
+    'http://[2800:300:6f53:6290:bc24:415e:8d6c:b7d7]:3003'
   ],
   outputFileTracingRoot: require('path').join(__dirname, './'),
 
@@ -26,6 +26,21 @@ const nextConfig = {
   // },
   
 
+
+    async rewrites() {
+    return [
+      {
+        source: '/',
+        has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
+        destination: '/movil/',
+      },
+      {
+        source: '/',
+        has: [{ type: 'header', key: 'x-device-type', value: 'desktop' }],
+        destination: '/page', // Asume que src/app/page.jsx es tu página de escritorio
+      },
+    ];
+  },
 
   // Webpack config mejorado para evitar problemas de chunks
   webpack: (config, { isServer, dev }) => {
