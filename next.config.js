@@ -1,3 +1,5 @@
+import path from 'path';
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Imágenes sin optimización server-side
@@ -13,7 +15,7 @@ const nextConfig = {
     'http://192.168.100.190:3003',
     'http://[2800:300:6f53:6290:bc24:415e:8d6c:b7d7]:3003'
   ],
-  outputFileTracingRoot: require('path').join(__dirname, './'),
+  outputFileTracingRoot: path.join(process.cwd(), './'),
 
 
   // Habilitar detección de errores (mejor práctica)
@@ -67,4 +69,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+export default nextConfig;
