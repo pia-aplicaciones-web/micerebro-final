@@ -427,6 +427,7 @@ export type ElementContent =
   | LibretaContent
   | MiniContent
   | ContainerContent
+  | DictadoContent
   | Record<string, unknown>;
 
 // --- INTERFAZ UNIVERSAL DE PROPS -- CORRECTED ---

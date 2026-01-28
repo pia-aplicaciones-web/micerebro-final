@@ -54,7 +54,7 @@ export default function DictadoElement(props: CommonElementProps) {
           ...typedContent, 
           title,
           createdAt: timestamp 
-        } 
+        } as DictadoContent
       });
     }
   }, []);

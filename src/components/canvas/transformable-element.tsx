@@ -40,6 +40,7 @@ import LibretaElement from './elements/libreta-element';
 import NotesElement from './elements/notes-element';
 import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
+import DictadoElement from './elements/dictado-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -422,7 +423,11 @@ export default function TransformableElement({
     }
   };
 
-  const handleDragStart = useCallback((e: RndDragEvent) => {
+  const handleDragStart = useCallback((e: RndDragEvent, data?: DraggableData) => {
+    // Guardar posición inicial para validar umbral de movimiento
+    if (data) {
+      setDragStartPos({ x: data.x, y: data.y });
+    }
     // Configurar dataTransfer para drag and drop hacia otros elementos (como galería)
     if ((e as any).dataTransfer) {
       (e as any).dataTransfer.setData('application/element-id', element.id);

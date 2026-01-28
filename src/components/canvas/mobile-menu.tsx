@@ -160,7 +160,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       label: 'Tableros',
       icon: LayoutDashboard,
       subMenu: [
-        { label: 'Nuevo Tablero', onClick: () => handleAddElement('board') },
+        { label: 'Nuevo Tablero', onClick: () => router.push('/') },
         {
           label: 'Abrir Tablero...',
           subMenu: boards.map((boardItem) => ({
@@ -176,14 +176,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       subMenu: [
         { label: 'Agregar Cuaderno', onClick: () => handleAddElement('notepad') },
         { label: 'Nuevo Block', onClick: () => handleAddElement('yellow-notepad') },
-        { label: 'Agregar Apuntes', onClick: () => handleAddElement('notes') },
+        { label: 'Agregar Apuntes', onClick: () => handleAddElement('mini-notes') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
         {
           label: 'Elementos Abiertos',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true).map(element => {
             let title = 'Sin título';
-            switch (element.type) {
+            const elementType = element.type as ElementType;
+            switch (elementType) {
               case 'notepad':
                 const notepadContent = element.content as NotepadContent;
                 title = notepadContent?.title || 'Cuaderno';
@@ -191,7 +192,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               case 'yellow-notepad':
                 title = 'Cuaderno Amarillo';
                 break;
-              case 'notes':
+              case 'mini-notes':
                 title = 'Apuntes';
                 break;
               case 'libreta':
@@ -209,15 +210,16 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         },
         {
           label: 'Cerrados',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'todo'].includes(el.type) && el.hidden === true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'todo', 'dictado'].includes(el.type) && el.hidden === true).map(element => {
             let title = 'Sin título';
-            switch (element.type) {
+            const elementType = element.type as ElementType;
+            switch (elementType) {
               case 'notepad':
               case 'yellow-notepad':
                 const notepadContent = element.content as NotepadContent;
                 title = notepadContent?.title || 'Cuaderno';
                 break;
-              case 'notes':
+              case 'mini-notes':
                 title = 'Apuntes';
                 break;
               case 'libreta':
@@ -274,7 +276,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Nuevo Localizador', onClick: () => handleAddElement('locator') },
         {
           label: 'Localizadores',
-          subMenu: elements.filter(el => el.type === 'locator').map(loc => {
+          subMenu: elements.filter(el => (el.type as string) === 'locator').map(loc => {
             const label = (typeof loc.content === 'object' && loc.content && (loc.content as any).label) ? (loc.content as any).label : 'Localizador';
             return { label: label, onClick: () => onLocateElement(loc.id), icon: MapPin };
           }),
@@ -406,7 +408,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 ) : (
                   <Button
                     variant="ghost"
-                    className={cn("w-full flex items-center gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm", item.className)}
+                    className={cn("w-full flex items-center gap-2 p-2 hover:bg-gray-100 rounded text-left text-sm", (item as any).className)}
                     onClick={item.onClick}
                   >
                     {item.icon && <item.icon className="w-4 h-4" />}

@@ -571,6 +571,29 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onAddImageFromUrl={handleAddImageFromUrl}
               onCropImage={handleCropImage}
               onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+              onExportBoardToPng={handleExportToPng}
+              onDeleteAllUserImages={async () => {
+                if (!user) {
+                  toast({
+                    variant: 'destructive',
+                    title: 'Error',
+                    description: 'Usuario no autenticado'
+                  });
+                  return;
+                }
+                const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
+                navigator.clipboard?.writeText(firebaseUrl).then(() => {
+                  toast({
+                    title: 'URL copiada al portapapeles',
+                    description: firebaseUrl
+                  });
+                }).catch(() => {
+                  toast({
+                    title: 'URL (cópiala manualmente)',
+                    description: firebaseUrl
+                  });
+                });
+              }}
             />
 
             {/* Canvas Principal */}
