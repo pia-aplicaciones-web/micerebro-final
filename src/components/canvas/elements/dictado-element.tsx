@@ -12,7 +12,6 @@ import { format } from 'date-fns';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { useDictation } from '@/hooks/use-dictation';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 
 export default function DictadoElement(props: CommonElementProps) {
@@ -26,10 +25,6 @@ export default function DictadoElement(props: CommonElementProps) {
     isSelected,
     minimized,
     onEditElement,
-    isListening = false,
-    liveTranscript = '',
-    finalTranscript = '',
-    interimTranscript = '',
   } = props;
 
   const typedContent = (content || {}) as DictadoContent;
@@ -39,9 +34,6 @@ export default function DictadoElement(props: CommonElementProps) {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isReading, setIsReading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-
-  // Usar hook de dictado para insertar texto (solo dictado global del menú principal)
-  useDictation(isListening, finalTranscript || liveTranscript || '', interimTranscript);
 
   // Auto-guardado con timestamp en título
   useEffect(() => {

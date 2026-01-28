@@ -45,6 +45,7 @@ import MobileMenu from '@/components/canvas/mobile-menu';
 
 // Hooks de dictado
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
+import { useDictation } from '@/hooks/use-dictation';
 
 interface BoardPageClientProps {
   boardId: string;
@@ -107,6 +108,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     startListening,
     stopListening,
   } = useSpeechToText();
+
+  // Dictado global: inserta texto donde esté el cursor (CURSOR MANDA),
+  // independientemente de qué elemento esté activo (notas, mini, dictado, etc.)
+  useDictation(isListening, transcript, interimTranscript);
 
   // CRÍTICO: Cleanup del listener cuando el componente se desmonta o cambia boardId
   useEffect(() => {
