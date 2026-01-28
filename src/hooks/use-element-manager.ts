@@ -189,10 +189,8 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
       case 'sticky':
         const stickyColor = props?.color || 'yellow';
         const stickyVariant = (props?.properties as any)?.variant || props?.variant;
-        // Tamaño según variante: grande = 300x300, normal = 224x224
-        const stickySize = stickyVariant === 'grande' 
-          ? { width: 300, height: 300 }
-          : { width: 224, height: 224 };
+        // Tamaño estándar: 224x224 (solo transparente cambia estilo, no tamaño)
+        const stickySize = { width: 224, height: 224 };
         const stickyPos = getCenteredPosition(stickySize.width, stickySize.height);
         const stickyElement: Omit<StickyCanvasElement, 'id'> = {
           type: 'sticky',

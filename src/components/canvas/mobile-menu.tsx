@@ -254,8 +254,6 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
           onClick: () => handleAddElement('sticky', { color: color.name }),
           icon: () => <div className={cn('w-4 h-4 rounded-sm mr-2 border border-slate-300', color.className)} />
         })),
-        { label: 'Nota Grande', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'grande' } }) },
-        { label: 'Nota Redonda', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'redonda' } }) },
         { label: 'Nota Transparente', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } }) },
       ]
     },

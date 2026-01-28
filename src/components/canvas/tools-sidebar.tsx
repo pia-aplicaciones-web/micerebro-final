@@ -797,14 +797,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'grande' } })}>
-                <div className="w-4 h-4 rounded-sm mr-2 border border-slate-300 bg-yellow-200" />
-                <span>Nota Grande</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'redonda' } })}>
-                <div className="w-4 h-4 rounded-full mr-2 border border-slate-300 bg-yellow-200" />
-                <span>Nota Redonda</span>
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } })}>
                 <div className="w-4 h-4 rounded-sm mr-2 border-2 border-gray-400 bg-yellow-200/50" />
                 <span>Nota Transparente</span>
