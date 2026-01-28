@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import type { CommonElementProps, DictadoContent, CanvasElementProperties } from '@/lib/types';
 import {
-  X, Minus, Maximize, GripVertical, Volume2, Mic, Save
+  X, Minus, Maximize, GripVertical, Volume2, Save
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -14,7 +14,6 @@ import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useDictation } from '@/hooks/use-dictation';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
-import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 export default function DictadoElement(props: CommonElementProps) {
   const { 
@@ -40,25 +39,8 @@ export default function DictadoElement(props: CommonElementProps) {
   const [isReading, setIsReading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
-  // Hook de dictado local para el botón de dictar del elemento
-  const {
-    isListening: isLocalListening,
-    transcript: localTranscript,
-    interimTranscript: localInterimTranscript,
-    toggleListening: toggleLocalListening,
-  } = useSpeechToText();
-
-  // Usar hook de dictado para insertar texto
-  // Prioridad: dictado local > dictado global
-  const activeListening = isLocalListening || isListening;
-  const activeTranscript = isLocalListening 
-    ? localTranscript 
-    : (finalTranscript || liveTranscript || '');
-  const activeInterimTranscript = isLocalListening 
-    ? localInterimTranscript 
-    : interimTranscript;
-
-  useDictation(activeListening, activeTranscript, activeInterimTranscript);
+  // Usar hook de dictado para insertar texto (solo dictado global del menú principal)
+  useDictation(isListening, finalTranscript || liveTranscript || '', interimTranscript);
 
   // Auto-guardado con timestamp en título
   useEffect(() => {
@@ -317,25 +299,6 @@ export default function DictadoElement(props: CommonElementProps) {
             <SaveStatusIndicator status={saveStatus} size="sm" />
           </div>
         </div>
-
-        {/* Botón flotante Dictar */}
-        <Button
-          variant="ghost"
-          className={cn(
-            "fixed top-4 right-4 z-[10000] bg-white rounded-md border border-gray-700 w-14 h-14 p-3",
-            (isLocalListening || isListening) && "bg-red-500 border-red-600 animate-pulse"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleLocalListening();
-          }}
-          title="Dictar"
-        >
-          <Mic className={cn(
-            "h-8 w-8",
-            (isLocalListening || isListening) ? "text-white" : "text-black"
-          )} />
-        </Button>
       </div>
     );
   }
@@ -467,27 +430,6 @@ export default function DictadoElement(props: CommonElementProps) {
               <SaveStatusIndicator status={saveStatus} size="sm" />
             </div>
           </div>
-        )}
-
-        {/* Botón flotante Dictar (web) */}
-        {!minimized && (
-          <Button
-            variant="ghost"
-            className={cn(
-              "absolute top-16 right-4 z-10 bg-white rounded-md border border-gray-700 w-12 h-12 p-2",
-              (isLocalListening || isListening) && "bg-red-500 border-red-600 animate-pulse"
-            )}
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleLocalListening();
-          }}
-            title="Dictar"
-          >
-            <Mic className={cn(
-              "h-6 w-6",
-              (isLocalListening || isListening) ? "text-white" : "text-black"
-            )} />
-          </Button>
         )}
       </div>
     </Card>
