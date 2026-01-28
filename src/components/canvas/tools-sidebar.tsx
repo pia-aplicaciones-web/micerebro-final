@@ -84,14 +84,30 @@ import { useToast } from '@/hooks/use-toast';
 import CreateBoardDialog from './create-board-dialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-const stickyNoteColors = [
-  { name: 'yellow', label: 'Amarillo', className: 'bg-yellow-200' },
-  { name: 'pink', label: 'Rosa', className: 'bg-pink-200' },
-  { name: 'blue', label: 'Azul', className: 'bg-blue-200' },
-  { name: 'green', label: 'Verde', className: 'bg-green-200' },
-  { name: 'orange', label: 'Naranja', className: 'bg-orange-200' },
-  { name: 'purple', label: 'Morado', className: 'bg-purple-200' },
-];
+// 14 Colores pastel elegantes para notas adhesivas
+const PASTEL_COLORS = {
+  rose: { bg: '#FFE5E5', name: 'Rosa', label: 'Rosa' },
+  lavender: { bg: '#E5E1FF', name: 'Lavanda', label: 'Lavanda' },
+  mint: { bg: '#E5FFE5', name: 'Menta', label: 'Menta' },
+  peach: { bg: '#FFE5D9', name: 'Durazno', label: 'Durazno' },
+  sky: { bg: '#E5F5FF', name: 'Cielo', label: 'Cielo' },
+  butter: { bg: '#FFF9E5', name: 'Mantequilla', label: 'Mantequilla' },
+  lilac: { bg: '#F0E5FF', name: 'Lila', label: 'Lila' },
+  sage: { bg: '#E5F0E5', name: 'Salvia', label: 'Salvia' },
+  coral: { bg: '#FFE5D0', name: 'Coral', label: 'Coral' },
+  aqua: { bg: '#E5FFF5', name: 'Aqua', label: 'Aqua' },
+  cream: { bg: '#FFF5E5', name: 'Crema', label: 'Crema' },
+  periwinkle: { bg: '#E5EBFF', name: 'Periwinkle', label: 'Periwinkle' },
+  blush: { bg: '#FFE5F0', name: 'Rubor', label: 'Rubor' },
+  honey: { bg: '#FFF0E5', name: 'Miel', label: 'Miel' },
+} as const;
+
+const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({
+  name: key,
+  label: color.label,
+  className: '',
+  bg: color.bg,
+}));
 
 const SidebarButton = forwardRef<
   HTMLButtonElement,
@@ -789,26 +805,59 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             <DropdownMenuTrigger asChild>
               <SidebarButton icon={StickyNote} label="Notas" title="Crear notas adhesivas" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" sideOffset={5}>
-              {stickyNoteColors.map((color) => (
-                <DropdownMenuItem key={color.name} onClick={() => handleAddElement('sticky', { color: color.name })}>
-                  <div className={cn('w-4 h-4 rounded-sm mr-2 border border-slate-300', color.className)} />
-                  <span className="capitalize">{color.label}</span>
-                </DropdownMenuItem>
-              ))}
+            <DropdownMenuContent side="right" align="start" sideOffset={5} className="max-h-[600px] overflow-y-auto">
+              {/* Variante V1 - Minimalista */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Minimalista V1</div>
+              <div className="grid grid-cols-2 gap-1 px-2 pb-2">
+                {stickyNoteColors.map((color) => (
+                  <DropdownMenuItem 
+                    key={`v1-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v1' } })}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <div className="w-4 h-4 rounded-sm border border-gray-300/30" style={{ backgroundColor: color.bg }} />
+                    <span className="text-sm">{color.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'rose', properties: { variant: 'v1' } })}>
-                <div className="w-4 h-4 rounded-sm mr-2 border border-gray-300/30 bg-rose-200 shadow-sm" />
-                <span>Nota Minimalista V1</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'lavender', properties: { variant: 'v2' } })}>
-                <div className="w-4 h-4 mr-2 bg-lavender-200 shadow-md" style={{ clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%)' }} />
-                <span>Nota Post-it V2</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'mint', properties: { variant: 'v3' } })}>
-                <div className="w-4 h-4 rounded-lg mr-2 bg-mint-200 border border-gray-200/50 shadow-sm" />
-                <span>Nota Card V3</span>
-              </DropdownMenuItem>
+              
+              {/* Variante V2 - Post-it */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Post-it V2</div>
+              <div className="grid grid-cols-2 gap-1 px-2 pb-2">
+                {stickyNoteColors.map((color) => (
+                  <DropdownMenuItem 
+                    key={`v2-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v2' } })}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <div 
+                      className="w-4 h-4 shadow-sm" 
+                      style={{ 
+                        backgroundColor: color.bg,
+                        clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%)'
+                      }} 
+                    />
+                    <span className="text-sm">{color.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
+              <DropdownMenuSeparator />
+              
+              {/* Variante V3 - Card */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Card V3</div>
+              <div className="grid grid-cols-2 gap-1 px-2 pb-2">
+                {stickyNoteColors.map((color) => (
+                  <DropdownMenuItem 
+                    key={`v3-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v3' } })}
+                    className="flex items-center gap-2 cursor-pointer"
+                  >
+                    <div className="w-4 h-4 rounded-lg border border-gray-200/50" style={{ backgroundColor: color.bg }} />
+                    <span className="text-sm">{color.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
 
