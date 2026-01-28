@@ -299,6 +299,37 @@ export default function MiniElement(props: CommonElementProps) {
                 const newTitle = e.currentTarget.textContent || 'Mini';
                 // Aquí puedes agregar lógica para guardar el título si es necesario
               }}
+              onFocus={(e) => {
+                // Asegurar que el cursor esté visible en el título
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  setTimeout(() => {
+                    const range = document.createRange();
+                    if (e.currentTarget) {
+                      range.selectNodeContents(e.currentTarget);
+                      range.collapse(false);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }, 50);
+                }
+              }}
+              onTouchStart={(e) => {
+                // En móvil, establecer foco y cursor al tocar el título
+                if (!isPreview && (!typedContent.password || isUnlockedForEditing)) {
+                  e.currentTarget.focus();
+                  setTimeout(() => {
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(e.currentTarget);
+                      range.collapse(false);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }, 50);
+                }
+              }}
               className="bg-transparent flex-grow outline-none cursor-text font-headline text-sm font-semibold p-1"
               style={{ color: '#000000' }}
               data-placeholder='Título'
