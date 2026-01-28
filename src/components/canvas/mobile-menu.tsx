@@ -86,20 +86,20 @@ interface MobileMenuProps {
   onToggleDictation?: () => void;
 }
 
-// Paleta de colores para notas adhesivas
+// Paleta de colores para notas adhesivas (ordenada como paleta visual)
 const PASTEL_COLORS = {
+  'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel', label: 'Rosa Pastel' },
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro', label: 'Morado Claro' },
   'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
-  'menta': { bg: '#d9f99d', name: 'Verde Lima', label: 'Verde Lima' },
+  'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
   'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
+  'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
+  'menta': { bg: '#d9f99d', name: 'Verde Lima', label: 'Verde Lima' },
   'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel', label: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
-  'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
-  'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel', label: 'Rosa Pastel' },
-  'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
-  'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
+  'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({
