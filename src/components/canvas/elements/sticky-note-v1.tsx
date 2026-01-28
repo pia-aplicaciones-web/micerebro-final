@@ -33,7 +33,7 @@ const PASTEL_COLORS = {
   honey: { bg: '#FFF0E5', name: 'Miel' },
 } as const;
 
-const TEXT_COLOR = '#4A5568';
+const TEXT_COLOR = '#1A1A1B'; // Gris muy oscuro elegante (no negro puro)
 
 export default function StickyNoteV1(props: CommonElementProps) {
   const {
@@ -159,7 +159,8 @@ export default function StickyNoteV1(props: CommonElementProps) {
                 fontFamily: '"Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                 fontSize: '16px',
                 color: TEXT_COLOR,
-                lineHeight: '1.5',
+                lineHeight: '1.6',
+                letterSpacing: '0.01em',
                 touchAction: 'manipulation',
                 WebkitUserSelect: 'text',
                 userSelect: 'text',
