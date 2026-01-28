@@ -26,6 +26,9 @@ export const useDictation = (
   // Guardar la posición del cursor cuando empieza el dictado
   useEffect(() => {
     if (isListening) {
+      // Resetear el transcript anterior cuando se inicia el dictado para evitar duplicaciones
+      lastTranscriptRef.current = '';
+      
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
@@ -144,13 +147,31 @@ export const useDictation = (
 
   // Procesar cambios en transcript (texto final)
   useEffect(() => {
-    if (!isListening) return;
+    if (!isListening) {
+      // Si no está escuchando, resetear el transcript guardado
+      lastTranscriptRef.current = '';
+      return;
+    }
 
     const currentTranscript = transcript || '';
     const lastTranscript = lastTranscriptRef.current || '';
     
-    // Solo procesar si el transcript realmente cambió y es más largo
-    if (currentTranscript.length <= lastTranscript.length) {
+    // Si el transcript está vacío o es igual al anterior, no hacer nada
+    if (!currentTranscript || currentTranscript === lastTranscript) {
+      return;
+    }
+    
+    // Si el transcript es más corto que el anterior, significa que se reinició
+    // En ese caso, resetear y procesar desde el inicio
+    if (currentTranscript.length < lastTranscript.length) {
+      lastTranscriptRef.current = '';
+      // Procesar todo el transcript como nuevo
+      if (currentTranscript.trim()) {
+        removeInterimNode();
+        const processedText = processDictationCommand(currentTranscript);
+        insertTextAtCursor(processedText, false);
+        lastTranscriptRef.current = currentTranscript;
+      }
       return;
     }
 
