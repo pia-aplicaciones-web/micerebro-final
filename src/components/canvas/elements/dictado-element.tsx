@@ -270,21 +270,23 @@ export default function DictadoElement(props: CommonElementProps) {
             }}
             onTouchStart={(e) => {
               // En móvil, establecer foco y cursor al tocar
+              e.stopPropagation(); // Evitar que el evento suba al contenedor
               if (contentRef.current && !isPreview) {
                 contentRef.current.focus();
-                // Pequeño delay para asegurar que el foco se establezca
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection) {
-                    if (selection.rangeCount === 0) {
-                      const range = document.createRange();
-                      range.selectNodeContents(contentRef.current!);
-                      range.collapse(false); // Al final
-                      selection.removeAllRanges();
-                      selection.addRange(range);
+                requestAnimationFrame(() => {
+                  setTimeout(() => {
+                    const selection = window.getSelection();
+                    if (selection) {
+                      if (selection.rangeCount === 0) {
+                        const range = document.createRange();
+                        range.selectNodeContents(contentRef.current!);
+                        range.collapse(false); // Al final
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
                     }
-                  }
-                }, 50);
+                  }, 100);
+                });
               }
             }}
             onPaste={handlePaste}
@@ -293,6 +295,9 @@ export default function DictadoElement(props: CommonElementProps) {
               fontFamily: 'Poppins, sans-serif',
               fontSize: '20px',
               lineHeight: '1.6',
+              touchAction: 'manipulation',
+              WebkitUserSelect: 'text',
+              userSelect: 'text',
             }}
           />
           <div className="absolute top-20 right-4 z-10">
@@ -332,7 +337,7 @@ export default function DictadoElement(props: CommonElementProps) {
         style={{ margin: '8px' }}
       >
         {/* Header web */}
-        <div className="flex items-center justify-between p-2 border-b bg-white/50">
+        <div className="flex items-center justify-between p-2 border-b bg-white">
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -424,6 +429,9 @@ export default function DictadoElement(props: CommonElementProps) {
                 fontFamily: 'Poppins, sans-serif',
                 fontSize: '16px',
                 lineHeight: '1.6',
+                touchAction: 'manipulation',
+                WebkitUserSelect: 'text',
+                userSelect: 'text',
               }}
             />
             <div className="absolute top-12 right-4 z-10">
