@@ -16,22 +16,21 @@ import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { X, Plus, Circle } from 'lucide-react';
 
-// 14 Colores pastel
+// Paleta de colores para notas adhesivas
 const PASTEL_COLORS = {
-  rose: { bg: '#FFE5E5', name: 'Rosa' },
-  lavender: { bg: '#E5E1FF', name: 'Lavanda' },
-  mint: { bg: '#E5FFE5', name: 'Menta' },
-  peach: { bg: '#FFE5D9', name: 'Durazno' },
-  sky: { bg: '#E5F5FF', name: 'Cielo' },
-  butter: { bg: '#FFF9E5', name: 'Mantequilla' },
-  lilac: { bg: '#F0E5FF', name: 'Lila' },
-  sage: { bg: '#E5F0E5', name: 'Salvia' },
-  coral: { bg: '#FFE5D0', name: 'Coral' },
-  aqua: { bg: '#E5FFF5', name: 'Aqua' },
-  cream: { bg: '#FFF5E5', name: 'Crema' },
-  periwinkle: { bg: '#E5EBFF', name: 'Periwinkle' },
-  blush: { bg: '#FFE5F0', name: 'Rubor' },
-  honey: { bg: '#FFF0E5', name: 'Miel' },
+  'morado-claro': { bg: '#e0cee0', name: 'Morado Claro' },
+  'morado': { bg: '#aa72bf', name: 'Morado' },
+  'menta': { bg: '#bae0e2', name: 'Menta' },
+  'calipso': { bg: '#28c4d8', name: 'Calipso' },
+  'verde': { bg: '#00b2a0', name: 'Verde' },
+  'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark' },
+  'amarillo': { bg: '#f2ed6d', name: 'Amarillo' },
+  'tierra': { bg: '#dbcea5', name: 'Tierra' },
+  'coral': { bg: '#f26877', name: 'Coral' },
+  'naranja': { bg: '#ffbc21', name: 'Naranja' },
+  'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
+  'naranja-intenso': { bg: '#ff7f1e', name: 'Naranja Intenso' },
+  'amarillo-verde': { bg: '#d6d60c', name: 'Amarillo Verde' },
 } as const;
 
 const TEXT_COLOR = '#1A1A1B';
@@ -59,8 +58,8 @@ export default function StickyNoteType3(props: CommonElementProps) {
   const currentTags = (tags || []) as string[];
 
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
-  const colorKey = (safeProperties.color as keyof typeof PASTEL_COLORS) || 'rose';
-  const currentColor = PASTEL_COLORS[colorKey] || PASTEL_COLORS.rose;
+  const colorKey = (safeProperties.color as keyof typeof PASTEL_COLORS) || 'morado-claro';
+  const currentColor = PASTEL_COLORS[colorKey] || PASTEL_COLORS['morado-claro'];
 
   const typedContent = (content || {}) as { text: string };
   const textContent = typedContent.text || '';

@@ -84,22 +84,21 @@ import { useToast } from '@/hooks/use-toast';
 import CreateBoardDialog from './create-board-dialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
 
-// 14 Colores pastel elegantes para notas adhesivas
+// Paleta de colores para notas adhesivas
 const PASTEL_COLORS = {
-  rose: { bg: '#FFE5E5', name: 'Rosa', label: 'Rosa' },
-  lavender: { bg: '#E5E1FF', name: 'Lavanda', label: 'Lavanda' },
-  mint: { bg: '#E5FFE5', name: 'Menta', label: 'Menta' },
-  peach: { bg: '#FFE5D9', name: 'Durazno', label: 'Durazno' },
-  sky: { bg: '#E5F5FF', name: 'Cielo', label: 'Cielo' },
-  butter: { bg: '#FFF9E5', name: 'Mantequilla', label: 'Mantequilla' },
-  lilac: { bg: '#F0E5FF', name: 'Lila', label: 'Lila' },
-  sage: { bg: '#E5F0E5', name: 'Salvia', label: 'Salvia' },
-  coral: { bg: '#FFE5D0', name: 'Coral', label: 'Coral' },
-  aqua: { bg: '#E5FFF5', name: 'Aqua', label: 'Aqua' },
-  cream: { bg: '#FFF5E5', name: 'Crema', label: 'Crema' },
-  periwinkle: { bg: '#E5EBFF', name: 'Periwinkle', label: 'Periwinkle' },
-  blush: { bg: '#FFE5F0', name: 'Rubor', label: 'Rubor' },
-  honey: { bg: '#FFF0E5', name: 'Miel', label: 'Miel' },
+  'morado-claro': { bg: '#e0cee0', name: 'Morado Claro', label: 'Morado Claro' },
+  'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
+  'menta': { bg: '#bae0e2', name: 'Menta', label: 'Menta' },
+  'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
+  'verde': { bg: '#00b2a0', name: 'Verde', label: 'Verde' },
+  'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark', label: 'Amarillo Dark' },
+  'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
+  'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
+  'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
+  'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
+  'verde-teal': { bg: '#00a087', name: 'Verde Teal', label: 'Verde Teal' },
+  'naranja-intenso': { bg: '#ff7f1e', name: 'Naranja Intenso', label: 'Naranja Intenso' },
+  'amarillo-verde': { bg: '#d6d60c', name: 'Amarillo Verde', label: 'Amarillo Verde' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({
