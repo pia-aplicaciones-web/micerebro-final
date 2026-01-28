@@ -203,6 +203,10 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               case 'mini':
                 title = 'Mini';
                 break;
+              case 'dictado':
+                const dictadoContentOpen = element.content as any;
+                title = dictadoContentOpen?.title || 'Dictado';
+                break;
               default:
                 title = 'Elemento';
             }
