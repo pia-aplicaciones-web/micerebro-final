@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
-import { X, Plus, Tag } from 'lucide-react';
+import { X, Plus, Tag, GripVertical, RotateCw, ArrowUp, ArrowDown } from 'lucide-react';
 
 // Paleta de colores para notas adhesivas
 const PASTEL_COLORS = {
@@ -28,6 +28,8 @@ const PASTEL_COLORS = {
   'coral': { bg: '#f26877', name: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja' },
   'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
+  'verde': { bg: '#a8e6cf', name: 'Verde' },
+  'azul': { bg: '#b3d9ff', name: 'Azul' },
 } as const;
 
 const TEXT_COLOR = '#1A1A1B';
@@ -45,6 +47,8 @@ export default function StickyNoteType1(props: CommonElementProps) {
     isPreview,
     minimized,
     tags,
+    onBringToFront,
+    onSendToBack,
   } = props;
 
   const { toast } = useToast();
@@ -113,12 +117,35 @@ export default function StickyNoteType1(props: CommonElementProps) {
     onUpdate(id, { tags: updatedTags });
   };
 
+  const handleRotate = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rotation = (safeProperties.rotation || 0) + 15;
+    onUpdate(id, { properties: { ...safeProperties, rotation: rotation % 360 } });
+  };
+
+  const handleBringToFront = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onBringToFront) {
+      onBringToFront(id);
+    }
+  };
+
+  const handleSendToBack = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (onSendToBack) {
+      onSendToBack(id);
+    }
+  };
+
   return (
     <div
       data-element-id={id}
       className="relative w-full h-full flex flex-col"
       onMouseDown={(e) => {
-        if ((e.target as HTMLElement).closest('.drag-handle, .close-btn, .tag-input')) return;
+        if ((e.target as HTMLElement).closest('.drag-handle, .close-btn, .tag-input, button')) return;
         e.stopPropagation();
         onSelectElement(id, e.shiftKey || e.ctrlKey || e.metaKey);
       }}
@@ -134,6 +161,10 @@ export default function StickyNoteType1(props: CommonElementProps) {
         style={{ backgroundColor: `${currentColor.bg}DD` }}
       >
         <div className="flex items-center gap-2 flex-1 min-w-0">
+          {/* Drag Handle */}
+          <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0">
+            <GripVertical className="h-3.5 w-3.5 text-gray-600" />
+          </div>
           <Tag className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
           <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
             {currentTags.map((tag, index) => (
@@ -209,15 +240,52 @@ export default function StickyNoteType1(props: CommonElementProps) {
             )}
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="close-btn h-6 w-6 p-0 hover:bg-red-100"
-          onClick={handleClose}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <X className="h-3.5 w-3.5 text-gray-600" />
-        </Button>
+        <div className="flex items-center gap-1">
+          {/* Flecha Arriba - Traer al frente */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0 hover:bg-blue-100"
+            onClick={handleBringToFront}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Traer al frente"
+          >
+            <ArrowUp className="h-3.5 w-3.5 text-gray-600" />
+          </Button>
+          {/* Flecha Abajo - Enviar atrás */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0 hover:bg-blue-100"
+            onClick={handleSendToBack}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Enviar atrás"
+          >
+            <ArrowDown className="h-3.5 w-3.5 text-gray-600" />
+          </Button>
+          {/* Rotar 15 grados */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0 hover:bg-gray-100"
+            onClick={handleRotate}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 15°"
+          >
+            <RotateCw className="h-3.5 w-3.5 text-gray-600" />
+          </Button>
+          {/* Cerrar */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="close-btn h-6 w-6 p-0 hover:bg-red-100"
+            onClick={handleClose}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Cerrar"
+          >
+            <X className="h-3.5 w-3.5 text-gray-600" />
+          </Button>
+        </div>
       </div>
 
       {/* Content Area */}
