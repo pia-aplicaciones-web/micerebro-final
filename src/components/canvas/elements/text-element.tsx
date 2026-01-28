@@ -124,6 +124,27 @@ export default function TextElement(props: CommonElementProps) {
             }
           }
         }}
+        onTouchStart={(e) => {
+          // En móvil, establecer foco y cursor al tocar
+          e.stopPropagation(); // Evitar que el evento suba al contenedor
+          if (isEditing && editorRef.current) {
+            editorRef.current.focus();
+            requestAnimationFrame(() => {
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  const range = document.createRange();
+                  if (editorRef.current) {
+                    range.selectNodeContents(editorRef.current);
+                    range.collapse(false);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
+                }
+              }, 100);
+            });
+          }
+        }}
         className={cn(
           'w-full h-full outline-none break-words',
           (isEditing || isSelected) ? 'cursor-text' : 'cursor-grab drag-handle active:cursor-grabbing'
@@ -135,6 +156,9 @@ export default function TextElement(props: CommonElementProps) {
           fontStyle: fontStyle || 'normal',
           color: safeProperties.color || '#000000',
           backgroundColor: safeProperties.backgroundColor || '#ffffff',
+          touchAction: 'manipulation', // Mejorar interacción touch en móvil
+          WebkitUserSelect: 'text',
+          userSelect: 'text',
         }}
       />
       {/* Indicador de estado de guardado */}
