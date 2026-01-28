@@ -516,8 +516,8 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         };
         break;
       case 'dictado':
-        // Tamaño fijo: 6.7 pulgadas en diagonal (170mm x 96mm = 642px x 362px en 96 DPI)
-        const dictadoSize = { width: 642, height: 362 };
+        // Tamaño fijo: formato vertical (400px x 600px)
+        const dictadoSize = { width: 400, height: 600 };
         const dictadoPos = getCenteredPosition(dictadoSize.width, dictadoSize.height);
         const dictadoTimestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
         newElementData = {

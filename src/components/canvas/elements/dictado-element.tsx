@@ -117,16 +117,16 @@ export default function DictadoElement(props: CommonElementProps) {
     if (isPreview) return;
 
     const isCurrentlyMinimized = !!minimized;
-    const currentSize = (properties as CanvasElementProperties)?.size || { width: 642, height: 362 };
+    const currentSize = (properties as CanvasElementProperties)?.size || { width: 400, height: 600 };
 
     const currentSizeNumeric = {
-      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 642,
-      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 362,
+      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400,
+      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 600,
     };
 
     if (isCurrentlyMinimized) {
       const { originalSize, ...restProps } = (properties || {}) as Partial<CanvasElementProperties>;
-      const restoredSize = originalSize || { width: 642, height: 362 };
+      const restoredSize = originalSize || { width: 400, height: 600 };
       const newProperties: Partial<CanvasElementProperties> = {
         ...restProps,
         size: restoredSize
@@ -137,7 +137,7 @@ export default function DictadoElement(props: CommonElementProps) {
         properties: newProperties,
       });
     } else {
-      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 642;
+      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400;
       onUpdate(id, {
         minimized: true,
         properties: {
@@ -212,7 +212,7 @@ export default function DictadoElement(props: CommonElementProps) {
   if (isMobile && !minimized) {
     return (
       <div
-        className="fixed inset-0 z-[9999] bg-white/80 flex flex-col"
+        className="fixed inset-0 z-[9999] bg-white/90 flex flex-col"
         style={{ fontFamily: 'Poppins, sans-serif' }}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -320,8 +320,8 @@ export default function DictadoElement(props: CommonElementProps) {
         minimized && 'h-12'
       )}
       style={{
-        width: minimized ? '100%' : '642px',
-        height: minimized ? '48px' : '362px',
+        width: minimized ? '100%' : '400px',
+        height: minimized ? '48px' : '600px',
         backgroundColor: '#2C3E50', // Navy blue grisáceo
         transform: `rotate(${rotation}deg)`,
         transformOrigin: 'center center',
@@ -333,7 +333,7 @@ export default function DictadoElement(props: CommonElementProps) {
     >
       {/* Contenedor interno estilo celular */}
       <div
-        className="flex-1 bg-white/80 rounded-3xl m-2 flex flex-col overflow-hidden"
+        className="flex-1 bg-white/90 rounded-3xl m-2 flex flex-col overflow-hidden"
         style={{ margin: '8px' }}
       >
         {/* Header web */}
