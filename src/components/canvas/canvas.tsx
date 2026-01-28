@@ -42,6 +42,10 @@ type CanvasProps = {
   storage?: any;
   toast?: any;
   isPreview?: boolean;
+  isListening?: boolean;
+  liveTranscript?: string;
+  finalTranscript?: string;
+  interimTranscript?: string;
 };
 
 type CanvasHandle = {
@@ -98,6 +102,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   storage,
   toast,
   isPreview = false,
+  isListening,
+  liveTranscript,
+  finalTranscript,
+  interimTranscript,
 }, ref) => {
   const [scale, setScale] = useState(1);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -560,6 +568,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       storage={storage}
                       toast={toast}
                       isPreview={isPreview}
+                      isListening={isListening}
+                      liveTranscript={liveTranscript}
+                      finalTranscript={finalTranscript}
+                      interimTranscript={interimTranscript}
                     />
                   );
                 })}

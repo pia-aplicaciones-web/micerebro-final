@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { uploadFile } from '@/lib/upload-helper';
 import { WithId, CanvasElement, Board } from '@/lib/types';
 import html2canvas from 'html2canvas';
+import { cn } from '@/lib/utils';
 
 // Componentes del Canvas
 import Canvas from '@/components/canvas/canvas';
@@ -42,7 +43,8 @@ import MobileMenu from '@/components/canvas/mobile-menu';
 // QuickAddTask movido al menú principal (tools-sidebar.tsx)
 // import QuickAddTask from '@/components/canvas/quick-add-task';
 
-// Hooks de dictado (ya no son necesarios en mobile-menu)
+// Hooks de dictado
+import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 interface BoardPageClientProps {
   boardId: string;
@@ -96,8 +98,15 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isPasswordVerified, setIsPasswordVerified] = useState(false);
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
   
-  // Estado para dictado
-  const [isListening, setIsListening] = useState(false);
+  // Hook de dictado global - controla el micrófono del navegador
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    toggleListening,
+    startListening,
+    stopListening,
+  } = useSpeechToText();
 
   // CRÍTICO: Cleanup del listener cuando el componente se desmonta o cambia boardId
   useEffect(() => {
@@ -811,11 +820,16 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           {isMobile && (
             <Button
               variant="ghost"
-              className="fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
-              // Lógica para dictado (placeholder por ahora)
-              onClick={() => console.log("Botón Dictar presionado")}
+              className={cn(
+                "fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3",
+                isListening && "bg-red-500 border-red-600 animate-pulse"
+              )}
+              onClick={toggleListening}
             >
-              <Mic className="h-8 w-8 text-black" />
+              <Mic className={cn(
+                "h-8 w-8",
+                isListening ? "text-white" : "text-black"
+              )} />
             </Button>
           )}
           {isMobile && (
@@ -885,7 +899,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             isGalleryPanelOpen={isGalleryOpen}
             onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
             isListening={isListening}
-            onToggleDictation={() => setIsListening(prev => !prev)}
+            onToggleDictation={toggleListening}
           />
         )}
 
@@ -916,6 +930,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onGroupElements={() => {}}
           saveLastView={() => {}}
           onActivateDrag={() => {}}
+          isListening={isListening}
+          liveTranscript={transcript}
+          finalTranscript={transcript}
+          interimTranscript={interimTranscript}
           onEditComment={handleEditComment}
           onDuplicateElement={() => {}}
           onUngroup={() => {}}

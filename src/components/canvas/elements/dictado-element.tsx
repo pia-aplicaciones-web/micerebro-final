@@ -14,6 +14,7 @@ import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { useDictation } from '@/hooks/use-dictation';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
+import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 export default function DictadoElement(props: CommonElementProps) {
   const { 
@@ -36,13 +37,28 @@ export default function DictadoElement(props: CommonElementProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [isLocalListening, setIsLocalListening] = useState(false);
   const [isReading, setIsReading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Hook de dictado local para el botón de dictar del elemento
+  const {
+    isListening: isLocalListening,
+    transcript: localTranscript,
+    interimTranscript: localInterimTranscript,
+    toggleListening: toggleLocalListening,
+  } = useSpeechToText();
+
   // Usar hook de dictado para insertar texto
-  // El hook espera: isListening, transcript (texto final), interimTranscript
-  useDictation(isLocalListening || isListening, finalTranscript || liveTranscript || '', interimTranscript);
+  // Prioridad: dictado local > dictado global
+  const activeListening = isLocalListening || isListening;
+  const activeTranscript = isLocalListening 
+    ? localTranscript 
+    : (finalTranscript || liveTranscript || '');
+  const activeInterimTranscript = isLocalListening 
+    ? localInterimTranscript 
+    : interimTranscript;
+
+  useDictation(activeListening, activeTranscript, activeInterimTranscript);
 
   // Auto-guardado con timestamp en título
   useEffect(() => {
@@ -279,7 +295,7 @@ export default function DictadoElement(props: CommonElementProps) {
           )}
           onClick={(e) => {
             e.stopPropagation();
-            setIsLocalListening(!isLocalListening);
+            toggleLocalListening();
           }}
           title="Dictar"
         >
@@ -400,10 +416,10 @@ export default function DictadoElement(props: CommonElementProps) {
               "absolute top-16 right-4 z-10 bg-white rounded-md border border-gray-700 w-12 h-12 p-2",
               (isLocalListening || isListening) && "bg-red-500 border-red-600 animate-pulse"
             )}
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsLocalListening(!isLocalListening);
-            }}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleLocalListening();
+          }}
             title="Dictar"
           >
             <Mic className={cn(
