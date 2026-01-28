@@ -316,18 +316,21 @@ export default function MiniElement(props: CommonElementProps) {
               }}
               onTouchStart={(e) => {
                 // En móvil, establecer foco y cursor al tocar el título
+                e.stopPropagation(); // Evitar que el evento suba al contenedor
                 if (!isPreview && (!typedContent.password || isUnlockedForEditing)) {
                   e.currentTarget.focus();
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection && selection.rangeCount === 0) {
-                      const range = document.createRange();
-                      range.selectNodeContents(e.currentTarget);
-                      range.collapse(false);
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }, 50);
+                  requestAnimationFrame(() => {
+                    setTimeout(() => {
+                      const selection = window.getSelection();
+                      if (selection && selection.rangeCount === 0) {
+                        const range = document.createRange();
+                        range.selectNodeContents(e.currentTarget);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                    }, 100);
+                  });
                 }
               }}
               className="bg-transparent flex-grow outline-none cursor-text font-headline text-sm font-semibold p-1"
@@ -435,20 +438,23 @@ export default function MiniElement(props: CommonElementProps) {
           }}
           onTouchStart={(e) => {
             // En móvil, establecer foco y cursor al tocar
+            e.stopPropagation(); // Evitar que el evento suba al contenedor
             if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
               contentRef.current.focus();
-              setTimeout(() => {
-                const selection = window.getSelection();
-                if (selection) {
-                  if (selection.rangeCount === 0) {
-                    const range = document.createRange();
-                    range.selectNodeContents(contentRef.current!);
-                    range.collapse(false); // Al final
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const selection = window.getSelection();
+                  if (selection) {
+                    if (selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(contentRef.current!);
+                      range.collapse(false); // Al final
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
                   }
-                }
-              }, 50);
+                }, 100);
+              });
             }
           }}
           onMouseDown={(e) => {

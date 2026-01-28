@@ -643,20 +643,24 @@ export default function StickyNoteElement(props: CommonElementProps) {
           }}
           onTouchStart={(e) => {
             // En móvil, establecer foco y cursor al tocar
+            e.stopPropagation(); // Evitar que el evento suba al contenedor
             if (editorRef.current && !isPreview) {
               editorRef.current.focus();
-              setTimeout(() => {
-                const selection = window.getSelection();
-                if (selection) {
-                  if (selection.rangeCount === 0) {
-                    const range = document.createRange();
-                    range.selectNodeContents(editorRef.current!);
-                    range.collapse(false); // Al final
-                    selection.removeAllRanges();
-                    selection.addRange(range);
+              // Usar requestAnimationFrame para asegurar que el foco se establezca
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const selection = window.getSelection();
+                  if (selection) {
+                    if (selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(editorRef.current!);
+                      range.collapse(false); // Al final
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
                   }
-                }
-              }, 50);
+                }, 100);
+              });
             }
           }}
           onPaste={handlePaste}
@@ -667,7 +671,10 @@ export default function StickyNoteElement(props: CommonElementProps) {
             fontSize: fontSize,
             lineHeight: '1.6',
             minHeight: 'calc(100% - 1rem)',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            touchAction: 'manipulation', // Mejorar interacción touch en móvil
+            WebkitUserSelect: 'text',
+            userSelect: 'text',
           }}
         />
         {/* Indicador de estado de guardado */}

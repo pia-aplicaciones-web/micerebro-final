@@ -1316,20 +1316,23 @@ export default function NotepadElement(props: CommonElementProps) {
                             }}
                             onTouchStart={(e) => {
                               // En móvil, establecer foco y cursor al tocar
+                              e.stopPropagation(); // Evitar que el evento suba al contenedor
                               if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
                                 contentRef.current.focus();
-                                setTimeout(() => {
-                                  const selection = window.getSelection();
-                                  if (selection) {
-                                    if (selection.rangeCount === 0) {
-                                      const range = document.createRange();
-                                      range.selectNodeContents(contentRef.current!);
-                                      range.collapse(false); // Al final
-                                      selection.removeAllRanges();
-                                      selection.addRange(range);
+                                requestAnimationFrame(() => {
+                                  setTimeout(() => {
+                                    const selection = window.getSelection();
+                                    if (selection) {
+                                      if (selection.rangeCount === 0) {
+                                        const range = document.createRange();
+                                        range.selectNodeContents(contentRef.current!);
+                                        range.collapse(false); // Al final
+                                        selection.removeAllRanges();
+                                        selection.addRange(range);
+                                      }
                                     }
-                                  }
-                                }, 50);
+                                  }, 100);
+                                });
                               }
                             }}
                             onInput={handleChange}
