@@ -811,10 +811,9 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   <DropdownMenuItem 
                     key={`type1-${color.name}`} 
                     onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } })}
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex items-center justify-center cursor-pointer"
                   >
                     <div className="w-4 h-4 rounded-sm border border-gray-300/30" style={{ backgroundColor: color.bg }} />
-                    <span className="text-sm">{color.label}</span>
                   </DropdownMenuItem>
                 ))}
               </div>
@@ -827,10 +826,9 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   <DropdownMenuItem 
                     key={`type2-${color.name}`} 
                     onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } })}
-                    className="flex items-center gap-2 cursor-pointer"
+                    className="flex items-center justify-center cursor-pointer"
                   >
                     <div className="w-4 h-4 rounded-md border border-gray-200/50" style={{ backgroundColor: color.bg }} />
-                    <span className="text-sm">{color.label}</span>
                   </DropdownMenuItem>
                 ))}
               </div>

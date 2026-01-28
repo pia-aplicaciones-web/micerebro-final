@@ -136,7 +136,7 @@ export default function StickyNoteType2(props: CommonElementProps) {
         boxShadow: isSelected ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.1)',
       }}
     >
-      {/* Header Compacto con Etiquetas Coloreadas */}
+      {/* Header Compacto */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/40 border-b border-gray-300/30">
         <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
           {/* Drag Handle de 9 puntos */}
@@ -154,6 +154,21 @@ export default function StickyNoteType2(props: CommonElementProps) {
             </div>
           </div>
           <Hash className="h-3 w-3 text-gray-500 flex-shrink-0" />
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="close-btn h-5 w-5 p-0 hover:bg-red-100 flex-shrink-0"
+          onClick={handleClose}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          <X className="h-3 w-3 text-gray-600" />
+        </Button>
+      </div>
+
+      {/* Chips de etiquetas bajo el header */}
+      <div className="px-3 py-1 flex flex-wrap items-center gap-1.5 bg-white/30 border-b border-gray-300/30">
+        <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
           {currentTags.map((tag, index) => (
             <span
               key={index}
@@ -214,15 +229,6 @@ export default function StickyNoteType2(props: CommonElementProps) {
             </div>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="close-btn h-5 w-5 p-0 hover:bg-red-100 flex-shrink-0"
-          onClick={handleClose}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <X className="h-3 w-3 text-gray-600" />
-        </Button>
       </div>
 
       {/* Content Area */}

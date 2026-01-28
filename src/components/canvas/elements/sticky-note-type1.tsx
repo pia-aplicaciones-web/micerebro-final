@@ -161,7 +161,7 @@ export default function StickyNoteType1(props: CommonElementProps) {
         className="flex items-center justify-between px-3 py-2 border-b border-gray-300/30"
         style={{ backgroundColor: `${currentColor.bg}DD` }}
       >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
           {/* Drag Handle */}
           <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0">
             <div className="grid grid-cols-3 gap-[1px]">
@@ -176,11 +176,11 @@ export default function StickyNoteType1(props: CommonElementProps) {
               <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
             </div>
           </div>
-          {/* Botones de rotación izquierda / derecha */}
+          {/* Botones de rotación izquierda / derecha (más juntos) */}
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 p-0 hover:bg-gray-100"
+            className="h-6 w-6 p-0 hover:bg-gray-100 mr-[2px]"
             onClick={handleRotateLeft}
             onMouseDown={(e) => e.stopPropagation()}
             title="Rotar 10° a la izquierda"
@@ -197,80 +197,6 @@ export default function StickyNoteType1(props: CommonElementProps) {
           >
             <RotateCw className="h-3.5 w-3.5 text-gray-600" />
           </Button>
-          <Tag className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
-          <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
-            {currentTags.map((tag, index) => (
-              <span
-                key={index}
-                className="px-2 py-0.5 text-xs rounded-full bg-white/60 text-gray-700 border border-gray-300/50 flex items-center gap-1"
-              >
-                {tag}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveTag(tag);
-                  }}
-                  className="hover:text-red-600"
-                >
-                  <X className="h-2.5 w-2.5" />
-                </button>
-              </span>
-            ))}
-            {!isAddingTag && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddTag();
-                }}
-                className="px-2 py-0.5 text-xs rounded-full bg-white/40 text-gray-600 border border-gray-300/50 hover:bg-white/60 flex items-center gap-1"
-              >
-                <Plus className="h-2.5 w-2.5" />
-                Etiqueta
-              </button>
-            )}
-            {isAddingTag && (
-              <div className="tag-input flex items-center gap-1">
-                <Input
-                  value={newTagName}
-                  onChange={(e) => setNewTagName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleConfirmTag();
-                    } else if (e.key === 'Escape') {
-                      setIsAddingTag(false);
-                      setNewTagName('');
-                    }
-                  }}
-                  className="h-6 text-xs w-24"
-                  autoFocus
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleConfirmTag();
-                  }}
-                >
-                  ✓
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 px-2 text-xs"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsAddingTag(false);
-                    setNewTagName('');
-                  }}
-                >
-                  ✕
-                </Button>
-              </div>
-            )}
-          </div>
         </div>
         <div className="flex items-center gap-1">
           {/* Cerrar */}
@@ -284,6 +210,83 @@ export default function StickyNoteType1(props: CommonElementProps) {
           >
             <X className="h-3.5 w-3.5 text-gray-600" />
           </Button>
+        </div>
+      </div>
+
+      {/* Chips de etiquetas bajo el header */}
+      <div className="px-3 py-1 flex flex-wrap items-center gap-1.5 border-b border-gray-300/30 bg-white/40">
+        <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+          {currentTags.map((tag, index) => (
+            <span
+              key={index}
+              className="px-2 py-0.5 text-xs rounded-full bg-white/60 text-gray-700 border border-gray-300/50 flex items-center gap-1"
+            >
+              {tag}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemoveTag(tag);
+                }}
+                className="hover:text-red-600"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </span>
+          ))}
+          {!isAddingTag && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleAddTag();
+              }}
+              className="px-2 py-0.5 text-xs rounded-full bg-white/40 text-gray-600 border border-gray-300/50 hover:bg-white/60 flex items-center gap-1"
+            >
+              <Plus className="h-2.5 w-2.5" />
+              Etiqueta
+            </button>
+          )}
+          {isAddingTag && (
+            <div className="tag-input flex items-center gap-1">
+              <Input
+                value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleConfirmTag();
+                  } else if (e.key === 'Escape') {
+                    setIsAddingTag(false);
+                    setNewTagName('');
+                  }
+                }}
+                className="h-6 text-xs w-24"
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmTag();
+                }}
+              >
+                ✓
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAddingTag(false);
+                  setNewTagName('');
+                }}
+              >
+                ✕
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 

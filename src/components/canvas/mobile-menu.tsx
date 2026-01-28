@@ -289,7 +289,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         {
           label: 'Tipo 1 - Header Elegante',
           subMenu: stickyNoteColors.map(color => ({
-            label: color.label,
+            label: '',
             onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } }),
             icon: () => <div className="w-4 h-4 rounded-sm border border-gray-300/30 mr-2" style={{ backgroundColor: color.bg }} />
           }))
@@ -298,7 +298,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         {
           label: 'Tipo 2 - Header Compacto',
           subMenu: stickyNoteColors.map(color => ({
-            label: color.label,
+            label: '',
             onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } }),
             icon: () => <div className="w-4 h-4 rounded-md border border-gray-200/50 mr-2" style={{ backgroundColor: color.bg }} />
           }))
