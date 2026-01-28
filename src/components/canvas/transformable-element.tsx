@@ -403,7 +403,17 @@ export default function TransformableElement({
   }, []);
 
   // ✅ EARLY RETURNS DESPUÉS DE TODOS LOS HOOKS
-  const ElementComponent = ElementComponentMap[element.type as keyof typeof ElementComponentMap];
+  // Seleccionar componente según tipo y variante (para sticky notes modernas)
+  const ElementComponent = useMemo(() => {
+    if (element.type === 'sticky') {
+      const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
+      const variant = (elementProps as any)?.variant;
+      if (variant === 'v1') return ModernStickyNoteV1;
+      if (variant === 'v2') return ModernStickyNoteV2;
+      if (variant === 'v3') return ModernStickyNoteV3;
+    }
+    return ElementComponentMap[element.type as keyof typeof ElementComponentMap] || (() => <div>Unknown element type: {element.type}</div>);
+  }, [element.type, element.properties]);
   
   if (!ElementComponent) {
     console.warn(`ElementComponent no encontrado para tipo: ${element.type}`);
