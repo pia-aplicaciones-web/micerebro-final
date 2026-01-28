@@ -45,7 +45,7 @@ import DictadoElement from './elements/dictado-element';
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
   // cuaderno: CuadernoElement, // DESACTIVADO - causando problemas
-  sticky: StickyNoteType1, // Default
+  sticky: StickyNoteType2, // Default (solo Tipo 2)
   todo: TodoListElement,
   image: ImageElement,
   text: TextElement,
