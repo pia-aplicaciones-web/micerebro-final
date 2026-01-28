@@ -13,6 +13,9 @@ import DeleteElementDialog from './elements/delete-element-dialog';
 import NotepadElement from './elements/notepad-element';
 // import CuadernoElement from './elements/cuaderno'; // DESACTIVADO - causando problemas
 import StickyNoteElement from './elements/sticky-note-element';
+import ModernStickyNoteV1 from './elements/modern-sticky-note-v1';
+import ModernStickyNoteV2 from './elements/modern-sticky-note-v2';
+import ModernStickyNoteV3 from './elements/modern-sticky-note-v3';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
 import TextElement from './elements/text-element';

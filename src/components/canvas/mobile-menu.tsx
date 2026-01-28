@@ -276,7 +276,9 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
           onClick: () => handleAddElement('sticky', { color: color.name }),
           icon: () => <div className={cn('w-4 h-4 rounded-sm mr-2 border border-slate-300', color.className)} />
         })),
-        { label: 'Nota Transparente', onClick: () => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } }) },
+        { label: 'Nota Moderna V1 (Glassmorphism)', onClick: () => handleAddElement('sticky', { color: 'rose', properties: { variant: 'v1' } }) },
+        { label: 'Nota Moderna V2 (Neumorphism)', onClick: () => handleAddElement('sticky', { color: 'lavender', properties: { variant: 'v2' } }) },
+        { label: 'Nota Moderna V3 (Flat Design)', onClick: () => handleAddElement('sticky', { color: 'mint', properties: { variant: 'v3' } }) },
       ]
     },
     {

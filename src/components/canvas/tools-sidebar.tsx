@@ -797,9 +797,17 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'yellow', properties: { variant: 'transparente' } })}>
-                <div className="w-4 h-4 rounded-sm mr-2 border-2 border-gray-400 bg-yellow-200/50" />
-                <span>Nota Transparente</span>
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'rose', properties: { variant: 'v1' } })}>
+                <div className="w-4 h-4 rounded-lg mr-2 bg-gradient-to-br from-rose-200 to-rose-300 border border-rose-400/30 shadow-sm" />
+                <span>Nota Moderna V1 (Glassmorphism)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'lavender', properties: { variant: 'v2' } })}>
+                <div className="w-4 h-4 rounded-xl mr-2 bg-gradient-to-br from-purple-200 to-purple-300 shadow-inner" />
+                <span>Nota Moderna V2 (Neumorphism)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'mint', properties: { variant: 'v3' } })}>
+                <div className="w-4 h-4 rounded-md mr-2 bg-green-200 border-2 border-green-300" />
+                <span>Nota Moderna V3 (Flat Design)</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
