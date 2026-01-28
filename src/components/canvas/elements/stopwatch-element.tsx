@@ -29,24 +29,22 @@ export default function StopwatchElement({ id, onUpdate, onSelectElement, isSele
           const newTime = prev + 10;
           const totalMinutes = Math.floor(newTime / 60000);
 
-          // Verificar notificaciones
-          const totalSeconds = Math.floor(newTime / 1000);
-
-          if (totalSeconds === 30 && !showThirtyMinNotification) {
+          // Verificar notificaciones en tiempos reales
+          if (totalMinutes === 30 && !showThirtyMinNotification) {
+            // 30 minutos
             setShowThirtyMinNotification(true);
-            // Auto-hide después de 2 minutos (modo producción)
             setTimeout(() => setShowThirtyMinNotification(false), 120000);
-          } else if (totalSeconds === 60 && !showOneHourNotification) {
+          } else if (totalMinutes === 60 && !showOneHourNotification) {
+            // 1 hora
             setShowOneHourNotification(true);
-            // Auto-hide después de 2 minutos (modo producción)
             setTimeout(() => setShowOneHourNotification(false), 120000);
-          } else if (totalSeconds === 90 && !showNinetyMinNotification) {
+          } else if (totalMinutes === 90 && !showNinetyMinNotification) {
+            // 1 hora 30 minutos
             setShowNinetyMinNotification(true);
-            // Auto-hide después de 2 minutos (modo producción)
             setTimeout(() => setShowNinetyMinNotification(false), 120000);
-          } else if (totalSeconds === 120 && !showTwoHourNotification) {
+          } else if (totalMinutes === 120 && !showTwoHourNotification) {
+            // 2 horas
             setShowTwoHourNotification(true);
-            // Auto-hide después de 4 minutos
             setTimeout(() => setShowTwoHourNotification(false), 240000);
           }
 
@@ -118,61 +116,55 @@ export default function StopwatchElement({ id, onUpdate, onSelectElement, isSele
         <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-slate-700 px-2">
-        <span className="font-semibold text-[11px]">
-          Cronómetro
-        </span>
+      <div className="flex items-center justify-end text-sm text-slate-700 px-2">
         <span className="text-xs text-slate-500">{isRunning ? 'En curso' : 'Pausado'}</span>
       </div>
       
-      <div className="relative">
+      <div className="flex flex-col items-center gap-2">
         <div className="text-3xl font-mono text-center tracking-wide text-black">
           {hours.toString().padStart(2, '0')}:{minutes.toString().padStart(2, '0')}:{seconds.toString().padStart(2, '0')}
         </div>
 
-        {/* Notificación de 30 minutos */}
+        {/* Notificaciones de tiempo: aparecen debajo del número del cronómetro */}
         {showThirtyMinNotification && (
-          <div className="absolute top-0 left-0 right-0 bg-red-500 bg-opacity-95 py-2 text-center rounded-lg">
-            <span className="text-white font-bold text-[16px]">
+          <div className="w-full bg-red-500 bg-opacity-95 py-1.5 text-center rounded-md">
+            <span className="text-white font-bold text-[14px]">
               30 MINUTOS!!
             </span>
           </div>
         )}
 
-        {/* Notificación de 1 hora */}
         {showOneHourNotification && (
-          <div className="absolute top-0 left-0 right-0 bg-red-500 bg-opacity-95 py-2 text-center rounded-lg flex flex-col justify-center items-center">
-            <span className="text-white font-bold text-[16px] block">
+          <div className="w-full bg-red-500 bg-opacity-95 py-1.5 text-center rounded-md flex flex-col justify-center items-center">
+            <span className="text-white font-bold text-[14px]">
               1 HORA!!
             </span>
-            <span className="text-white font-bold text-[16px] block mt-1">
+            <span className="text-white font-bold text-[12px] mt-1">
               ---Descansa---
             </span>
           </div>
         )}
 
-        {/* Notificación de 1 hora y 30 minutos */}
         {showNinetyMinNotification && (
-          <div className="absolute top-0 left-0 right-0 bg-red-500 bg-opacity-95 py-3 text-center rounded-lg flex flex-col justify-center items-center">
-            <span className="text-white font-bold text-[16px] block">
+          <div className="w-full bg-red-500 bg-opacity-95 py-2 text-center rounded-md flex flex-col justify-center items-center">
+            <span className="text-white font-bold text-[14px]">
               1 HR. 30 MIN.!
             </span>
-            <span className="text-white font-bold text-[14px] block mt-1">
+            <span className="text-white font-bold text-[12px] mt-1">
               Prepara para terminar!
             </span>
           </div>
         )}
 
-        {/* Notificación de 2 horas */}
         {showTwoHourNotification && (
-          <div className="absolute top-0 left-0 right-0 bg-red-600 bg-opacity-95 py-4 text-center rounded-lg flex flex-col justify-center items-center">
-            <span className="text-white font-bold text-[16px] block">
+          <div className="w-full bg-red-600 bg-opacity-95 py-2 text-center rounded-md flex flex-col justify-center items-center">
+            <span className="text-white font-bold text-[14px]">
               2 HORAS!
             </span>
-            <span className="text-white font-bold text-[16px] block mt-1">
+            <span className="text-white font-bold text-[14px] mt-1">
               0 TIEMPO!!-
             </span>
-            <span className="text-white font-bold text-[18px] block mt-1">
+            <span className="text-white font-bold text-[16px] mt-1">
               APAGA
             </span>
           </div>
