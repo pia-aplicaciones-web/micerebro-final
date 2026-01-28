@@ -34,6 +34,7 @@ export default function DictadoElement(props: CommonElementProps) {
 
   const typedContent = (content || {}) as DictadoContent;
   const contentRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isReading, setIsReading] = useState(false);
@@ -54,8 +55,43 @@ export default function DictadoElement(props: CommonElementProps) {
           createdAt: timestamp 
         } as DictadoContent
       });
+      // Sincronizar el título con el ref después de actualizar
+      if (titleRef.current) {
+        titleRef.current.innerText = title;
+      }
     }
   }, []);
+
+  // Sincronizar el título cuando cambia desde fuera
+  useEffect(() => {
+    if (titleRef.current && typedContent.title && titleRef.current.innerText !== typedContent.title) {
+      titleRef.current.innerText = typedContent.title;
+    }
+  }, [typedContent.title]);
+
+  // Hook de autoguardado para el título
+  const { handleBlur: handleTitleBlurAutoSave } = useAutoSave({
+    getContent: () => titleRef.current?.innerText || '',
+    onSave: async (newTitle) => {
+      if (isPreview || !titleRef.current) return;
+      if (typedContent.title !== newTitle) {
+        const newContent: DictadoContent = { ...typedContent, title: newTitle };
+        onUpdate(id, { content: newContent });
+      }
+    },
+    debounceMs: 1000,
+    disabled: isPreview,
+  });
+
+  const handleTitleBlur = useCallback(async () => {
+    if (isPreview || !titleRef.current) return;
+    await handleTitleBlurAutoSave();
+  }, [isPreview, handleTitleBlurAutoSave]);
+
+  const handleTitleFocus = useCallback(() => {
+    if (isPreview || !titleRef.current) return;
+    onEditElement(id);
+  }, [isPreview, onEditElement, id]);
 
   // Hook de autoguardado
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
@@ -278,7 +314,42 @@ export default function DictadoElement(props: CommonElementProps) {
               <Copy className="h-4 w-4" />
             </Button>
           </div>
-          <div className="text-sm font-medium">
+          <div
+            ref={titleRef}
+            contentEditable={!isPreview}
+            spellCheck="true"
+            suppressContentEditableWarning
+            onFocus={handleTitleFocus}
+            onBlur={handleTitleBlur}
+            className="bg-transparent flex-grow outline-none cursor-text text-sm font-medium p-1 min-w-0"
+            data-placeholder="Dictado"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (titleRef.current && !isPreview) {
+                titleRef.current.focus();
+                requestAnimationFrame(() => {
+                  setTimeout(() => {
+                    const selection = window.getSelection();
+                    if (selection) {
+                      if (selection.rangeCount === 0) {
+                        const range = document.createRange();
+                        range.selectNodeContents(titleRef.current!);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                    }
+                  }, 100);
+                });
+              }
+            }}
+            style={{
+              touchAction: 'manipulation',
+              WebkitUserSelect: 'text',
+              userSelect: 'text',
+            }}
+          >
             {typedContent.title || 'Dictado'}
           </div>
         </div>
@@ -426,7 +497,42 @@ export default function DictadoElement(props: CommonElementProps) {
               <Copy className="h-4 w-4 text-gray-700" />
             </Button>
           </div>
-          <div className="text-xs font-medium text-gray-700 truncate max-w-[200px]">
+          <div
+            ref={titleRef}
+            contentEditable={!isPreview}
+            spellCheck="true"
+            suppressContentEditableWarning
+            onFocus={handleTitleFocus}
+            onBlur={handleTitleBlur}
+            className="bg-transparent flex-grow outline-none cursor-text text-xs font-medium text-gray-700 p-1 min-w-0 truncate max-w-[200px]"
+            data-placeholder="Dictado"
+            onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              if (titleRef.current && !isPreview) {
+                titleRef.current.focus();
+                requestAnimationFrame(() => {
+                  setTimeout(() => {
+                    const selection = window.getSelection();
+                    if (selection) {
+                      if (selection.rangeCount === 0) {
+                        const range = document.createRange();
+                        range.selectNodeContents(titleRef.current!);
+                        range.collapse(false);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                    }
+                  }, 100);
+                });
+              }
+            }}
+            style={{
+              touchAction: 'manipulation',
+              WebkitUserSelect: 'text',
+              userSelect: 'text',
+            }}
+          >
             {typedContent.title || 'Dictado'}
           </div>
         </div>
