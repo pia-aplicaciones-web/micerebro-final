@@ -13,8 +13,7 @@ import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
 import { useToast } from '@/hooks/use-toast';
-// import { useSpeechToText } from '@/hooks/use-speech-to-text';
-// import { useDictation } from '@/hooks/use-dictation';
+import { useSpeechToText } from '@/hooks/use-speech-to-text';
 
 // Utilidades y Tipos
 import { uploadFile } from '@/lib/upload-helper';
@@ -153,8 +152,13 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false); // Mantener para compatibilidad, aunque el Sidebar no se use
 
-  // const { isListening, transcript, interimTranscript, toggleListening } = useSpeechToText();
-  // useDictation(isListening, transcript, interimTranscript);
+  // Hook de dictado global para móvil
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    toggleListening,
+  } = useSpeechToText();
 
   // Funciones auxiliares para el Canvas
   const getViewportCenter = useCallback(() => {
@@ -560,8 +564,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               boards={boards || []}
               boardId={boardId}
               user={user}
-              // isListening={isListening}
-              // onToggleDictation={toggleListening}
+              isListening={isListening}
+              onToggleDictation={toggleListening}
               onOpenNotepad={handleOpenNotepad}
               onLocateElement={handleLocateElement}
               addElement={addElement}
@@ -630,6 +634,10 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               storage={storage}
               toast={toast}
               isPreview={false}
+              isListening={isListening}
+              liveTranscript={transcript}
+              finalTranscript={transcript}
+              interimTranscript={interimTranscript}
             />
 
             {/* FormattingToolbar para móvil (visible en la parte inferior) */}

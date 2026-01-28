@@ -146,14 +146,23 @@ export const useDictation = (
   useEffect(() => {
     if (!isListening) return;
 
-    const newText = transcript.slice(lastTranscriptRef.current.length);
+    const currentTranscript = transcript || '';
+    const lastTranscript = lastTranscriptRef.current || '';
+    
+    // Solo procesar si el transcript realmente cambió y es más largo
+    if (currentTranscript.length <= lastTranscript.length) {
+      return;
+    }
+
+    // Calcular solo el texto nuevo (diferencia)
+    const newText = currentTranscript.slice(lastTranscript.length);
 
     if (newText.trim()) {
       removeInterimNode();
       // Procesar comandos especiales antes de insertar
       const processedText = processDictationCommand(newText);
       insertTextAtCursor(processedText, false);
-      lastTranscriptRef.current = transcript;
+      lastTranscriptRef.current = currentTranscript;
     }
   }, [transcript, isListening, insertTextAtCursor, removeInterimNode, processDictationCommand]);
 
