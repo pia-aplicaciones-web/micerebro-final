@@ -12,10 +12,9 @@ import DeleteElementDialog from './elements/delete-element-dialog';
 // Esto previene errores como "Cannot find module './948.js'" durante desarrollo
 import NotepadElement from './elements/notepad-element';
 // import CuadernoElement from './elements/cuaderno'; // DESACTIVADO - causando problemas
-import StickyNoteElement from './elements/sticky-note-element';
-import ModernStickyNoteV1 from './elements/modern-sticky-note-v1';
-import ModernStickyNoteV2 from './elements/modern-sticky-note-v2';
-import ModernStickyNoteV3 from './elements/modern-sticky-note-v3';
+import StickyNoteV1 from './elements/sticky-note-v1';
+import StickyNoteV2 from './elements/sticky-note-v2';
+import StickyNoteV3 from './elements/sticky-note-v3';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
 import TextElement from './elements/text-element';
@@ -403,14 +402,15 @@ export default function TransformableElement({
   }, []);
 
   // ✅ EARLY RETURNS DESPUÉS DE TODOS LOS HOOKS
-  // Seleccionar componente según tipo y variante (para sticky notes modernas)
+  // Seleccionar componente según tipo y variante (para sticky notes)
   const ElementComponent = useMemo(() => {
     if (element.type === 'sticky') {
       const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
       const variant = (elementProps as any)?.variant;
-      if (variant === 'v1') return ModernStickyNoteV1;
-      if (variant === 'v2') return ModernStickyNoteV2;
-      if (variant === 'v3') return ModernStickyNoteV3;
+      if (variant === 'v1') return StickyNoteV1;
+      if (variant === 'v2') return StickyNoteV2;
+      if (variant === 'v3') return StickyNoteV3;
+      return StickyNoteV1; // Default
     }
     return ElementComponentMap[element.type as keyof typeof ElementComponentMap] || (() => <div>Unknown element type: {element.type}</div>);
   }, [element.type, element.properties]);

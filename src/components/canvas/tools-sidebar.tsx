@@ -798,16 +798,16 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'rose', properties: { variant: 'v1' } })}>
-                <div className="w-4 h-4 rounded-lg mr-2 bg-gradient-to-br from-rose-200 to-rose-300 border border-rose-400/30 shadow-sm" />
-                <span>Nota Moderna V1 (Glassmorphism)</span>
+                <div className="w-4 h-4 rounded-sm mr-2 border border-gray-300/30 bg-rose-200 shadow-sm" />
+                <span>Nota Minimalista V1</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'lavender', properties: { variant: 'v2' } })}>
-                <div className="w-4 h-4 rounded-xl mr-2 bg-gradient-to-br from-purple-200 to-purple-300 shadow-inner" />
-                <span>Nota Moderna V2 (Neumorphism)</span>
+                <div className="w-4 h-4 mr-2 bg-lavender-200 shadow-md" style={{ clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%)' }} />
+                <span>Nota Post-it V2</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('sticky', { color: 'mint', properties: { variant: 'v3' } })}>
-                <div className="w-4 h-4 rounded-md mr-2 bg-green-200 border-2 border-green-300" />
-                <span>Nota Moderna V3 (Flat Design)</span>
+                <div className="w-4 h-4 rounded-lg mr-2 bg-mint-200 border border-gray-200/50 shadow-sm" />
+                <span>Nota Card V3</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
