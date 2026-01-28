@@ -806,13 +806,13 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <SidebarButton icon={StickyNote} label="Notas" title="Crear notas adhesivas" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5} className="max-h-[600px] overflow-y-auto">
-              {/* Variante V1 - Minimalista */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Minimalista V1</div>
+              {/* Tipo 1 - Header Elegante */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 1 - Header Elegante</div>
               <div className="grid grid-cols-2 gap-1 px-2 pb-2">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
-                    key={`v1-${color.name}`} 
-                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v1' } })}
+                    key={`type1-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } })}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <div className="w-4 h-4 rounded-sm border border-gray-300/30" style={{ backgroundColor: color.bg }} />
@@ -822,38 +822,32 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </div>
               <DropdownMenuSeparator />
               
-              {/* Variante V2 - Post-it */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Post-it V2</div>
+              {/* Tipo 2 - Header Compacto */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 2 - Header Compacto</div>
               <div className="grid grid-cols-2 gap-1 px-2 pb-2">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
-                    key={`v2-${color.name}`} 
-                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v2' } })}
+                    key={`type2-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } })}
                     className="flex items-center gap-2 cursor-pointer"
                   >
-                    <div 
-                      className="w-4 h-4 shadow-sm" 
-                      style={{ 
-                        backgroundColor: color.bg,
-                        clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%)'
-                      }} 
-                    />
+                    <div className="w-4 h-4 rounded-md border border-gray-200/50" style={{ backgroundColor: color.bg }} />
                     <span className="text-sm">{color.label}</span>
                   </DropdownMenuItem>
                 ))}
               </div>
               <DropdownMenuSeparator />
               
-              {/* Variante V3 - Card */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Card V3</div>
+              {/* Tipo 3 - Header Minimalista */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 3 - Header Minimalista</div>
               <div className="grid grid-cols-2 gap-1 px-2 pb-2">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
-                    key={`v3-${color.name}`} 
-                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'v3' } })}
+                    key={`type3-${color.name}`} 
+                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type3' } })}
                     className="flex items-center gap-2 cursor-pointer"
                   >
-                    <div className="w-4 h-4 rounded-lg border border-gray-200/50" style={{ backgroundColor: color.bg }} />
+                    <div className="w-4 h-4 rounded-md border border-gray-200/40" style={{ backgroundColor: color.bg }} />
                     <span className="text-sm">{color.label}</span>
                   </DropdownMenuItem>
                 ))}

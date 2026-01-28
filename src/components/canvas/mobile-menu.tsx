@@ -287,31 +287,31 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       label: 'Notas Adhesivas',
       icon: StickyNote,
       subMenu: [
-        // Variante V1 - Minimalista
+        // Tipo 1 - Header Elegante
         {
-          label: 'Minimalista V1',
+          label: 'Tipo 1 - Header Elegante',
           subMenu: stickyNoteColors.map(color => ({
             label: color.label,
-            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'v1' } }),
+            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } }),
             icon: () => <div className="w-4 h-4 rounded-sm border border-gray-300/30 mr-2" style={{ backgroundColor: color.bg }} />
           }))
         },
-        // Variante V2 - Post-it
+        // Tipo 2 - Header Compacto
         {
-          label: 'Post-it V2',
+          label: 'Tipo 2 - Header Compacto',
           subMenu: stickyNoteColors.map(color => ({
             label: color.label,
-            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'v2' } }),
-            icon: () => <div className="w-4 h-4 shadow-sm mr-2" style={{ backgroundColor: color.bg, clipPath: 'polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 0 100%)' }} />
+            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } }),
+            icon: () => <div className="w-4 h-4 rounded-md border border-gray-200/50 mr-2" style={{ backgroundColor: color.bg }} />
           }))
         },
-        // Variante V3 - Card
+        // Tipo 3 - Header Minimalista
         {
-          label: 'Card V3',
+          label: 'Tipo 3 - Header Minimalista',
           subMenu: stickyNoteColors.map(color => ({
             label: color.label,
-            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'v3' } }),
-            icon: () => <div className="w-4 h-4 rounded-lg border border-gray-200/50 mr-2" style={{ backgroundColor: color.bg }} />
+            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type3' } }),
+            icon: () => <div className="w-4 h-4 rounded-md border border-gray-200/40 mr-2" style={{ backgroundColor: color.bg }} />
           }))
         },
       ]

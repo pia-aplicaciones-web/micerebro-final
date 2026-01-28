@@ -12,9 +12,9 @@ import DeleteElementDialog from './elements/delete-element-dialog';
 // Esto previene errores como "Cannot find module './948.js'" durante desarrollo
 import NotepadElement from './elements/notepad-element';
 // import CuadernoElement from './elements/cuaderno'; // DESACTIVADO - causando problemas
-import StickyNoteV1 from './elements/sticky-note-v1';
-import StickyNoteV2 from './elements/sticky-note-v2';
-import StickyNoteV3 from './elements/sticky-note-v3';
+import StickyNoteType1 from './elements/sticky-note-type1';
+import StickyNoteType2 from './elements/sticky-note-type2';
+import StickyNoteType3 from './elements/sticky-note-type3';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
 import TextElement from './elements/text-element';
@@ -407,10 +407,10 @@ export default function TransformableElement({
     if (element.type === 'sticky') {
       const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
       const variant = (elementProps as any)?.variant;
-      if (variant === 'v1') return StickyNoteV1;
-      if (variant === 'v2') return StickyNoteV2;
-      if (variant === 'v3') return StickyNoteV3;
-      return StickyNoteV1; // Default
+      if (variant === 'type1') return StickyNoteType1;
+      if (variant === 'type2') return StickyNoteType2;
+      if (variant === 'type3') return StickyNoteType3;
+      return StickyNoteType1; // Default
     }
     return ElementComponentMap[element.type as keyof typeof ElementComponentMap] || (() => <div>Unknown element type: {element.type}</div>);
   }, [element.type, element.properties]);
