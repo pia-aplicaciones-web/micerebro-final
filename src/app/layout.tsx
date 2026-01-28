@@ -16,7 +16,8 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" suppressHydrationWarning>
-       <head>
+      <head>
+          {/* Favicon principal de la web app */}
           <link rel="icon" href="/favicon.ico" />
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <link rel="preconnect" href="https://fonts.googleapis.com" />
