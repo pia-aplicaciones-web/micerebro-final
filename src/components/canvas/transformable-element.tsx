@@ -204,6 +204,102 @@ export default function TransformableElement({
             (typeof size.height === 'number' && size.height > 0 ? size.height : 150)
   };
   
+  // Estado para centrar temporalmente el elemento en vista al hacer clic
+  const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isCenteredView, setIsCenteredView] = useState(false);
+  const [hasUserMovedWhileCentered, setHasUserMovedWhileCentered] = useState(false);
+
+  // Función: mover elemento al centro del área visible del canvas (sin cambiar tamaño)
+  const centerElementInView = useCallback(() => {
+    // Solo aplicar a elementos sin padre (no dentro de contenedores) para evitar conflictos
+    if (element.parentId) return;
+    if (!canvasContainerRef.current) return;
+
+    const container = canvasContainerRef.current;
+
+    const scrollLeft = container.scrollLeft ?? 0;
+    const scrollTop = container.scrollTop ?? 0;
+    const visibleWidth = container.clientWidth;
+    const visibleHeight = container.clientHeight;
+
+    if (visibleWidth <= 0 || visibleHeight <= 0) return;
+
+    const targetX = Math.max(0, scrollLeft + visibleWidth / 2 - safeSize.width / 2);
+    const targetY = Math.max(0, scrollTop + visibleHeight / 2 - safeSize.height / 2);
+
+    // Guardar posición original solo la primera vez
+    if (!isCenteredView && !originalPosition) {
+      setOriginalPosition({ x: position.x, y: position.y });
+    }
+
+    setIsCenteredView(true);
+    setHasUserMovedWhileCentered(false);
+
+    const safeProperties = (typeof element.properties === 'object' && element.properties !== null
+      ? element.properties
+      : {}) as CanvasElementProperties;
+
+    const newPosition = { x: targetX, y: targetY };
+
+    const props = {
+      ...safeProperties,
+      size: {
+        ...(safeProperties.size || {}),
+        width: safeSize.width,
+        height: safeSize.height,
+      },
+      position: newPosition,
+      relativePosition: null,
+    };
+
+    Object.keys(props).forEach((k) => {
+      if ((props as any)[k] === undefined) delete (props as any)[k];
+    });
+
+    updateElement(element.id, {
+      x: newPosition.x,
+      y: newPosition.y,
+      properties: props,
+    });
+  }, [canvasContainerRef, element.parentId, element.properties, element.id, isCenteredView, originalPosition, position.x, position.y, safeSize.width, safeSize.height, updateElement]);
+
+  // Cuando se deselecciona el elemento, devolverlo a su posición original SI no fue movido mientras estaba centrado
+  useEffect(() => {
+    if (!isSelected) {
+      if (isCenteredView && originalPosition && !hasUserMovedWhileCentered && !element.parentId) {
+        const safeProperties = (typeof element.properties === 'object' && element.properties !== null
+          ? element.properties
+          : {}) as CanvasElementProperties;
+
+        const props = {
+          ...safeProperties,
+          size: {
+            ...(safeProperties.size || {}),
+            width: safeSize.width,
+            height: safeSize.height,
+          },
+          position: originalPosition,
+          relativePosition: null,
+        };
+
+        Object.keys(props).forEach((k) => {
+          if ((props as any)[k] === undefined) delete (props as any)[k];
+        });
+
+        updateElement(element.id, {
+          x: originalPosition.x,
+          y: originalPosition.y,
+          properties: props,
+        });
+      }
+
+      // Limpiar estado de centrado siempre que el elemento quede deseleccionado
+      setIsCenteredView(false);
+      setOriginalPosition(null);
+      setHasUserMovedWhileCentered(false);
+    }
+  }, [isSelected, isCenteredView, originalPosition, hasUserMovedWhileCentered, element.parentId, element.properties, element.id, safeSize.width, safeSize.height, updateElement]);
+
   
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
     // Validar umbral de movimiento para evitar arrastres accidentales
@@ -430,102 +526,6 @@ export default function TransformableElement({
   }
 
   const isGroupedFrame = false;
-
-  // Estado para centrar temporalmente el elemento en vista al hacer clic
-  const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isCenteredView, setIsCenteredView] = useState(false);
-  const [hasUserMovedWhileCentered, setHasUserMovedWhileCentered] = useState(false);
-
-  // Función: mover elemento al centro del área visible del canvas (sin cambiar tamaño)
-  const centerElementInView = useCallback(() => {
-    // Solo aplicar a elementos sin padre (no dentro de contenedores) para evitar conflictos
-    if (element.parentId) return;
-    if (!canvasContainerRef.current) return;
-
-    const container = canvasContainerRef.current;
-
-    const scrollLeft = container.scrollLeft ?? 0;
-    const scrollTop = container.scrollTop ?? 0;
-    const visibleWidth = container.clientWidth;
-    const visibleHeight = container.clientHeight;
-
-    if (visibleWidth <= 0 || visibleHeight <= 0) return;
-
-    const targetX = Math.max(0, scrollLeft + visibleWidth / 2 - safeSize.width / 2);
-    const targetY = Math.max(0, scrollTop + visibleHeight / 2 - safeSize.height / 2);
-
-    // Guardar posición original solo la primera vez
-    if (!isCenteredView && !originalPosition) {
-      setOriginalPosition({ x: position.x, y: position.y });
-    }
-
-    setIsCenteredView(true);
-    setHasUserMovedWhileCentered(false);
-
-    const safeProperties = (typeof element.properties === 'object' && element.properties !== null
-      ? element.properties
-      : {}) as CanvasElementProperties;
-
-    const newPosition = { x: targetX, y: targetY };
-
-    const props = {
-      ...safeProperties,
-      size: {
-        ...(safeProperties.size || {}),
-        width: safeSize.width,
-        height: safeSize.height,
-      },
-      position: newPosition,
-      relativePosition: null,
-    };
-
-    Object.keys(props).forEach((k) => {
-      if ((props as any)[k] === undefined) delete (props as any)[k];
-    });
-
-    updateElement(element.id, {
-      x: newPosition.x,
-      y: newPosition.y,
-      properties: props,
-    });
-  }, [canvasContainerRef, element.parentId, element.properties, element.id, isCenteredView, originalPosition, position.x, position.y, safeSize.width, safeSize.height, updateElement]);
-
-  // Cuando se deselecciona el elemento, devolverlo a su posición original SI no fue movido mientras estaba centrado
-  useEffect(() => {
-    if (!isSelected) {
-      if (isCenteredView && originalPosition && !hasUserMovedWhileCentered && !element.parentId) {
-        const safeProperties = (typeof element.properties === 'object' && element.properties !== null
-          ? element.properties
-          : {}) as CanvasElementProperties;
-
-        const props = {
-          ...safeProperties,
-          size: {
-            ...(safeProperties.size || {}),
-            width: safeSize.width,
-            height: safeSize.height,
-          },
-          position: originalPosition,
-          relativePosition: null,
-        };
-
-        Object.keys(props).forEach((k) => {
-          if ((props as any)[k] === undefined) delete (props as any)[k];
-        });
-
-        updateElement(element.id, {
-          x: originalPosition.x,
-          y: originalPosition.y,
-          properties: props,
-        });
-      }
-
-      // Limpiar estado de centrado siempre que el elemento quede deseleccionado
-      setIsCenteredView(false);
-      setOriginalPosition(null);
-      setHasUserMovedWhileCentered(false);
-    }
-  }, [isSelected, isCenteredView, originalPosition, hasUserMovedWhileCentered, element.parentId, element.properties, element.id, safeSize.width, safeSize.height, updateElement]);
 
   const handleMouseDown = (e: MouseEvent) => {
     // Permitir que los eventos lleguen a los elementos editables
