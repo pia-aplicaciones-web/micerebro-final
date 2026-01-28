@@ -14,20 +14,20 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
-import { X, Plus, Tag, GripVertical, RotateCw, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, Plus, Tag, RotateCw } from 'lucide-react';
 
 // Paleta de colores para notas adhesivas
 const PASTEL_COLORS = {
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro' },
   'morado': { bg: '#aa72bf', name: 'Morado' },
-  'menta': { bg: '#bae0e2', name: 'Menta' },
+  'menta': { bg: '#d9f99d', name: 'Verde Lima' },
   'calipso': { bg: '#28c4d8', name: 'Calipso' },
-  'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark' },
+  'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja' },
-  'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
+  'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel' },
   'verde': { bg: '#a8e6cf', name: 'Verde' },
   'azul': { bg: '#b3d9ff', name: 'Azul' },
 } as const;
@@ -47,8 +47,6 @@ export default function StickyNoteType1(props: CommonElementProps) {
     isPreview,
     minimized,
     tags,
-    onBringToFront,
-    onSendToBack,
   } = props;
 
   const { toast } = useToast();
@@ -117,27 +115,30 @@ export default function StickyNoteType1(props: CommonElementProps) {
     onUpdate(id, { tags: updatedTags });
   };
 
-  const handleRotate = (e: React.MouseEvent) => {
+  const ROTATE_STEP = 10;
+
+  const handleRotateLeft = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    const rotation = (safeProperties.rotation || 0) + 15;
-    onUpdate(id, { properties: { ...safeProperties, rotation: rotation % 360 } });
+    const rotation = (safeProperties.rotation || 0) - ROTATE_STEP;
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        rotation: (rotation + 360) % 360,
+      },
+    });
   };
 
-  const handleBringToFront = (e: React.MouseEvent) => {
+  const handleRotateRight = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (onBringToFront) {
-      onBringToFront(id);
-    }
-  };
-
-  const handleSendToBack = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    if (onSendToBack) {
-      onSendToBack(id);
-    }
+    const rotation = (safeProperties.rotation || 0) + ROTATE_STEP;
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        rotation: rotation % 360,
+      },
+    });
   };
 
   return (
@@ -163,8 +164,39 @@ export default function StickyNoteType1(props: CommonElementProps) {
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {/* Drag Handle */}
           <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0">
-            <GripVertical className="h-3.5 w-3.5 text-gray-600" />
+            <div className="grid grid-cols-3 gap-[1px]">
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+            </div>
           </div>
+          {/* Botones de rotación izquierda / derecha */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0 hover:bg-gray-100"
+            onClick={handleRotateLeft}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 10° a la izquierda"
+          >
+            <RotateCw className="h-3.5 w-3.5 text-gray-600 rotate-180" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 p-0 hover:bg-gray-100"
+            onClick={handleRotateRight}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 10° a la derecha"
+          >
+            <RotateCw className="h-3.5 w-3.5 text-gray-600" />
+          </Button>
           <Tag className="h-3.5 w-3.5 text-gray-600 flex-shrink-0" />
           <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
             {currentTags.map((tag, index) => (
@@ -241,39 +273,6 @@ export default function StickyNoteType1(props: CommonElementProps) {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {/* Flecha Arriba - Traer al frente */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 p-0 hover:bg-blue-100"
-            onClick={handleBringToFront}
-            onMouseDown={(e) => e.stopPropagation()}
-            title="Traer al frente"
-          >
-            <ArrowUp className="h-3.5 w-3.5 text-gray-600" />
-          </Button>
-          {/* Flecha Abajo - Enviar atrás */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 p-0 hover:bg-blue-100"
-            onClick={handleSendToBack}
-            onMouseDown={(e) => e.stopPropagation()}
-            title="Enviar atrás"
-          >
-            <ArrowDown className="h-3.5 w-3.5 text-gray-600" />
-          </Button>
-          {/* Rotar 15 grados */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 p-0 hover:bg-gray-100"
-            onClick={handleRotate}
-            onMouseDown={(e) => e.stopPropagation()}
-            title="Rotar 15°"
-          >
-            <RotateCw className="h-3.5 w-3.5 text-gray-600" />
-          </Button>
           {/* Cerrar */}
           <Button
             variant="ghost"

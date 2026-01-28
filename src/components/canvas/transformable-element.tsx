@@ -14,7 +14,6 @@ import NotepadElement from './elements/notepad-element';
 // import CuadernoElement from './elements/cuaderno'; // DESACTIVADO - causando problemas
 import StickyNoteType1 from './elements/sticky-note-type1';
 import StickyNoteType2 from './elements/sticky-note-type2';
-import StickyNoteType3 from './elements/sticky-note-type3';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
 import TextElement from './elements/text-element';
@@ -409,7 +408,8 @@ export default function TransformableElement({
       const variant = (elementProps as any)?.variant;
       if (variant === 'type1') return StickyNoteType1;
       if (variant === 'type2') return StickyNoteType2;
-      if (variant === 'type3') return StickyNoteType3;
+      // Si alguna nota antigua tiene variant 'type3', la mostramos como Tipo 2
+      if (variant === 'type3') return StickyNoteType2;
       return StickyNoteType1; // Default
     }
     return ElementComponentMap[element.type as keyof typeof ElementComponentMap] || (() => <div>Unknown element type: {element.type}</div>);

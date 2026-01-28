@@ -90,14 +90,14 @@ interface MobileMenuProps {
 const PASTEL_COLORS = {
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro', label: 'Morado Claro' },
   'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
-  'menta': { bg: '#bae0e2', name: 'Menta', label: 'Menta' },
+  'menta': { bg: '#d9f99d', name: 'Verde Lima', label: 'Verde Lima' },
   'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
-  'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark', label: 'Amarillo Dark' },
+  'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel', label: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
-  'verde-teal': { bg: '#00a087', name: 'Verde Teal', label: 'Verde Teal' },
+  'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel', label: 'Rosa Pastel' },
   'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
   'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
 } as const;
@@ -301,15 +301,6 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
             label: color.label,
             onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } }),
             icon: () => <div className="w-4 h-4 rounded-md border border-gray-200/50 mr-2" style={{ backgroundColor: color.bg }} />
-          }))
-        },
-        // Tipo 3 - Header Minimalista
-        {
-          label: 'Tipo 3 - Header Minimalista',
-          subMenu: stickyNoteColors.map(color => ({
-            label: color.label,
-            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type3' } }),
-            icon: () => <div className="w-4 h-4 rounded-md border border-gray-200/40 mr-2" style={{ backgroundColor: color.bg }} />
           }))
         },
       ]

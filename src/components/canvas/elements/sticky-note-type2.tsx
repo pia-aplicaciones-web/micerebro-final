@@ -20,14 +20,14 @@ import { X, Plus, Hash } from 'lucide-react';
 const PASTEL_COLORS = {
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro' },
   'morado': { bg: '#aa72bf', name: 'Morado' },
-  'menta': { bg: '#bae0e2', name: 'Menta' },
+  'menta': { bg: '#d9f99d', name: 'Verde Lima' },
   'calipso': { bg: '#28c4d8', name: 'Calipso' },
-  'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark' },
+  'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja' },
-  'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
+  'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel' },
   'verde': { bg: '#a8e6cf', name: 'Verde' },
   'azul': { bg: '#b3d9ff', name: 'Azul' },
 } as const;
@@ -139,6 +139,20 @@ export default function StickyNoteType2(props: CommonElementProps) {
       {/* Header Compacto con Etiquetas Coloreadas */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/40 border-b border-gray-300/30">
         <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
+          {/* Drag Handle de 9 puntos */}
+          <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0">
+            <div className="grid grid-cols-3 gap-[1px]">
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+              <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
+            </div>
+          </div>
           <Hash className="h-3 w-3 text-gray-500 flex-shrink-0" />
           {currentTags.map((tag, index) => (
             <span
@@ -224,8 +238,8 @@ export default function StickyNoteType2(props: CommonElementProps) {
             onPaste={handlePaste}
             className="w-full h-full outline-none cursor-text"
             style={{
-              fontFamily: '"Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              fontSize: '16px',
+              fontFamily: '"Quicksand", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontSize: '18px',
               color: TEXT_COLOR,
               lineHeight: '1.6',
               letterSpacing: '0.01em',
