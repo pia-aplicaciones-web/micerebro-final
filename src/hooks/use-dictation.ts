@@ -23,17 +23,19 @@ export const useDictation = (
     }
   }, []);
 
-  // Guardar la posición del cursor cuando empieza el dictado
+  // Guardar la posición inicial del cursor cuando empieza el dictado (solo como fallback)
+  // REGLA: CURSOR MANDA - siempre se usará la posición ACTUAL del cursor al insertar
   useEffect(() => {
     if (isListening) {
       // Resetear el transcript anterior cuando se inicia el dictado para evitar duplicaciones
       lastTranscriptRef.current = '';
       
+      // Guardar la posición inicial solo como fallback (si no hay cursor actual al insertar)
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
       } else {
-        // Si no hay cursor, crear uno al final del elemento activo
+        // Si no hay cursor, crear uno al final del elemento activo como fallback
         const activeElement = document.activeElement;
         if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
           const range = document.createRange();
@@ -52,6 +54,7 @@ export const useDictation = (
   }, [isListening, removeInterimNode]);
 
   // Insertar texto en el cursor actual
+  // REGLA: CURSOR MANDA - siempre usar la posición ACTUAL del cursor
   const insertTextAtCursor = useCallback((text: string, isInterim: boolean = false) => {
     const activeElement = document.activeElement;
     
@@ -59,6 +62,7 @@ export const useDictation = (
     if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
       if (isInterim) return; // No mostramos interim en inputs
       
+      // Usar la posición ACTUAL del cursor (CURSOR MANDA)
       const start = activeElement.selectionStart || 0;
       const end = activeElement.selectionEnd || 0;
       const value = activeElement.value;
@@ -75,15 +79,27 @@ export const useDictation = (
 
     let range: Range;
     
-    // Restaurar la posición guardada o usar la actual
-    if (savedRangeRef.current) {
+    // REGLA: CURSOR MANDA - siempre priorizar la posición ACTUAL del cursor
+    // Solo usar la posición guardada si no hay una posición actual válida
+    if (selection.rangeCount > 0) {
+      // Usar la posición ACTUAL del cursor (el usuario puede haberla movido)
+      range = selection.getRangeAt(0);
+    } else if (savedRangeRef.current) {
+      // Si no hay cursor actual, usar el guardado como fallback
       range = savedRangeRef.current;
       selection.removeAllRanges();
       selection.addRange(range);
-    } else if (selection.rangeCount > 0) {
-      range = selection.getRangeAt(0);
     } else {
-      return;
+      // Si no hay cursor ni posición guardada, intentar crear uno al final del elemento activo
+      if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
+        range = document.createRange();
+        range.selectNodeContents(activeElement);
+        range.collapse(false); // Al final
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        return; // No hay donde insertar
+      }
     }
 
     // Verificar que estamos en un contentEditable
@@ -111,7 +127,7 @@ export const useDictation = (
       selection.removeAllRanges();
       selection.addRange(range);
     } else {
-      // Insertar texto final
+      // Insertar texto final en la posición ACTUAL del cursor
       const textNode = document.createTextNode(text);
       range.insertNode(textNode);
       range.setStartAfter(textNode);
@@ -119,7 +135,7 @@ export const useDictation = (
       selection.removeAllRanges();
       selection.addRange(range);
       
-      // Actualizar la posición guardada
+      // Actualizar la posición guardada para el próximo insert (pero siempre priorizar posición actual)
       savedRangeRef.current = range.cloneRange();
     }
   }, [removeInterimNode]);
