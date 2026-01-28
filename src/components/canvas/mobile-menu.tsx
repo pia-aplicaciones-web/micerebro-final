@@ -92,15 +92,12 @@ const PASTEL_COLORS = {
   'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
   'menta': { bg: '#bae0e2', name: 'Menta', label: 'Menta' },
   'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
-  'verde': { bg: '#00b2a0', name: 'Verde', label: 'Verde' },
   'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark', label: 'Amarillo Dark' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
   'verde-teal': { bg: '#00a087', name: 'Verde Teal', label: 'Verde Teal' },
-  'naranja-intenso': { bg: '#ff7f1e', name: 'Naranja Intenso', label: 'Naranja Intenso' },
-  'amarillo-verde': { bg: '#d6d60c', name: 'Amarillo Verde', label: 'Amarillo Verde' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({

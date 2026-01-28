@@ -22,15 +22,12 @@ const PASTEL_COLORS = {
   'morado': { bg: '#aa72bf', name: 'Morado' },
   'menta': { bg: '#bae0e2', name: 'Menta' },
   'calipso': { bg: '#28c4d8', name: 'Calipso' },
-  'verde': { bg: '#00b2a0', name: 'Verde' },
   'amarillo-dark': { bg: '#ede211', name: 'Amarillo Dark' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo' },
   'tierra': { bg: '#dbcea5', name: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja' },
   'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
-  'naranja-intenso': { bg: '#ff7f1e', name: 'Naranja Intenso' },
-  'amarillo-verde': { bg: '#d6d60c', name: 'Amarillo Verde' },
 } as const;
 
 const TEXT_COLOR = '#1A1A1B';
