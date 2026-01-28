@@ -96,6 +96,8 @@ const PASTEL_COLORS = {
   'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
   'verde-teal': { bg: '#00a087', name: 'Verde Teal', label: 'Verde Teal' },
+  'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
+  'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({

@@ -28,6 +28,8 @@ const PASTEL_COLORS = {
   'coral': { bg: '#f26877', name: 'Coral' },
   'naranja': { bg: '#ffbc21', name: 'Naranja' },
   'verde-teal': { bg: '#00a087', name: 'Verde Teal' },
+  'verde': { bg: '#a8e6cf', name: 'Verde' },
+  'azul': { bg: '#b3d9ff', name: 'Azul' },
 } as const;
 
 const TEXT_COLOR = '#1A1A1B';
