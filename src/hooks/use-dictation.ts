@@ -29,6 +29,17 @@ export const useDictation = (
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+      } else {
+        // Si no hay cursor, crear uno al final del elemento activo
+        const activeElement = document.activeElement;
+        if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
+          const range = document.createRange();
+          range.selectNodeContents(activeElement);
+          range.collapse(false); // Colapsar al final
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          savedRangeRef.current = range.cloneRange();
+        }
       }
     } else {
       savedRangeRef.current = null;

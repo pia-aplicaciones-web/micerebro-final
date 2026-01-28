@@ -272,7 +272,39 @@ export default function DictadoElement(props: CommonElementProps) {
             suppressContentEditableWarning
             onInput={handleContentChange}
             onBlur={handleBlurWithSave}
-            onFocus={() => onEditElement(id)}
+            onFocus={() => {
+              onEditElement(id);
+              // Asegurar que el cursor esté visible en móvil
+              if (contentRef.current) {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  const range = document.createRange();
+                  range.selectNodeContents(contentRef.current);
+                  range.collapse(false); // Al final
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }
+            }}
+            onTouchStart={(e) => {
+              // En móvil, establecer foco y cursor al tocar
+              if (contentRef.current && !isPreview) {
+                contentRef.current.focus();
+                // Pequeño delay para asegurar que el foco se establezca
+                setTimeout(() => {
+                  const selection = window.getSelection();
+                  if (selection) {
+                    if (selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(contentRef.current!);
+                      range.collapse(false); // Al final
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+                }, 50);
+              }
+            }}
             onPaste={handlePaste}
             className="outline-none w-full h-full min-h-full"
             style={{
@@ -393,7 +425,36 @@ export default function DictadoElement(props: CommonElementProps) {
               suppressContentEditableWarning
               onInput={handleContentChange}
               onBlur={handleBlurWithSave}
-              onFocus={() => onEditElement(id)}
+              onFocus={() => {
+                onEditElement(id);
+                // Asegurar que el cursor esté visible
+                if (contentRef.current) {
+                  const selection = window.getSelection();
+                  if (selection && selection.rangeCount === 0) {
+                    const range = document.createRange();
+                    range.selectNodeContents(contentRef.current);
+                    range.collapse(false); // Al final
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
+                }
+              }}
+              onTouchStart={(e) => {
+                // En móvil, establecer foco y cursor al tocar
+                if (contentRef.current && !isPreview) {
+                  contentRef.current.focus();
+                  setTimeout(() => {
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(contentRef.current!);
+                      range.collapse(false);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }, 50);
+                }
+              }}
               onPaste={handlePaste}
               className="outline-none w-full h-full min-h-full"
               style={{

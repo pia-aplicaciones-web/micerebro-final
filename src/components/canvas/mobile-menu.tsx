@@ -177,6 +177,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Agregar Cuaderno', onClick: () => handleAddElement('notepad') },
         { label: 'Nuevo Block', onClick: () => handleAddElement('yellow-notepad') },
         { label: 'Agregar Apuntes', onClick: () => handleAddElement('mini-notes') },
+        { label: 'Nuevo cuaderno dictar', onClick: () => handleAddElement('dictado') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
         {
