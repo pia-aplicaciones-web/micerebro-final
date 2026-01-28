@@ -347,7 +347,11 @@ export default function TransformableElement({
     // Permitir que los eventos lleguen a los elementos editables
     const target = e.target as HTMLElement;
     const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-    if (isEditable) {
+    const isEditableParent = target.closest('[contenteditable="true"]');
+    
+    if (isEditable || isEditableParent) {
+      // No interferir con elementos editables - dejar que manejen su propio touch
+      // NO llamar stopPropagation aquí porque el evento ya está en el elemento editable
       return; // Permitir que el navegador maneje el foco y el cursor
     }
 
@@ -552,7 +556,18 @@ export default function TransformableElement({
           data-element-id={element.id}
           data-element-type={element.type}
           className="w-full h-full relative group"
-          onTouchStart={handleTouchStart}
+          onTouchStart={(e) => {
+            // Verificar si el toque es en un elemento editable antes de manejar
+            const target = e.target as HTMLElement;
+            const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+            const isEditableParent = target.closest('[contenteditable="true"]');
+            
+            if (!isEditable && !isEditableParent) {
+              // Solo manejar touch si NO es un elemento editable
+              handleTouchStart(e);
+            }
+            // Si es editable, dejar que el evento se propague normalmente
+          }}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           onTouchCancel={handleTouchCancel}
