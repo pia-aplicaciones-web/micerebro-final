@@ -99,16 +99,16 @@ export default function DictadoElement(props: CommonElementProps) {
     if (isPreview) return;
 
     const isCurrentlyMinimized = !!minimized;
-    const currentSize = (properties as CanvasElementProperties)?.size || { width: 320, height: 600 };
+    const currentSize = (properties as CanvasElementProperties)?.size || { width: 256, height: 600 };
 
     const currentSizeNumeric = {
-      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 320,
+      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 256,
       height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 600,
     };
 
     if (isCurrentlyMinimized) {
       const { originalSize, ...restProps } = (properties || {}) as Partial<CanvasElementProperties>;
-      const restoredSize = originalSize || { width: 320, height: 600 };
+      const restoredSize = originalSize || { width: 256, height: 600 };
       const newProperties: Partial<CanvasElementProperties> = {
         ...restProps,
         size: restoredSize
@@ -119,7 +119,7 @@ export default function DictadoElement(props: CommonElementProps) {
         properties: newProperties,
       });
     } else {
-      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 320;
+      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 256;
       onUpdate(id, {
         minimized: true,
         properties: {
@@ -320,7 +320,7 @@ export default function DictadoElement(props: CommonElementProps) {
         minimized && 'h-12'
       )}
       style={{
-        width: minimized ? '100%' : '320px',
+        width: minimized ? '100%' : '256px',
         height: minimized ? '48px' : '600px',
         backgroundColor: '#2C3E50', // Navy blue grisáceo
         transform: `rotate(${rotation}deg)`,
