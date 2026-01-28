@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useCallback, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import type { CommonElementProps, DictadoContent, CanvasElementProperties } from '@/lib/types';
 import {
-  X, Minus, Maximize, GripVertical, Volume2, Save
+  X, Minus, Maximize, GripVertical, Volume2, Save, Copy
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -179,6 +179,34 @@ export default function DictadoElement(props: CommonElementProps) {
     setIsReading(true);
   }, [isReading, isPaused, toast]);
 
+  const handleCopyAll = useCallback(async () => {
+    if (!contentRef.current) return;
+
+    try {
+      const text = contentRef.current.innerText || contentRef.current.textContent || '';
+      if (!text.trim()) {
+        toast({ variant: 'destructive', title: 'Sin contenido', description: 'No hay texto para copiar' });
+        return;
+      }
+
+      // Seleccionar todo el texto
+      const range = document.createRange();
+      range.selectNodeContents(contentRef.current);
+      const selection = window.getSelection();
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      // Copiar al portapapeles
+      await navigator.clipboard.writeText(text);
+      toast({ title: 'Copiado', description: 'Todo el texto ha sido copiado al portapapeles' });
+    } catch (error) {
+      console.error('Error al copiar:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo copiar el texto' });
+    }
+  }, [toast]);
+
   // Sincronizar contenido desde props
   useEffect(() => {
     if (contentRef.current && !isPreview) {
@@ -240,6 +268,15 @@ export default function DictadoElement(props: CommonElementProps) {
             >
               <Volume2 className={cn("h-4 w-4", isReading && "text-blue-500")} />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleCopyAll}
+              title="Seleccionar y copiar todo el texto"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
           </div>
           <div className="text-sm font-medium">
             {typedContent.title || 'Dictado'}
@@ -247,7 +284,7 @@ export default function DictadoElement(props: CommonElementProps) {
         </div>
 
         {/* Contenido móvil con scroll infinito */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4" style={{ minHeight: '100%' }}>
           <div
             ref={contentRef}
             contentEditable={!isPreview}
@@ -298,6 +335,7 @@ export default function DictadoElement(props: CommonElementProps) {
               touchAction: 'manipulation',
               WebkitUserSelect: 'text',
               userSelect: 'text',
+              minHeight: '100%', // Scroll infinito
             }}
           />
           <div className="absolute top-20 right-4 z-10">
@@ -378,15 +416,24 @@ export default function DictadoElement(props: CommonElementProps) {
             >
               <Volume2 className={cn("h-4 w-4 text-gray-700", isReading && "text-blue-500")} />
             </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 hover:bg-black/10"
+              onClick={handleCopyAll}
+              title="Seleccionar y copiar todo el texto"
+            >
+              <Copy className="h-4 w-4 text-gray-700" />
+            </Button>
           </div>
           <div className="text-xs font-medium text-gray-700 truncate max-w-[200px]">
             {typedContent.title || 'Dictado'}
           </div>
         </div>
 
-        {/* Contenido web con scroll */}
+        {/* Contenido web con scroll infinito */}
         {!minimized && (
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: '100%' }}>
             <div
               ref={contentRef}
               contentEditable={!isPreview}
@@ -437,6 +484,7 @@ export default function DictadoElement(props: CommonElementProps) {
                 touchAction: 'manipulation',
                 WebkitUserSelect: 'text',
                 userSelect: 'text',
+                minHeight: '100%', // Scroll infinito
               }}
             />
             <div className="absolute top-12 right-4 z-10">
