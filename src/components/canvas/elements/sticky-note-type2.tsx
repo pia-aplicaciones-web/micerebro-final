@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
-import { X, Plus, Hash } from 'lucide-react';
+import { X, Plus, RotateCw } from 'lucide-react';
 
 // Paleta de colores para notas adhesivas
 const PASTEL_COLORS = {
@@ -117,6 +117,64 @@ export default function StickyNoteType2(props: CommonElementProps) {
     onUpdate(id, { tags: updatedTags });
   };
 
+  const ROTATE_STEP = 10;
+
+  const handleRotateLeft = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rotation = (safeProperties.rotation || 0) - ROTATE_STEP;
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        rotation: (rotation + 360) % 360,
+      },
+    });
+  };
+
+  const handleRotateRight = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const rotation = (safeProperties.rotation || 0) + ROTATE_STEP;
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        rotation: rotation % 360,
+      },
+    });
+  };
+
+  const handleUppercaseSelection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) {
+      return;
+    }
+
+    const selectedText = range.toString();
+    if (!selectedText) return;
+
+    const upperText = selectedText.toUpperCase();
+    range.deleteContents();
+    range.insertNode(document.createTextNode(upperText));
+
+    // Mover el cursor al final de la selección modificada
+    selection.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(editor);
+    newRange.collapse(false);
+    selection.addRange(newRange);
+
+    // Disparar autosave
+    handleChange();
+  };
+
   const getTagColor = (index: number) => TAG_COLORS[index % TAG_COLORS.length];
 
   return (
@@ -153,7 +211,38 @@ export default function StickyNoteType2(props: CommonElementProps) {
               <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
             </div>
           </div>
-          <Hash className="h-3 w-3 text-gray-500 flex-shrink-0" />
+          {/* Botones de rotación izquierda / derecha */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 p-0 hover:bg-gray-100 mr-[2px]"
+            onClick={handleRotateLeft}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 10° a la izquierda"
+          >
+            <RotateCw className="h-3 w-3 text-gray-600 rotate-180" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 p-0 hover:bg-gray-100"
+            onClick={handleRotateRight}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 10° a la derecha"
+          >
+            <RotateCw className="h-3 w-3 text-gray-600" />
+          </Button>
+          {/* Botón: texto seleccionado a MAYÚSCULAS */}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 px-1 text-[10px] font-semibold text-gray-700 hover:bg-gray-100"
+            onClick={handleUppercaseSelection}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Texto seleccionado a MAYÚSCULAS"
+          >
+            Aa
+          </Button>
         </div>
         <Button
           variant="ghost"
@@ -244,8 +333,8 @@ export default function StickyNoteType2(props: CommonElementProps) {
             onPaste={handlePaste}
             className="w-full h-full outline-none cursor-text"
             style={{
-              fontFamily: '"Quicksand", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-              fontSize: '18px',
+              fontFamily: '"Raleway", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+              fontSize: '16px',
               color: TEXT_COLOR,
               lineHeight: '1.6',
               letterSpacing: '0.01em',

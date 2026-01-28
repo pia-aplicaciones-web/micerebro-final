@@ -214,7 +214,10 @@ export default function StickyNoteType1(props: CommonElementProps) {
       </div>
 
       {/* Chips de etiquetas bajo el header */}
-      <div className="px-3 py-1 flex flex-wrap items-center gap-1.5 border-b border-gray-300/30 bg-white/40">
+      <div
+        className="px-3 py-1 flex flex-wrap items-center gap-1.5 border-b border-gray-300/30"
+        style={{ backgroundColor: currentColor.bg }}
+      >
         <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
           {currentTags.map((tag, index) => (
             <span
