@@ -806,7 +806,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             <DropdownMenuContent side="right" align="start" sideOffset={5} className="max-h-[600px] overflow-y-auto">
               {/* Tipo 1 - Header Elegante */}
               <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 1 - Header Elegante</div>
-              <div className="grid grid-cols-2 gap-1 px-2 pb-2">
+              <div className="grid grid-cols-5 gap-2 px-3 pb-3">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
                     key={`type1-${color.name}`} 
@@ -821,7 +821,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               
               {/* Tipo 2 - Header Compacto */}
               <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 2 - Header Compacto</div>
-              <div className="grid grid-cols-2 gap-1 px-2 pb-2">
+              <div className="grid grid-cols-5 gap-2 px-3 pb-3">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
                     key={`type2-${color.name}`} 
