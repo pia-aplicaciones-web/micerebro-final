@@ -422,39 +422,13 @@ export default function MiniElement(props: CommonElementProps) {
           onInput={handleContentInput}
           onBlur={handleContentBlur}
           onFocus={() => {
-            // Asegurar que el cursor esté visible
-            if (contentRef.current) {
-              setTimeout(() => {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount === 0) {
-                  const range = document.createRange();
-                  range.selectNodeContents(contentRef.current!);
-                  range.collapse(false); // Al final
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-              }, 50);
-            }
+            // Dejamos que el navegador coloque el cursor donde el usuario toca o hace clic
           }}
           onTouchStart={(e) => {
-            // En móvil, establecer foco y cursor al tocar
+            // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
             e.stopPropagation(); // Evitar que el evento suba al contenedor
             if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
               contentRef.current.focus();
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection) {
-                    if (selection.rangeCount === 0) {
-                      const range = document.createRange();
-                      range.selectNodeContents(contentRef.current!);
-                      range.collapse(false); // Al final
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-                }, 100);
-              });
             }
           }}
           onMouseDown={(e) => {

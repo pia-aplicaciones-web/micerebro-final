@@ -199,14 +199,15 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           width: stickySize.width,
           height: stickySize.height,
           userId,
-          properties: { 
-            ...baseProperties, 
-            position: stickyPos, 
-            size: stickySize, 
+          properties: {
+            ...baseProperties,
+            position: stickyPos,
+            size: stickySize,
             color: stickyColor,
             ...(stickyVariant && { variant: stickyVariant })
           } as CanvasElementProperties,
-          content: (typeof props?.content === 'string' ? props.content : 'Escribe algo...'),
+          // Nota adhesiva sin texto inicial por defecto
+          content: (typeof props?.content === 'string' ? props.content : ''),
           zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),

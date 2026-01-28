@@ -11,7 +11,6 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 
 export default function DictadoElement(props: CommonElementProps) {
@@ -31,7 +30,6 @@ export default function DictadoElement(props: CommonElementProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const isMobile = useMediaQuery('(max-width: 768px)');
   const [isReading, setIsReading] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
@@ -39,7 +37,7 @@ export default function DictadoElement(props: CommonElementProps) {
   useEffect(() => {
     if (!typedContent.createdAt && contentRef.current) {
       const timestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
-      const title = `Dictado ${timestamp}`;
+      const title = `iPhone ${timestamp}`;
       onUpdate(id, { 
         content: { 
           ...typedContent, 
@@ -246,170 +244,7 @@ export default function DictadoElement(props: CommonElementProps) {
     }
   }, [typedContent.content, isPreview]);
 
-  // Renderizado móvil: pantalla completa
-  if (isMobile && !minimized) {
-    return (
-      <div
-        className="fixed inset-0 z-[9999] bg-white flex flex-col"
-        style={{ fontFamily: 'Poppins, sans-serif' }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        {/* Header móvil */}
-        <div className="flex items-center justify-between p-4 border-b bg-white">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleClose}
-              title="Cerrar"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleForceSave}
-              title="Guardar"
-            >
-              <Save className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={toggleMinimize}
-              title="Minimizar"
-            >
-              <Minus className="h-4 w-4" />
-            </Button>
-            <div className="drag-handle cursor-grab active:cursor-grabbing p-1">
-              <GripVertical className="h-4 w-4" />
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleReadAloud}
-              title="Leer en voz alta"
-            >
-              <Volume2 className={cn("h-4 w-4", isReading && "text-blue-500")} />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={handleCopyAll}
-              title="Seleccionar y copiar todo el texto"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-          </div>
-          <div
-            ref={titleRef}
-            contentEditable={!isPreview}
-            spellCheck="true"
-            suppressContentEditableWarning
-            onFocus={handleTitleFocus}
-            onBlur={handleTitleBlur}
-            className="bg-transparent flex-grow outline-none cursor-text text-sm font-medium p-1 min-w-0"
-            data-placeholder="Dictado"
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-              if (titleRef.current && !isPreview) {
-                titleRef.current.focus();
-                requestAnimationFrame(() => {
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection) {
-                      if (selection.rangeCount === 0) {
-                        const range = document.createRange();
-                        range.selectNodeContents(titleRef.current!);
-                        range.collapse(false);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                      }
-                    }
-                  }, 100);
-                });
-              }
-            }}
-            style={{
-              touchAction: 'manipulation',
-              WebkitUserSelect: 'text',
-              userSelect: 'text',
-            }}
-          >
-            {typedContent.title || 'Dictado'}
-          </div>
-        </div>
-
-        {/* Contenido móvil con scroll infinito */}
-        <div className="flex-1 overflow-y-auto p-4" style={{ minHeight: '100%' }}>
-          <div
-            ref={contentRef}
-            contentEditable={!isPreview}
-            suppressContentEditableWarning
-            onInput={handleContentChange}
-            onBlur={handleBlurWithSave}
-            onFocus={() => {
-              onEditElement(id);
-              // Asegurar que el cursor esté visible en móvil
-              if (contentRef.current) {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount === 0) {
-                  const range = document.createRange();
-                  range.selectNodeContents(contentRef.current);
-                  range.collapse(false); // Al final
-                  selection.removeAllRanges();
-                  selection.addRange(range);
-                }
-              }
-            }}
-            onTouchStart={(e) => {
-              // En móvil, establecer foco y cursor al tocar
-              e.stopPropagation(); // Evitar que el evento suba al contenedor
-              if (contentRef.current && !isPreview) {
-                contentRef.current.focus();
-                requestAnimationFrame(() => {
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection) {
-                      if (selection.rangeCount === 0) {
-                        const range = document.createRange();
-                        range.selectNodeContents(contentRef.current!);
-                        range.collapse(false); // Al final
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                      }
-                    }
-                  }, 100);
-                });
-              }
-            }}
-            onPaste={handlePaste}
-            className="outline-none w-full h-full min-h-full"
-            style={{
-              fontFamily: 'Poppins, sans-serif',
-              fontSize: '20px',
-              lineHeight: '1.6',
-              touchAction: 'manipulation',
-              WebkitUserSelect: 'text',
-              userSelect: 'text',
-              minHeight: '100%', // Scroll infinito
-            }}
-          />
-          <div className="absolute top-20 right-4 z-10">
-            <SaveStatusIndicator status={saveStatus} size="sm" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Renderizado web: tamaño fijo estilo celular
+  // Renderizado único (web y móvil): tamaño fijo estilo celular
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const rotation = safeProperties.rotation || 0;
 
@@ -497,7 +332,7 @@ export default function DictadoElement(props: CommonElementProps) {
             onFocus={handleTitleFocus}
             onBlur={handleTitleBlur}
             className="bg-transparent flex-grow outline-none cursor-text text-xs font-medium text-gray-700 p-1 min-w-0 truncate max-w-[200px]"
-            data-placeholder="Dictado"
+            data-placeholder="iPhone"
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => {
               e.stopPropagation();
@@ -525,7 +360,7 @@ export default function DictadoElement(props: CommonElementProps) {
               userSelect: 'text',
             }}
           >
-            {typedContent.title || 'Dictado'}
+            {typedContent.title || 'iPhone'}
           </div>
         </div>
 

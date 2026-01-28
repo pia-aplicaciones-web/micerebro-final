@@ -17,19 +17,21 @@ import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { X, Plus, RotateCw } from 'lucide-react';
 
 // Paleta de colores para notas adhesivas
+// Regla: quitar Naranja, Morado oscuro y Tierra, y agregar nuevos tonos
 const PASTEL_COLORS = {
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro' },
-  'morado': { bg: '#aa72bf', name: 'Morado' },
   'menta': { bg: '#d9f99d', name: 'Verde Lima' },
   'calipso': { bg: '#28c4d8', name: 'Calipso' },
   'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo' },
-  'tierra': { bg: '#dbcea5', name: 'Tierra' },
   'coral': { bg: '#f26877', name: 'Coral' },
-  'naranja': { bg: '#ffbc21', name: 'Naranja' },
   'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel' },
   'verde': { bg: '#a8e6cf', name: 'Verde' },
   'azul': { bg: '#b3d9ff', name: 'Azul' },
+  'naranja-suave': { bg: '#fcad56', name: 'Naranja Suave' },
+  'azul-suave': { bg: '#6693bc', name: 'Azul Suave' },
+  'amarillo-brillante': { bg: '#f9d616', name: 'Amarillo Brillante' },
+  'amarillo-claro': { bg: '#f2ea87', name: 'Amarillo Claro' },
 } as const;
 
 const TAG_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F', '#BB8FCE'];

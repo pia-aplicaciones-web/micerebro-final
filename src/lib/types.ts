@@ -120,6 +120,8 @@ export interface TodoItem {
 }
 export interface TodoContent {
   title?: string;
+  // Etiqueta opcional para la lista (un solo tag corto)
+  label?: string;
   items: TodoItem[];
 }
 

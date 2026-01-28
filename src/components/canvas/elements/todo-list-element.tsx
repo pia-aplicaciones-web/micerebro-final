@@ -126,6 +126,7 @@ export default function TodoListElement(props: CommonElementProps) {
   }, [isSelected, bindDictationTarget]);
   const [newItemText, setNewItemText] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
+  const [isLabelPopoverOpen, setIsLabelPopoverOpen] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const newItemRef = useRef<HTMLTextAreaElement>(null);
 
@@ -203,6 +204,48 @@ export default function TodoListElement(props: CommonElementProps) {
     onUpdate(id, { content: updatedContent });
     handleAutoSaveChange(); // Programar auto-save
   };
+
+  const handleLabelChange = (value: string) => {
+    const updatedContent: TodoContent = { ...todoContent, label: value };
+    onUpdate(id, { content: updatedContent });
+    handleAutoSaveChange(); // Programar auto-save
+  };
+
+  // Ajustar automáticamente la altura del contenedor cuando cambian los ítems
+  useEffect(() => {
+    if (!cardRef.current) return;
+
+    const cardElement = cardRef.current;
+    const contentHeight = cardElement.scrollHeight;
+
+    const propsSize = (safeProperties as any).size;
+    const currentHeight =
+      (propsSize && typeof propsSize.height === 'number'
+        ? propsSize.height
+        : typeof height === 'number'
+          ? height
+          : 150);
+
+    // Evitar actualizaciones mínimas para no crear bucles
+    if (Math.abs(contentHeight - currentHeight) < 4) return;
+
+    const newSize = {
+      width:
+        (propsSize && typeof propsSize.width === 'number'
+          ? propsSize.width
+          : typeof width === 'number'
+            ? width
+            : 260),
+      height: contentHeight,
+    };
+
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        size: newSize,
+      },
+    });
+  }, [id, items, width, height, onUpdate, safeProperties]);
 
   const handleColorChange = (colorKey: { hex: string }) => {
     const selectedPalette = EXTENDED_PALETTES[colorKey.hex as keyof typeof EXTENDED_PALETTES];
@@ -491,6 +534,42 @@ export default function TodoListElement(props: CommonElementProps) {
               onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
               onFocusCapture={() => onEditElement(id)}
             />
+            {todoContent.label && (
+              <span
+                className="ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-black/10 text-black/70 max-w-[80px] truncate flex-shrink-0"
+                title={todoContent.label}
+              >
+                {todoContent.label}
+              </span>
+            )}
+            <Popover open={isLabelPopoverOpen} onOpenChange={setIsLabelPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 flex-shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                  title="Agregar etiqueta"
+                >
+                  <Plus className="h-3 w-3" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                onClick={(e) => e.stopPropagation()}
+                className="w-40 p-2 border border-gray-200 bg-white shadow-lg rounded-md"
+                align="start"
+              >
+                <Input
+                  autoFocus
+                  type="text"
+                  value={todoContent.label || ''}
+                  onChange={(e) => handleLabelChange(e.target.value)}
+                  placeholder="Etiqueta..."
+                  maxLength={24}
+                  className="h-7 text-xs"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Derecha: Botones de Acción */}

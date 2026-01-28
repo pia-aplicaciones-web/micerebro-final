@@ -182,24 +182,10 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
             }
           }}
           onTouchStart={(e) => {
-            // En móvil, establecer foco y cursor al tocar
-            e.stopPropagation(); // Evitar que el evento suba al contenedor
+            // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
+            e.stopPropagation();
             if (contentRef.current && !isPreview) {
               contentRef.current.focus();
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection) {
-                    if (selection.rangeCount === 0) {
-                      const range = document.createRange();
-                      range.selectNodeContents(contentRef.current!);
-                      range.collapse(false); // Al final
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-                }, 100);
-              });
             }
           }}
           className="outline-none min-h-[100px] w-full"

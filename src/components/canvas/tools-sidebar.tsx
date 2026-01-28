@@ -88,16 +88,17 @@ import { useMediaQuery } from '@/hooks/use-media-query';
 const PASTEL_COLORS = {
   'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel', label: 'Rosa Pastel' },
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro', label: 'Morado Claro' },
-  'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
   'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
   'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
   'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
   'menta': { bg: '#d9f99d', name: 'Verde Lima', label: 'Verde Lima' },
   'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel', label: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
-  'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
-  'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
   'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
+  'naranja-suave': { bg: '#fcad56', name: 'Naranja Suave', label: 'Naranja Suave' },
+  'azul-suave': { bg: '#6693bc', name: 'Azul Suave', label: 'Azul Suave' },
+  'amarillo-brillante': { bg: '#f9d616', name: 'Amarillo Brillante', label: 'Amarillo Brillante' },
+  'amarillo-claro': { bg: '#f2ea87', name: 'Amarillo Claro', label: 'Amarillo Claro' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({
@@ -672,7 +673,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
                 <Plus className="mr-2 h-4 w-4" />
-                <span>Dictado</span>
+                <span>iPhone</span>
               </DropdownMenuItem>
               {elementsOnCanvas.length > 0 && (
                 <>
@@ -718,7 +719,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             break;
                           case 'dictado':
                             const dictadoContentOpen = element.content as any;
-                            title = dictadoContentOpen?.title || 'Dictado';
+                            title = dictadoContentOpen?.title || 'iPhone';
                             break;
                           default:
                             title = 'Elemento';
@@ -775,7 +776,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             break;
                           case 'dictado':
                             const dictadoContentHidden = element.content as any;
-                            title = dictadoContentHidden?.title || 'Dictado';
+                            title = dictadoContentHidden?.title || 'iPhone';
                             break;
                           case 'todo':
                             const todoContent = element.content as TodoContent;
@@ -798,33 +799,17 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Notas */}
+          {/* Notas adhesivas (solo Tipo 2 - Header Compacto) */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <SidebarButton icon={StickyNote} label="Notas" title="Crear notas adhesivas" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5} className="max-h-[600px] overflow-y-auto">
-              {/* Tipo 1 - Header Elegante */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 1 - Header Elegante</div>
+              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Notas adhesivas</div>
               <div className="grid grid-cols-5 gap-2 px-3 pb-3">
                 {stickyNoteColors.map((color) => (
                   <DropdownMenuItem 
-                    key={`type1-${color.name}`} 
-                    onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } })}
-                    className="flex items-center justify-center cursor-pointer"
-                  >
-                    <div className="w-4 h-4 rounded-sm border border-gray-300/30" style={{ backgroundColor: color.bg }} />
-                  </DropdownMenuItem>
-                ))}
-              </div>
-              <DropdownMenuSeparator />
-              
-              {/* Tipo 2 - Header Compacto */}
-              <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase">Tipo 2 - Header Compacto</div>
-              <div className="grid grid-cols-5 gap-2 px-3 pb-3">
-                {stickyNoteColors.map((color) => (
-                  <DropdownMenuItem 
-                    key={`type2-${color.name}`} 
+                    key={`sticky-${color.name}`} 
                     onClick={() => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } })}
                     className="flex items-center justify-center cursor-pointer"
                   >
@@ -833,7 +818,6 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 ))}
               </div>
               <DropdownMenuSeparator />
-              
             </DropdownMenuContent>
           </DropdownMenu>
 

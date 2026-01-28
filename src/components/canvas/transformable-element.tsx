@@ -12,7 +12,6 @@ import DeleteElementDialog from './elements/delete-element-dialog';
 // Esto previene errores como "Cannot find module './948.js'" durante desarrollo
 import NotepadElement from './elements/notepad-element';
 // import CuadernoElement from './elements/cuaderno'; // DESACTIVADO - causando problemas
-import StickyNoteType1 from './elements/sticky-note-type1';
 import StickyNoteType2 from './elements/sticky-note-type2';
 import TodoListElement from './elements/todo-list-element';
 import ImageElement from './elements/image-element';
@@ -299,7 +298,16 @@ export default function TransformableElement({
       y: newPosition.y,
       properties: props,
     });
-  }, [element, updateElement, allElements, safeSize.width, safeSize.height, dragStartPos]);
+
+    // Si el elemento estaba centrado en vista y el usuario lo movió manualmente, ya no debemos "volver" a la posición original
+    if (isCenteredView && originalPosition) {
+      const totalDx = Math.abs(newPosition.x - originalPosition.x);
+      const totalDy = Math.abs(newPosition.y - originalPosition.y);
+      if (totalDx > 1 || totalDy > 1) {
+        setHasUserMovedWhileCentered(true);
+      }
+    }
+  }, [element, updateElement, allElements, safeSize.width, safeSize.height, dragStartPos, isCenteredView, originalPosition]);
 
   const onResizeStop = useCallback((e: MouseEvent | TouchEvent, direction: string, ref: HTMLElement, delta: ResizableDelta, newPosition: Position) => {
     const safeProperties = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
@@ -404,13 +412,9 @@ export default function TransformableElement({
   // Seleccionar componente según tipo y variante (para sticky notes)
   const ElementComponent = useMemo(() => {
     if (element.type === 'sticky') {
-      const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
-      const variant = (elementProps as any)?.variant;
-      if (variant === 'type1') return StickyNoteType1;
-      if (variant === 'type2') return StickyNoteType2;
-      // Si alguna nota antigua tiene variant 'type3', la mostramos como Tipo 2
-      if (variant === 'type3') return StickyNoteType2;
-      return StickyNoteType1; // Default
+      // Regla: eliminar notas tipo 1 y dejar solo tipo 2
+      // Cualquier variante antigua se renderiza siempre como StickyNoteType2
+      return StickyNoteType2;
     }
     return ElementComponentMap[element.type as keyof typeof ElementComponentMap] || (() => <div>Unknown element type: {element.type}</div>);
   }, [element.type, element.properties]);
@@ -427,6 +431,102 @@ export default function TransformableElement({
 
   const isGroupedFrame = false;
 
+  // Estado para centrar temporalmente el elemento en vista al hacer clic
+  const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number } | null>(null);
+  const [isCenteredView, setIsCenteredView] = useState(false);
+  const [hasUserMovedWhileCentered, setHasUserMovedWhileCentered] = useState(false);
+
+  // Función: mover elemento al centro del área visible del canvas (sin cambiar tamaño)
+  const centerElementInView = useCallback(() => {
+    // Solo aplicar a elementos sin padre (no dentro de contenedores) para evitar conflictos
+    if (element.parentId) return;
+    if (!canvasContainerRef.current) return;
+
+    const container = canvasContainerRef.current;
+
+    const scrollLeft = container.scrollLeft ?? 0;
+    const scrollTop = container.scrollTop ?? 0;
+    const visibleWidth = container.clientWidth;
+    const visibleHeight = container.clientHeight;
+
+    if (visibleWidth <= 0 || visibleHeight <= 0) return;
+
+    const targetX = Math.max(0, scrollLeft + visibleWidth / 2 - safeSize.width / 2);
+    const targetY = Math.max(0, scrollTop + visibleHeight / 2 - safeSize.height / 2);
+
+    // Guardar posición original solo la primera vez
+    if (!isCenteredView && !originalPosition) {
+      setOriginalPosition({ x: position.x, y: position.y });
+    }
+
+    setIsCenteredView(true);
+    setHasUserMovedWhileCentered(false);
+
+    const safeProperties = (typeof element.properties === 'object' && element.properties !== null
+      ? element.properties
+      : {}) as CanvasElementProperties;
+
+    const newPosition = { x: targetX, y: targetY };
+
+    const props = {
+      ...safeProperties,
+      size: {
+        ...(safeProperties.size || {}),
+        width: safeSize.width,
+        height: safeSize.height,
+      },
+      position: newPosition,
+      relativePosition: null,
+    };
+
+    Object.keys(props).forEach((k) => {
+      if ((props as any)[k] === undefined) delete (props as any)[k];
+    });
+
+    updateElement(element.id, {
+      x: newPosition.x,
+      y: newPosition.y,
+      properties: props,
+    });
+  }, [canvasContainerRef, element.parentId, element.properties, element.id, isCenteredView, originalPosition, position.x, position.y, safeSize.width, safeSize.height, updateElement]);
+
+  // Cuando se deselecciona el elemento, devolverlo a su posición original SI no fue movido mientras estaba centrado
+  useEffect(() => {
+    if (!isSelected) {
+      if (isCenteredView && originalPosition && !hasUserMovedWhileCentered && !element.parentId) {
+        const safeProperties = (typeof element.properties === 'object' && element.properties !== null
+          ? element.properties
+          : {}) as CanvasElementProperties;
+
+        const props = {
+          ...safeProperties,
+          size: {
+            ...(safeProperties.size || {}),
+            width: safeSize.width,
+            height: safeSize.height,
+          },
+          position: originalPosition,
+          relativePosition: null,
+        };
+
+        Object.keys(props).forEach((k) => {
+          if ((props as any)[k] === undefined) delete (props as any)[k];
+        });
+
+        updateElement(element.id, {
+          x: originalPosition.x,
+          y: originalPosition.y,
+          properties: props,
+        });
+      }
+
+      // Limpiar estado de centrado siempre que el elemento quede deseleccionado
+      setIsCenteredView(false);
+      setOriginalPosition(null);
+      setHasUserMovedWhileCentered(false);
+    }
+  }, [isSelected, isCenteredView, originalPosition, hasUserMovedWhileCentered, element.parentId, element.properties, element.id, safeSize.width, safeSize.height, updateElement]);
+
   const handleMouseDown = (e: MouseEvent) => {
     // Permitir que los eventos lleguen a los elementos editables
     const target = e.target as HTMLElement;
@@ -436,7 +536,14 @@ export default function TransformableElement({
     }
     // Solo seleccionar si no estamos en proceso de arrastre
     if (!isDraggingOrResizing) {
-      onSelectElement(element.id, e.altKey || e.shiftKey || e.metaKey || e.ctrlKey);
+      const isMultiSelect = e.altKey || e.shiftKey || e.metaKey || e.ctrlKey;
+      onSelectElement(element.id, isMultiSelect);
+
+      // Regla general: al pinchar, llevar el elemento al centro de la vista en la capa más alta
+      // Solo si no estaba ya seleccionado y no es multi-selección
+      if (!isSelected && !isMultiSelect) {
+        centerElementInView();
+      }
     }
   };
 
@@ -559,7 +666,9 @@ export default function TransformableElement({
         border: 'none',
         cursor: 'ew-resize'
       },
-    }
+    },
+    // Regla: solo arrastrar desde elementos con clase .drag-handle (no desde inputs o áreas de texto)
+    dragHandleClassName: 'drag-handle',
   }), [zIndex, isSelected, rotation, safeSize.width, safeSize.height, position, handleDragStart, onDragStop, onResizeStop, scale, element.parentId, element.type, canvasContainerRef.current]);
 
   return (

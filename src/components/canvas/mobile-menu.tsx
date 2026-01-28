@@ -90,16 +90,17 @@ interface MobileMenuProps {
 const PASTEL_COLORS = {
   'verde-teal': { bg: '#F8C1D9', name: 'Rosa Pastel', label: 'Rosa Pastel' },
   'morado-claro': { bg: '#e0cee0', name: 'Morado Claro', label: 'Morado Claro' },
-  'morado': { bg: '#aa72bf', name: 'Morado', label: 'Morado' },
   'azul': { bg: '#b3d9ff', name: 'Azul', label: 'Azul' },
   'calipso': { bg: '#28c4d8', name: 'Calipso', label: 'Calipso' },
   'verde': { bg: '#a8e6cf', name: 'Verde', label: 'Verde' },
   'menta': { bg: '#d9f99d', name: 'Verde Lima', label: 'Verde Lima' },
   'amarillo-dark': { bg: '#FFF4B8', name: 'Amarillo Pastel', label: 'Amarillo Pastel' },
   'amarillo': { bg: '#f2ed6d', name: 'Amarillo', label: 'Amarillo' },
-  'tierra': { bg: '#dbcea5', name: 'Tierra', label: 'Tierra' },
-  'naranja': { bg: '#ffbc21', name: 'Naranja', label: 'Naranja' },
   'coral': { bg: '#f26877', name: 'Coral', label: 'Coral' },
+  'naranja-suave': { bg: '#fcad56', name: 'Naranja Suave', label: 'Naranja Suave' },
+  'azul-suave': { bg: '#6693bc', name: 'Azul Suave', label: 'Azul Suave' },
+  'amarillo-brillante': { bg: '#f9d616', name: 'Amarillo Brillante', label: 'Amarillo Brillante' },
+  'amarillo-claro': { bg: '#f2ea87', name: 'Amarillo Claro', label: 'Amarillo Claro' },
 } as const;
 
 const stickyNoteColors = Object.entries(PASTEL_COLORS).map(([key, color]) => ({
@@ -208,7 +209,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Agregar Cuaderno', onClick: () => handleAddElement('notepad') },
         { label: 'Nuevo Block', onClick: () => handleAddElement('yellow-notepad') },
         { label: 'Agregar Apuntes', onClick: () => handleAddElement('mini-notes') },
-        { label: 'Nuevo cuaderno dictar', onClick: () => handleAddElement('dictado') },
+        { label: 'iPhone', onClick: () => handleAddElement('dictado') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
         {
@@ -236,7 +237,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 break;
               case 'dictado':
                 const dictadoContentOpen = element.content as any;
-                title = dictadoContentOpen?.title || 'Dictado';
+                title = dictadoContentOpen?.title || 'iPhone';
                 break;
               default:
                 title = 'Elemento';
@@ -267,7 +268,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 break;
               case 'dictado':
                 const dictadoContent = element.content as any;
-                title = dictadoContent?.title || 'Dictado';
+                title = dictadoContent?.title || 'iPhone';
                 break;
               case 'todo':
                 const todoContent = element.content as TodoContent;
@@ -285,18 +286,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       label: 'Notas Adhesivas',
       icon: StickyNote,
       subMenu: [
-        // Tipo 1 - Header Elegante
         {
-          label: 'Tipo 1 - Header Elegante',
-          subMenu: stickyNoteColors.map(color => ({
-            label: '',
-            onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type1' } }),
-            icon: () => <div className="w-4 h-4 rounded-sm border border-gray-300/30 mr-2" style={{ backgroundColor: color.bg }} />
-          }))
-        },
-        // Tipo 2 - Header Compacto
-        {
-          label: 'Tipo 2 - Header Compacto',
+          label: 'Notas adhesivas',
           subMenu: stickyNoteColors.map(color => ({
             label: '',
             onClick: () => handleAddElement('sticky', { color: color.name, properties: { variant: 'type2' } }),
