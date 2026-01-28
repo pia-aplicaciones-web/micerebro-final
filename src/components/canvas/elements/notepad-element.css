@@ -74,6 +74,10 @@
   /* FIX: Prevenir scroll automÃ¡tico al enfocar/escribir */
   scroll-margin: 0;
   overflow-anchor: none;
+  /* Mejorar interacción touch en móvil */
+  touch-action: manipulation;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 /* FIX: Prevenir scroll automÃ¡tico del navegador al enfocar */

@@ -166,8 +166,49 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
           onChange={handleTextChange}
           // onFocus={() => !isSelected && onSelectElement(id, false)} // REMOVIDO - interfiere con edición
           contentEditable={!isPreview}
+          onFocus={() => {
+            // Asegurar que el cursor esté visible
+            if (contentRef.current) {
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  const range = document.createRange();
+                  range.selectNodeContents(contentRef.current!);
+                  range.collapse(false); // Al final
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }, 50);
+            }
+          }}
+          onTouchStart={(e) => {
+            // En móvil, establecer foco y cursor al tocar
+            e.stopPropagation(); // Evitar que el evento suba al contenedor
+            if (contentRef.current && !isPreview) {
+              contentRef.current.focus();
+              requestAnimationFrame(() => {
+                setTimeout(() => {
+                  const selection = window.getSelection();
+                  if (selection) {
+                    if (selection.rangeCount === 0) {
+                      const range = document.createRange();
+                      range.selectNodeContents(contentRef.current!);
+                      range.collapse(false); // Al final
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+                }, 100);
+              });
+            }
+          }}
           className="outline-none min-h-[100px] w-full"
-          style={{ backgroundColor: 'transparent' }}
+          style={{ 
+            backgroundColor: 'transparent',
+            touchAction: 'manipulation',
+            WebkitUserSelect: 'text',
+            userSelect: 'text',
+          }}
         />
       </div>
   );
