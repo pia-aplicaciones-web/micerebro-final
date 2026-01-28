@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { TwitterPicker } from 'react-color';
-import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText, Camera } from 'lucide-react';
+import { Paintbrush, GripVertical, Plus, X, Maximize, FileImage, Copy, FileText, Camera, Minus, Volume2, Save, RotateCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -413,6 +413,56 @@ export default function StickyNoteElement(props: CommonElementProps) {
     }
   };
 
+  // Leer en voz alta
+  const [isReading, setIsReading] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const handleReadAloud = useCallback(() => {
+    if (!editorRef.current) return;
+
+    if (isReading) {
+      window.speechSynthesis.cancel();
+      setIsReading(false);
+      setIsPaused(false);
+      return;
+    }
+
+    if (isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+      return;
+    }
+
+    const text = editorRef.current.innerText || '';
+    if (!text.trim()) {
+      toast({ variant: 'destructive', title: 'Sin contenido', description: 'No hay texto para leer' });
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'es-ES';
+    utterance.rate = 0.85;
+
+    utterance.onend = () => {
+      setIsReading(false);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setIsReading(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+    setIsReading(true);
+  }, [isReading, isPaused, toast]);
+
+  // Forzar guardado
+  const handleForceSave = useCallback(async () => {
+    await handleAutoSaveBlur();
+    toast({ title: 'Guardado', description: 'Nota adhesiva guardada' });
+  }, [handleAutoSaveBlur, toast]);
+
   // Toggle minimize (copiado del notepad)
   const toggleMinimize = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -483,32 +533,92 @@ export default function StickyNoteElement(props: CommonElementProps) {
         }}
         onDoubleClick={() => onEditElement(id)}
       >
-      {/* Header con iconos en la esquina superior izquierda */}
-      <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-        {/* Botón de cerrar siempre visible */}
+      {/* Header moderno con funciones - siempre visible para variant transparente */}
+      <div className={cn(
+        "absolute top-2 left-2 flex items-center gap-1 z-10 transition-opacity",
+        variant === 'transparente' ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+        "bg-white/90 backdrop-blur-sm rounded-lg px-2 py-1 shadow-sm border border-gray-200/50"
+      )}>
+        {/* Botón de cerrar */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 p-1 hover:bg-black/10 rounded opacity-100"
+          className="h-7 w-7 p-1 hover:bg-black/10 rounded"
           onClick={handleClose}
           onMouseDown={(e) => e.stopPropagation()}
           title="Cerrar nota adhesiva"
         >
           <X className="h-4 w-4 text-gray-700" />
         </Button>
+        
+        {/* Drag handle */}
         <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded">
           <GripVertical className="h-4 w-4 text-gray-700" />
         </div>
+
+        {/* Botón minimizar */}
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 p-1 hover:bg-black/10 rounded"
+          className="h-7 w-7 p-1 hover:bg-black/10 rounded"
+          onClick={toggleMinimize}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Minimizar"
+        >
+          <Minus className="h-4 w-4 text-gray-700" />
+        </Button>
+
+        {/* Botón guardar */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 p-1 hover:bg-black/10 rounded"
+          onClick={handleForceSave}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Guardar"
+        >
+          <Save className="h-4 w-4 text-gray-700" />
+        </Button>
+
+        {/* Botón leer en voz alta */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn("h-7 w-7 p-1 hover:bg-black/10 rounded", isReading && "bg-blue-100")}
+          onClick={handleReadAloud}
+          onMouseDown={(e) => e.stopPropagation()}
+          title="Leer en voz alta"
+        >
+          <Volume2 className={cn("h-4 w-4", isReading ? "text-blue-600" : "text-gray-700")} />
+        </Button>
+
+        {/* Botón crear etiqueta */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 p-1 hover:bg-black/10 rounded"
           title="Crear etiqueta"
           onClick={handleAddContent}
           onMouseDown={(e) => e.stopPropagation()}
         >
           <Plus className="h-4 w-4 text-gray-700" />
         </Button>
+
+        {/* Botón rotar (solo para variant transparente) */}
+        {variant === 'transparente' && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 p-1 hover:bg-black/10 rounded"
+            onClick={handleRotate}
+            onMouseDown={(e) => e.stopPropagation()}
+            title="Rotar 15°"
+          >
+            <RotateCw className="h-4 w-4 text-gray-700" />
+          </Button>
+        )}
+
+        {/* Botones adicionales cuando está seleccionado */}
         {isSelected && (
           <>
             <Popover>
@@ -516,8 +626,9 @@ export default function StickyNoteElement(props: CommonElementProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 p-1 hover:bg-black/10 rounded"
+                  className="h-7 w-7 p-1 hover:bg-black/10 rounded"
                   onClick={(e) => e.stopPropagation()}
+                  title="Cambiar color"
                 >
                   <Paintbrush className="h-4 w-4 text-gray-700" />
                 </Button>
@@ -548,13 +659,14 @@ export default function StickyNoteElement(props: CommonElementProps) {
                 </div>
               </PopoverContent>
             </Popover>
-            {/* Botón exportar PNG */}
+            
+            {/* Menú de más opciones */}
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 p-1 hover:bg-black/10 rounded"
+                  className="h-7 w-7 p-1 hover:bg-black/10 rounded"
                   title="Más opciones"
                 >
                   <Maximize className="h-4 w-4 text-gray-700" />
@@ -667,8 +779,10 @@ export default function StickyNoteElement(props: CommonElementProps) {
           className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
           style={{
             color: currentPalette.text,
-            fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
-            fontSize: fontSize,
+            fontFamily: variant === 'transparente' 
+              ? '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+              : '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
+            fontSize: variant === 'transparente' ? '16px' : fontSize,
             lineHeight: '1.6',
             minHeight: 'calc(100% - 1rem)',
             boxSizing: 'border-box',
