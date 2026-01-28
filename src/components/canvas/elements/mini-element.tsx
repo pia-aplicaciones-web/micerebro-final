@@ -387,6 +387,39 @@ export default function MiniElement(props: CommonElementProps) {
           contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
           onInput={handleContentInput}
           onBlur={handleContentBlur}
+          onFocus={() => {
+            // Asegurar que el cursor esté visible
+            if (contentRef.current) {
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  const range = document.createRange();
+                  range.selectNodeContents(contentRef.current!);
+                  range.collapse(false); // Al final
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }, 50);
+            }
+          }}
+          onTouchStart={(e) => {
+            // En móvil, establecer foco y cursor al tocar
+            if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
+              contentRef.current.focus();
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection) {
+                  if (selection.rangeCount === 0) {
+                    const range = document.createRange();
+                    range.selectNodeContents(contentRef.current!);
+                    range.collapse(false); // Al final
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
+                }
+              }, 50);
+            }
+          }}
           onMouseDown={(e) => {
             // CRÍTICO: Prevenir que el drag se active cuando se está seleccionando texto
             // Si el usuario hace clic en el área de texto, no activar el drag

@@ -625,7 +625,40 @@ export default function StickyNoteElement(props: CommonElementProps) {
           suppressContentEditableWarning
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}
-          onFocus={() => onEditElement(id)}
+          onFocus={() => {
+            onEditElement(id);
+            // Asegurar que el cursor esté visible
+            if (editorRef.current) {
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection && selection.rangeCount === 0) {
+                  const range = document.createRange();
+                  range.selectNodeContents(editorRef.current!);
+                  range.collapse(false); // Al final
+                  selection.removeAllRanges();
+                  selection.addRange(range);
+                }
+              }, 50);
+            }
+          }}
+          onTouchStart={(e) => {
+            // En móvil, establecer foco y cursor al tocar
+            if (editorRef.current && !isPreview) {
+              editorRef.current.focus();
+              setTimeout(() => {
+                const selection = window.getSelection();
+                if (selection) {
+                  if (selection.rangeCount === 0) {
+                    const range = document.createRange();
+                    range.selectNodeContents(editorRef.current!);
+                    range.collapse(false); // Al final
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                  }
+                }
+              }, 50);
+            }
+          }}
           onPaste={handlePaste}
           className="text-base font-medium break-words outline-none cursor-text p-4 pt-6 w-full h-full overflow-auto"
           style={{
