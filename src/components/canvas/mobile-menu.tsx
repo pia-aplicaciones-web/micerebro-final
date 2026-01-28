@@ -21,7 +21,9 @@ import {
   List,
   MapPin,
   MessageCircle,
-  ChevronDown
+  ChevronDown,
+  Mic,
+  MicOff
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -80,6 +82,8 @@ interface MobileMenuProps {
   onAddImageFromUrlWithCrop: () => void;
   onExportBoardToPng: () => void;
   onDeleteAllUserImages: () => void;
+  isListening?: boolean;
+  onToggleDictation?: () => void;
 }
 
 const stickyNoteColors = [
@@ -98,6 +102,8 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   boards,
   boardId,
   user,
+  isListening = false,
+  onToggleDictation,
   onOpenNotepad,
   onLocateElement,
   addElement,
@@ -156,6 +162,17 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   };
 
   const menuItems = useMemo(() => [
+    {
+      label: isListening ? 'Detener' : 'Dictar',
+      icon: isListening ? MicOff : Mic,
+      onClick: () => {
+        if (onToggleDictation) {
+          onToggleDictation();
+        }
+        onClose();
+      },
+      className: isListening ? 'bg-red-500 text-white hover:bg-red-600 animate-pulse' : '',
+    },
     {
       label: 'Tableros',
       icon: LayoutDashboard,
@@ -328,7 +345,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   ].filter(item => {
     const excludedLabels = ["GUIA DE FOTOS", "MI PLAN", "COLUMNA"];
     return !excludedLabels.includes(item.label);
-  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose]);
+  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose, isListening, onToggleDictation]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>

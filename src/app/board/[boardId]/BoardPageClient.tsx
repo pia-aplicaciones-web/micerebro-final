@@ -818,21 +818,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             </Button>
           )}
           {isMobile && (
-            <Button
-              variant="ghost"
-              className={cn(
-                "fixed top-4 right-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3",
-                isListening && "bg-red-500 border-red-600 animate-pulse"
-              )}
-              onClick={toggleListening}
-            >
-              <Mic className={cn(
-                "h-8 w-8",
-                isListening ? "text-white" : "text-black"
-              )} />
-            </Button>
-          )}
-          {isMobile && (
             <MobileMenu
               isOpen={isMobileMenuOpen}
               onClose={handleToggleMobileMenu}
@@ -842,6 +827,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               user={user}
               onOpenNotepad={handleOpenNotepad}
               onLocateElement={handleLocateElement}
+              isListening={isListening}
+              onToggleDictation={toggleListening}
               addElement={addElement}
               onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
               onDeleteBoard={handleDeleteBoard}
