@@ -300,7 +300,28 @@ export default function TransformableElement({
     }
   }, [isSelected, isCenteredView, originalPosition, hasUserMovedWhileCentered, element.parentId, element.properties, element.id, safeSize.width, safeSize.height, updateElement]);
 
-  
+  // FIX: Evitar estado "congelado" cuando isDraggingOrResizing queda true (ej. onDragStop no se disparó).
+  // Reset al deseleccionar y al perder foco de ventana para que el header vuelva a ser clickeable.
+  useEffect(() => {
+    if (!isSelected) {
+      setIsDraggingOrResizing(false);
+    }
+  }, [isSelected]);
+
+  useEffect(() => {
+    const resetDragging = () => setIsDraggingOrResizing(false);
+    const onBlur = () => resetDragging();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') resetDragging();
+    };
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
+
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
     // Validar umbral de movimiento para evitar arrastres accidentales
     if (dragStartPos) {
@@ -678,6 +699,7 @@ export default function TransformableElement({
           data-element-id={element.id}
           data-element-type={element.type}
           className="w-full h-full relative group"
+          style={{ pointerEvents: 'auto' }}
           onTouchStart={(e) => {
             // Verificar si el toque es en un elemento editable antes de manejar
             const target = e.target as HTMLElement;
