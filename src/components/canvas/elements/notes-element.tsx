@@ -30,14 +30,15 @@ export default function NotesElement(props: CommonElementProps) {
     deleteElement,
     isSelected,
     isPreview,
+    minimized: minimizedProp,
   } = props;
 
   const { toast } = useToast();
   const contentRef = useRef<HTMLDivElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const isMinimized = !!minimizedProp;
 
   // Parsear contenido
   const typedContent = (content || {}) as { text?: string; searchQuery?: string; title?: string; pages?: string[]; currentPage?: number };
@@ -429,19 +430,36 @@ export default function NotesElement(props: CommonElementProps) {
 
 
 
-  // Toggle minimize - FIX CRÍTICO: Guardar estado en elemento para persistencia
-  const toggleMinimize = useCallback(() => {
+  // Toggle minimize: guardar contenido antes de minimizar para no perder datos
+  const toggleMinimize = useCallback(async () => {
+    if (isPreview) return;
     const newMinimizedState = !isMinimized;
-    setIsMinimized(newMinimizedState);
-
-    // CRÍTICO: Guardar estado de minimización en el elemento para persistencia
-    onUpdate(id, {
-      properties: {
-        ...properties,
-        minimized: newMinimizedState
-      }
-    });
-  }, [isMinimized, onUpdate, id, properties]);
+    handleChange();
+    const currentText = contentRef.current?.innerText ?? contentRef.current?.textContent ?? typedContent.text ?? '';
+    const updatedContent = { ...typedContent, text: currentText, searchQuery: typedContent.searchQuery ?? '' };
+    if (newMinimizedState) {
+      const currentSize = (properties as any)?.size || { width: 794, height: 567 };
+      const w = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 794;
+      const h = typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 567;
+      onUpdate(id, {
+        minimized: true,
+        content: updatedContent,
+        properties: {
+          ...properties,
+          size: { width: w, height: 48 },
+          originalSize: { width: w, height: h },
+        },
+      });
+    } else {
+      const { originalSize, ...restProps } = (properties || {}) as any;
+      const restoredSize = originalSize || { width: 794, height: 567 };
+      onUpdate(id, {
+        minimized: false,
+        content: updatedContent,
+        properties: { ...restProps, size: restoredSize },
+      });
+    }
+  }, [isMinimized, isPreview, onUpdate, id, properties, typedContent, handleChange]);
 
   // Handle delete
   const handleDelete = useCallback(() => {

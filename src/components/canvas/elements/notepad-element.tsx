@@ -1206,6 +1206,9 @@ export default function NotepadElement(props: CommonElementProps) {
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Completa" onClick={handleInsertDate}><Calendar className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
+                    <Button variant="ghost" size="icon" className="size-7" title="Minimizar" onMouseDown={(e) => {e.stopPropagation(); toggleMinimize(e);}}>
+                      <Minus className="size-4" />
+                    </Button>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7" title="Más opciones"><MoreVertical className="size-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>

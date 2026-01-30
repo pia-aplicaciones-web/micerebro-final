@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { CommonElementProps, LibretaContent } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GripVertical, FileText, Trash2, Maximize, Check, Calendar, ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
+import { GripVertical, FileText, Trash2, Maximize, Minus, Check, Calendar, ArrowLeft, ArrowRight, Plus, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
@@ -27,6 +27,7 @@ export default function LibretaElement(props: CommonElementProps) {
     isSelected,
     isPreview = false,
     parentId,
+    minimized = false,
   } = props;
 
   // Si está dentro de un contenedor, no mostrar header para evitar doble header
@@ -194,6 +195,39 @@ export default function LibretaElement(props: CommonElementProps) {
     }
   }, [properties.size, typedContent.text, typedContent.title]);
 
+  const toggleMinimize = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (isPreview) return;
+    const isCurrentlyMinimized = !!minimized;
+    const currentSize = (properties as any)?.size || { width: 378, height: 567 };
+    const currentSizeNumeric = {
+      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 378,
+      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 567,
+    };
+    if (isCurrentlyMinimized) {
+      const { originalSize, ...restProps } = (properties || {}) as any;
+      const restoredSize = originalSize || { width: 378, height: 567 };
+      onUpdate(id, { minimized: false, properties: { ...restProps, size: restoredSize } });
+    } else {
+      await handleTitleAutoSave();
+      await forceSave();
+      const titleText = titleRef.current?.innerText ?? typedContent.title ?? 'Libreta';
+      const textHtml = contentRef.current?.innerHTML ?? typedContent.text ?? '';
+      const updatedContent = { ...typedContent, title: titleText, text: textHtml };
+      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 378;
+      onUpdate(id, {
+        minimized: true,
+        content: updatedContent,
+        properties: {
+          ...properties,
+          size: { width: currentWidth, height: 48 },
+          originalSize: currentSizeNumeric,
+        },
+      });
+    }
+  }, [isPreview, minimized, properties, onUpdate, id, handleTitleAutoSave, forceSave, typedContent]);
+
   // Función para manejar clic en la libreta (mantener al frente)
   const handleLibretaClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('.drag-handle')) {
@@ -209,6 +243,20 @@ export default function LibretaElement(props: CommonElementProps) {
       }
     }, 2000);
   }, [id, safeProperties, onUpdate, isSelected]);
+
+  if (minimized && !hasParent) {
+    return (
+      <Card className="w-full flex items-center rounded-lg shadow-lg border border-gray-200/50 bg-white h-12" data-element-id={id}>
+        <div className="p-2 flex flex-row items-center gap-1 w-full drag-handle">
+          <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
+          <p className="font-headline text-sm font-semibold truncate flex-grow">{typedContent.title || 'Libreta'}</p>
+          <Button variant="ghost" size="icon" className="h-6 w-6" title="Maximizar" onMouseDown={(e) => { e.stopPropagation(); toggleMinimize(e); }}>
+            <Maximize className="h-4 w-4 text-gray-700" />
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <>
@@ -259,6 +307,15 @@ export default function LibretaElement(props: CommonElementProps) {
                   onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize();}}
                 >
                   <Maximize className="h-4 w-4 text-gray-700" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 hover:bg-gray-200"
+                  title={minimized ? 'Maximizar' : 'Minimizar'}
+                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
+                >
+                  {minimized ? <Maximize className="h-4 w-4 text-gray-700" /> : <Minus className="h-4 w-4 text-gray-700" />}
                 </Button>
                 <Button
                   variant="ghost"

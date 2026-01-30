@@ -56,7 +56,6 @@ export default function YellowNotepadElement(props: CommonElementProps) {
   const titleRef = useRef<HTMLDivElement>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isExportingPng, setIsExportingPng] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isExportPdfDialogOpen, setIsExportPdfDialogOpen] = useState(false);
@@ -453,8 +452,8 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     }
   }, [id, deleteElement]);
 
-  // Toggle minimize (copiado del notepad)
-  const toggleMinimize = useCallback((e: React.MouseEvent) => {
+  // Toggle minimize: guardar contenido antes de minimizar para no perder datos
+  const toggleMinimize = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (isPreview) return;
@@ -462,45 +461,50 @@ export default function YellowNotepadElement(props: CommonElementProps) {
     const isCurrentlyMinimized = !!minimized;
     const currentSize = (properties as any)?.size || { width: 400, height: 600 };
 
-    // Convertir currentSize a valores numéricos para originalSize
     const currentSizeNumeric = {
       width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400,
       height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 600,
     };
 
-    if (isMinimized) {
-        // Restaurar: recuperar tamaño original
-        const { originalSize, ...restProps } = (properties || {}) as any;
-        const restoredSize = originalSize || { width: 400, height: 600 };
-        const newProperties = {
-          ...restProps,
-          size: restoredSize
-        };
-
-        onUpdate(id, {
-            minimized: false,
-            properties: newProperties,
-        });
+    if (isCurrentlyMinimized) {
+      const { originalSize, ...restProps } = (properties || {}) as any;
+      const restoredSize = originalSize || { width: 400, height: 600 };
+      onUpdate(id, {
+        minimized: false,
+        properties: { ...restProps, size: restoredSize },
+      });
     } else {
-        // Minimizar: guardar tamaño actual y reducir altura
-        const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400;
-        onUpdate(id, {
-            minimized: true,
-            properties: {
-              ...properties,
-              size: { width: currentWidth, height: 48 },
-              originalSize: currentSizeNumeric
-            },
-        });
+      await handleTitleBlurAutoSave();
+      await handleAutoSaveBlur();
+      const titleText = titleRef.current?.innerText ?? typedContent.title ?? '';
+      const currentPageHtml = contentRef.current?.innerHTML ?? typedContent.pages?.[currentPageIndex] ?? '';
+      const updatedPages = [...(typedContent.pages || [])];
+      updatedPages[currentPageIndex] = currentPageHtml;
+      const updatedContent = {
+        ...typedContent,
+        title: titleText,
+        pages: updatedPages,
+        searchQuery: typedContent.searchQuery ?? searchQuery,
+      };
+      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 400;
+      onUpdate(id, {
+        minimized: true,
+        content: updatedContent,
+        properties: {
+          ...properties,
+          size: { width: currentWidth, height: 48 },
+          originalSize: currentSizeNumeric,
+        },
+      });
     }
-  }, [isPreview, isMinimized, properties, onUpdate, id]);
+  }, [isPreview, minimized, properties, onUpdate, id, handleTitleBlurAutoSave, handleAutoSaveBlur, typedContent, currentPageIndex, searchQuery]);
 
   return (
     <div 
       data-element-id={id}
       className={cn(
         'relative w-full h-full flex flex-col overflow-hidden',
-        isMinimized ? 'h-20' : 'h-full'
+        minimized ? 'h-20' : 'h-full'
       )}
       style={{
         backgroundColor: '#FFFFE0', // Amarillo claro
@@ -596,6 +600,16 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           >
             <CalendarDays className="h-4 w-4" />
           </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 hover:bg-black/10 p-0"
+            title={minimized ? 'Maximizar' : 'Minimizar'}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
+            style={{ color: '#000000' }}
+          >
+            {minimized ? <Maximize className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -658,7 +672,8 @@ export default function YellowNotepadElement(props: CommonElementProps) {
         </div>
       </div>
 
-      {/* Content Area - Amarillo con líneas */}
+      {/* Content Area - solo visible cuando no está minimizado */}
+      {!minimized && (
       <div
         className="flex-1 overflow-y-auto relative"
         style={{
@@ -766,9 +781,10 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           </div>
         )}
       </div>
+      )}
 
-      {/* Controles de página */}
-      {!isPreview && (
+      {/* Controles de página - solo cuando no está minimizado */}
+      {!minimized && !isPreview && (
         <div className="p-2 border-t flex items-center justify-between" style={{ backgroundColor: '#FFF9C4', borderTop: '1px solid #ADD8E6' }}>
           <Button
             variant="ghost"
@@ -810,7 +826,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
       )}
 
       {/* Panel de información */}
-      {isInfoOpen && (
+      {!minimized && isInfoOpen && (
         <div className='absolute inset-0 bg-white/95 z-20 p-4 text-xs overflow-y-auto' onClick={() => setIsInfoOpen(false)} style={{ backgroundColor: 'rgba(255, 255, 224, 0.95)' }}>
           <h3 className='font-bold mb-2 text-base' style={{ color: '#000000' }}>Comandos de Dictado por Voz</h3>
           <p style={{ color: '#000000' }}>WIP</p>

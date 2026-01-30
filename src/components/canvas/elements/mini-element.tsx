@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import type { CommonElementProps, MiniContent } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { GripVertical, Trash2, FileImage, MoreVertical, Square, CalendarDays, Copy, X, Lock } from 'lucide-react';
+import { GripVertical, Trash2, FileImage, MoreVertical, Square, CalendarDays, Copy, X, Lock, Minus, Maximize } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
@@ -27,6 +27,7 @@ export default function MiniElement(props: CommonElementProps) {
     deleteElement,
     isSelected,
     isPreview,
+    minimized = false,
     width = 302, // 8cm
     height = 362, // 12cm
   } = props;
@@ -54,7 +55,7 @@ export default function MiniElement(props: CommonElementProps) {
 
 
   // Hook de autoguardado
-  const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange } = useAutoSave({
+  const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
     getContent: () => {
       const html = contentRef.current?.innerText || '';
       return html;
@@ -171,7 +172,36 @@ export default function MiniElement(props: CommonElementProps) {
     await handleAutoSaveBlur();
   }, [handleAutoSaveBlur]);
 
-
+  const toggleMinimize = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (isPreview) return;
+    const isCurrentlyMinimized = !!minimized;
+    const currentSize = (properties as any)?.size || { width: 302, height: 529 };
+    const currentSizeNumeric = {
+      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 302,
+      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 529,
+    };
+    if (isCurrentlyMinimized) {
+      const { originalSize, ...restProps } = (properties || {}) as any;
+      const restoredSize = originalSize || { width: 302, height: 529 };
+      onUpdate(id, { minimized: false, properties: { ...restProps, size: restoredSize } });
+    } else {
+      await forceSave();
+      const currentText = contentRef.current?.innerText ?? contentRef.current?.textContent ?? typedContent.text ?? '';
+      const updatedContent = { ...typedContent, text: currentText };
+      const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 302;
+      onUpdate(id, {
+        minimized: true,
+        content: updatedContent,
+        properties: {
+          ...properties,
+          size: { width: currentWidth, height: 48 },
+          originalSize: currentSizeNumeric,
+        },
+      });
+    }
+  }, [isPreview, minimized, properties, onUpdate, id, forceSave, typedContent]);
 
   // Handle delete
   const handleDelete = useCallback(() => {
@@ -246,6 +276,29 @@ export default function MiniElement(props: CommonElementProps) {
     setIsUnlockedForEditing(true);
     // El diálogo se cierra automáticamente en MiniPasswordDialog
   }, []);
+
+  if (minimized) {
+    return (
+      <div
+        data-element-id={id}
+        className="relative w-full h-full flex items-center rounded-lg shadow-md border-none"
+        style={{
+          backgroundColor: '#ADD8E6',
+          borderRadius: '4px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          height: 48,
+        }}
+      >
+        <div className="p-2 flex flex-row items-center gap-1 w-full drag-handle">
+          <GripVertical className="h-4 w-4 text-gray-600 cursor-grab" />
+          <p className="font-headline text-sm font-semibold truncate flex-grow">Mini</p>
+          <Button variant="ghost" size="icon" className="h-6 w-6" title="Maximizar" onMouseDown={(e) => { e.stopPropagation(); toggleMinimize(e); }}>
+            <Maximize className="h-4 w-4 text-gray-700" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -367,6 +420,16 @@ export default function MiniElement(props: CommonElementProps) {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 hover:bg-black/10 p-0"
+            title={minimized ? 'Maximizar' : 'Minimizar'}
+            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
+            style={{ color: '#000000' }}
+          >
+            {minimized ? <Maximize className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+          </Button>
           <Button
             variant="ghost"
             size="icon"

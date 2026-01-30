@@ -119,7 +119,7 @@ export default function DictadoElement(props: CommonElementProps) {
     toast({ title: 'Guardado', description: 'Contenido guardado correctamente' });
   }, [forceSave, toast]);
 
-  const toggleMinimize = useCallback((e: React.MouseEvent) => {
+  const toggleMinimize = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     if (isPreview) return;
@@ -135,27 +135,28 @@ export default function DictadoElement(props: CommonElementProps) {
     if (isCurrentlyMinimized) {
       const { originalSize, ...restProps } = (properties || {}) as Partial<CanvasElementProperties>;
       const restoredSize = originalSize || { width: 280, height: 600 };
-      const newProperties: Partial<CanvasElementProperties> = {
-        ...restProps,
-        size: restoredSize
-      };
-
       onUpdate(id, {
         minimized: false,
-        properties: newProperties,
+        properties: { ...restProps, size: restoredSize },
       });
     } else {
+      await handleTitleBlurAutoSave();
+      await handleAutoSaveBlur();
+      const titleText = titleRef.current?.innerText ?? typedContent.title ?? '';
+      const contentHtml = contentRef.current?.innerHTML ?? typedContent.content ?? '';
+      const updatedContent: DictadoContent = { ...typedContent, title: titleText, content: contentHtml };
       const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 280;
       onUpdate(id, {
         minimized: true,
+        content: updatedContent,
         properties: {
           ...properties,
           size: { width: currentWidth, height: 48 },
-          originalSize: currentSizeNumeric
+          originalSize: currentSizeNumeric,
         },
       });
     }
-  }, [isPreview, minimized, properties, onUpdate, id]);
+  }, [isPreview, minimized, properties, onUpdate, id, handleTitleBlurAutoSave, handleAutoSaveBlur, typedContent]);
 
   const handleClose = (e: React.MouseEvent) => {
     e.stopPropagation();

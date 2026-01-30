@@ -732,8 +732,8 @@ export default function TransformableElement({
                   backgroundColor={element.backgroundColor}
                   hidden={element.hidden}
                   minimized={
-                    element.type === 'notepad'
-                      ? (element as NotepadCanvasElement).minimized
+                    ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado'].includes(element.type)
+                      ? (element as { minimized?: boolean }).minimized
                       : undefined
                   }
                   tags={element.type === 'sticky' ? (element as StickyCanvasElement).tags : undefined}
