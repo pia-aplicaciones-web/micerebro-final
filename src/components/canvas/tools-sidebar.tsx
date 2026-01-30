@@ -380,7 +380,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
     const w = typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || 300;
     const h = typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || 200;
     const currentSize = { width: w, height: h };
-    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'dictado'];
+    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado'];
     if (typesWithMinimized.includes(element.type)) {
       updateElement(id, {
         minimized: true,
@@ -570,7 +570,12 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       <ChevronDown className="w-4 h-4 ml-auto" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="center" className="w-56">
+                  <DropdownMenuContent side="top" align="center" className="w-56 max-h-[70vh] overflow-y-auto">
+                    <DropdownMenuItem onClick={handlePasteElement}>
+                      <ClipboardPaste className="mr-2 h-4 w-4" />
+                      <span>Pegar</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
                       <Plus className="mr-2 h-4 w-4" />
                       <span>Agregar Cuaderno</span>
@@ -583,6 +588,90 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       <Plus className="mr-2 h-4 w-4" />
                       <span>Agregar Apuntes</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('libreta')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Libreta</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('mini')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Mini</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>iPhone</span>
+                    </DropdownMenuItem>
+                    {elementsOnCanvas.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <span>Elementos Abiertos ({elementsOnCanvas.length})</span>
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {elementsOnCanvas.map((element) => {
+                              let title = 'Sin título';
+                              switch (element.type) {
+                                case 'notepad': {
+                                  const notepadContent = element.content as NotepadContent;
+                                  title = notepadContent?.title || 'Cuaderno';
+                                  break;
+                                }
+                                case 'yellow-notepad':
+                                  title = 'Cuaderno Amarillo';
+                                  break;
+                                case 'notes':
+                                  title = 'Apuntes';
+                                  break;
+                                case 'libreta': {
+                                  const libretaContent = element.content as LibretaContent;
+                                  title = libretaContent?.title || 'Libreta';
+                                  break;
+                                }
+                                case 'mini':
+                                  title = 'Mini';
+                                  break;
+                                case 'dictado': {
+                                  const dictadoContentOpen = element.content as any;
+                                  title = dictadoContentOpen?.title || 'iPhone';
+                                  break;
+                                }
+                                default:
+                                  title = 'Elemento';
+                              }
+                              return (
+                                <DropdownMenuItem
+                                  key={element.id}
+                                  onClick={() => onLocateElement(element.id)}
+                                  className="flex items-center justify-between gap-2"
+                                >
+                                  <span className="flex-1 truncate">{title}</span>
+                                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      title="Copiar"
+                                      onClick={(e) => handleCopyElement(e, element)}
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      title="Minimizar"
+                                      onClick={(e) => handleMinimizeElement(e, element)}
+                                    >
+                                      <Minus className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                </DropdownMenuItem>
+                              );
+                            })}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
