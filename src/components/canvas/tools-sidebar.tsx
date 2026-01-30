@@ -35,6 +35,9 @@ import { BookCopy,
   Frame,
   Grid3X3,
   Maximize,
+  Minus,
+  Copy,
+  ClipboardPaste,
   Mic,
   MicOff,
   Highlighter,
@@ -321,6 +324,72 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
     () => (Array.isArray(elements) ? elements : []).filter((el) => el.hidden === true),
     [elements]
   );
+
+  const COPIED_KEY = 'micerebro-copied-element';
+
+  const handleCopyElement = useCallback((e: React.MouseEvent, element: WithId<CanvasElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      const props = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
+      const size = (props as any).size || { width: element.width ?? 300, height: element.height ?? 200 };
+      const payload = {
+        type: element.type,
+        content: element.content != null ? JSON.parse(JSON.stringify(element.content)) : undefined,
+        width: typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || element.width ?? 300,
+        height: typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || element.height ?? 200,
+        properties: element.properties != null ? JSON.parse(JSON.stringify(element.properties)) : undefined,
+      };
+      localStorage.setItem(COPIED_KEY, JSON.stringify(payload));
+      toast({ title: 'Copiado', description: 'Elemento copiado. Puedes pegarlo en este u otro tablero.' });
+    } catch (err) {
+      console.error('Error al copiar elemento:', err);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo copiar el elemento.' });
+    }
+  }, [toast]);
+
+  const handlePasteElement = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(COPIED_KEY);
+      if (!raw) {
+        toast({ variant: 'destructive', title: 'Nada para pegar', description: 'Copia un elemento desde Cuadernos primero.' });
+        return;
+      }
+      const copied = JSON.parse(raw) as { type: ElementType; content?: any; width?: number; height?: number; properties?: any };
+      const size = copied.properties?.size || (copied.width != null && copied.height != null ? { width: copied.width, height: copied.height } : undefined);
+      await addElement(copied.type, {
+        content: copied.content,
+        properties: {
+          ...(copied.properties || {}),
+          ...(size && { size }),
+        },
+      });
+      toast({ title: 'Pegado', description: 'Elemento pegado en el tablero.' });
+    } catch (err: any) {
+      console.error('Error al pegar elemento:', err);
+      toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No se pudo pegar el elemento.' });
+    }
+  }, [addElement, toast]);
+
+  const handleMinimizeElement = useCallback((e: React.MouseEvent, element: WithId<CanvasElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const id = element.id;
+    const props = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
+    const size = (props as any).size || { width: element.width ?? 300, height: element.height ?? 200 };
+    const w = typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || 300;
+    const h = typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || 200;
+    const currentSize = { width: w, height: h };
+    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'dictado'];
+    if (typesWithMinimized.includes(element.type)) {
+      updateElement(id, {
+        minimized: true,
+        properties: { ...props, size: { width: w, height: 48 }, originalSize: currentSize },
+      });
+    } else {
+      updateElement(id, { hidden: true });
+    }
+  }, [updateElement]);
 
   // Cargar guías de fotos guardadas
   const loadSavedGuides = async () => {
@@ -647,6 +716,11 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <SidebarButton icon={BookCopy} label="Cuadernos" title="Gestionar cuadernos y notas" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuItem onClick={handlePasteElement}>
+                <ClipboardPaste className="mr-2 h-4 w-4" />
+                <span>Pegar</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Agregar Cuaderno</span>
@@ -725,8 +799,32 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             title = 'Elemento';
                         }
                         return (
-                          <DropdownMenuItem key={element.id} onClick={() => onLocateElement(element.id)}>
-                            <span>{title}</span>
+                          <DropdownMenuItem
+                            key={element.id}
+                            onClick={() => onLocateElement(element.id)}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span className="flex-1 truncate">{title}</span>
+                            <div className="flex items-center gap-0.5 flex-shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Copiar"
+                                onClick={(e) => handleCopyElement(e, element)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Minimizar"
+                                onClick={(e) => handleMinimizeElement(e, element)}
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                            </div>
                           </DropdownMenuItem>
                         );
                       })}

@@ -482,8 +482,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           updatedAt: serverTimestamp(),
         };
         break;
-      case 'libreta':
-        const libretaSize = { width: 378, height: 567 }; // 10x15 cm
+      case 'libreta': {
+        const libretaSizeFromProps = (props?.properties as any)?.size;
+        const libretaSize = libretaSizeFromProps && typeof libretaSizeFromProps.width === 'number' && typeof libretaSizeFromProps.height === 'number'
+          ? { width: libretaSizeFromProps.width, height: libretaSizeFromProps.height }
+          : { width: 378, height: 567 };
         const libretaPos = getCenteredPosition(libretaSize.width, libretaSize.height);
         newElementData = {
           type,
@@ -493,14 +496,18 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: libretaSize.height,
           userId,
           properties: { ...baseProperties, position: libretaPos, size: libretaSize },
-          content: { title: 'Libreta', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
+          content: (props?.content && typeof props.content === 'object') ? props.content : { title: 'Libreta', pages: Array(2).fill('<div><br></div>'), currentPage: 0 },
           zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         break;
-      case 'mini':
-        const miniSize = { width: 302, height: 529 }; // 8cm x 14cm
+      }
+      case 'mini': {
+        const miniSizeFromProps = (props?.properties as any)?.size;
+        const miniSize = miniSizeFromProps && typeof miniSizeFromProps.width === 'number' && typeof miniSizeFromProps.height === 'number'
+          ? { width: miniSizeFromProps.width, height: miniSizeFromProps.height }
+          : { width: 302, height: 529 };
         const miniPos = getCenteredPosition(miniSize.width, miniSize.height);
         newElementData = {
           type,
@@ -510,15 +517,18 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: miniSize.height,
           userId,
           properties: { ...baseProperties, position: miniPos, size: miniSize },
-          content: { text: '', searchQuery: '' },
+          content: (props?.content && typeof props.content === 'object') ? props.content : { text: '', searchQuery: '' },
           zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         break;
-      case 'dictado':
-        // Tamaño fijo: formato vertical (280px x 600px)
-        const dictadoSize = { width: 280, height: 600 };
+      }
+      case 'dictado': {
+        const dictadoSizeFromProps = (props?.properties as any)?.size;
+        const dictadoSize = dictadoSizeFromProps && typeof dictadoSizeFromProps.width === 'number' && typeof dictadoSizeFromProps.height === 'number'
+          ? { width: dictadoSizeFromProps.width, height: dictadoSizeFromProps.height }
+          : { width: 280, height: 600 };
         const dictadoPos = getCenteredPosition(dictadoSize.width, dictadoSize.height);
         const dictadoTimestamp = format(new Date(), 'dd/MM/yyyy HH:mm');
         newElementData = {
@@ -529,7 +539,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           height: dictadoSize.height,
           userId,
           properties: { ...baseProperties, position: dictadoPos, size: dictadoSize, zIndex: -1 },
-          content: { 
+          content: (props?.content && typeof props.content === 'object') ? props.content : {
             title: `Dictado ${dictadoTimestamp}`,
             content: '<div><br></div>',
             createdAt: dictadoTimestamp
@@ -539,6 +549,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           updatedAt: serverTimestamp(),
         };
         break;
+      }
       case 'pomodoro-timer':
         const pomodoroSize = { width: 260, height: 200 };
         const pomodoroPos = getCenteredPosition(pomodoroSize.width, pomodoroSize.height);
