@@ -336,8 +336,8 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
       const payload = {
         type: element.type,
         content: element.content != null ? JSON.parse(JSON.stringify(element.content)) : undefined,
-        width: typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || element.width ?? 300,
-        height: typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || element.height ?? 200,
+        width: typeof size.width === 'number' ? size.width : (parseFloat(String(size.width)) || element.width) ?? 300,
+        height: typeof size.height === 'number' ? size.height : (parseFloat(String(size.height)) || element.height) ?? 200,
         properties: element.properties != null ? JSON.parse(JSON.stringify(element.properties)) : undefined,
       };
       localStorage.setItem(COPIED_KEY, JSON.stringify(payload));
