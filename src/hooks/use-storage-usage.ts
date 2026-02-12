@@ -67,7 +67,8 @@ export function useStorageUsage(userId: string | undefined): StorageUsage {
           const element = elementDoc.data() as WithId<CanvasElement>;
           
           // Check for image elements
-          if (element.type === 'image' || element.type === 'image-frame') {
+          const elType = element.type as string;
+          if (elType === 'image' || elType === 'image-frame') {
             const imageUrl = (element.content as any)?.url;
             if (imageUrl) {
               try {
@@ -78,7 +79,7 @@ export function useStorageUsage(userId: string | undefined): StorageUsage {
                 console.warn(`Could not get metadata for image ${imageUrl}:`, imgError);
               }
             }
-          } else if (element.type === 'block-dibujo') {
+          } else if (elType === 'block-dibujo') {
             const blockImages = (element.content as any)?.images as { url: string }[] | undefined;
             if (blockImages && Array.isArray(blockImages)) {
               for (const img of blockImages) {
