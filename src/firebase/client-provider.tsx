@@ -66,7 +66,8 @@ export function FirebaseClientProvider({ children }: { children: ReactNode }) {
         await setPersistence(authInstance, browserSessionPersistence);
         console.log('✅ Firebase Auth configurado con persistencia de SESIÓN');
         
-        const firestoreInstance = getFirestore(app);
+        // Usar la misma base de datos que lib/firebase.js (datacerebro)
+        const firestoreInstance = getFirestore(app, 'datacerebro');
         const storageInstance = getStorage(app);
 
         console.log('✅ Firebase inicializado correctamente');

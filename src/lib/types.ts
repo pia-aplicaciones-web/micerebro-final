@@ -11,6 +11,7 @@ export type ElementType =
   'image' | 'text' | 'sticky' | 'notepad' |
   'comment' | 'comment-small' | 'comment-r' | 'comment-bubble' |
   'todo' |
+  'time-list' |
   'moodboard' |
   'gallery' |
   'photo-ideas-guide' |
@@ -33,7 +34,8 @@ export type ElementType =
   'photo-grid-free' |
   'pomodoro-timer' |
   'libreta' |
-  'dictado';
+  'dictado' |
+  'block-dibujo';
 
 // Interfaz para propiedades de elementos del canvas
 export interface CanvasElementProperties {
@@ -109,6 +111,15 @@ export interface YellowNotepadContent {
   searchQuery?: string;
 }
 
+export interface BlockDibujoContent {
+  text?: string;
+  title?: string;
+  images?: Array<{ id: string; url: string; alt?: string }>; // Para imágenes embebidas
+  searchQuery?: string;
+  pages?: string[]; // Array de HTML de cada página
+  currentPage?: number; // Índice de la página actual (0-based)
+}
+
 export interface WeeklyPlannerContent {
   days: Record<string, string>;
 }
@@ -123,6 +134,24 @@ export interface TodoContent {
   // Etiqueta opcional para la lista (un solo tag corto)
   label?: string;
   items: TodoItem[];
+}
+
+export interface TimeListItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  timerMinutes?: number; // Duración del timer en minutos (opcional)
+  timerSeconds?: number; // Segundos restantes del timer activo
+  timerRunning?: boolean; // Si el timer está corriendo
+  timerFinished?: boolean; // Si el timer terminó
+  waitingForReadyWord?: boolean; // Si está esperando que el usuario diga "listo"
+  lastAnnouncedMinutes?: number; // Último minuto anunciado para evitar repeticiones
+}
+
+export interface TimeListContent {
+  title?: string;
+  label?: string;
+  items: TimeListItem[];
 }
 
 export interface ContainerContent {
@@ -428,6 +457,7 @@ export type ElementContent =
   | PhotoIdeasGuideContent
   | LibretaContent
   | MiniContent
+  | TimeListContent
   | ContainerContent
   | DictadoContent
   | Record<string, unknown>;

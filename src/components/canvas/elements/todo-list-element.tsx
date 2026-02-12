@@ -95,6 +95,7 @@ export default function TodoListElement(props: CommonElementProps) {
     content,
     properties,
     onUpdate,
+    deleteElement,
     onEditElement,
     isSelected,
     onLocateElement,
@@ -157,6 +158,8 @@ export default function TodoListElement(props: CommonElementProps) {
     },
   });
 
+  const COPIED_KEY = 'micerebro-copied-element';
+
   // Dictation binding para el input de nueva tarea
 
   const handleToggleItem = (index: number) => {
@@ -211,6 +214,91 @@ export default function TodoListElement(props: CommonElementProps) {
     handleAutoSaveChange(); // Programar auto-save
   };
 
+  // Copiar la lista como elemento para pegarla en otros tableros
+  const handleCopyAsElement = () => {
+    try {
+      const props = safeProperties;
+      const sizeProp = (props as any).size || {};
+
+      const resolvedWidth =
+        typeof sizeProp.width === 'number'
+          ? sizeProp.width
+          : typeof width === 'number'
+            ? width
+            : parseFloat(String(sizeProp.width)) || 260;
+
+      const resolvedHeight =
+        typeof sizeProp.height === 'number'
+          ? sizeProp.height
+          : typeof height === 'number'
+            ? height
+            : parseFloat(String(sizeProp.height)) || 150;
+
+      const size = {
+        width: resolvedWidth,
+        height: resolvedHeight,
+      };
+
+      const payload = {
+        type: 'todo' as const,
+        content: JSON.parse(JSON.stringify(todoContent)),
+        width: resolvedWidth,
+        height: resolvedHeight,
+        properties: JSON.parse(
+          JSON.stringify({
+            ...props,
+            size,
+          })
+        ),
+      };
+
+      localStorage.setItem(COPIED_KEY, JSON.stringify(payload));
+
+      toast({
+        title: 'Lista copiada',
+        description: 'Lista copiada. Ve a otro tablero y usa Pegar en Cuadernos.',
+      });
+    } catch (error) {
+      console.error('Error al copiar lista como elemento:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo copiar la lista como elemento.',
+      });
+    }
+  };
+
+  // Pegado de nueva tarea como texto plano, sin formato y sin bullets
+  const handlePasteNewTask = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+
+    const plain = e.clipboardData.getData('text/plain') || '';
+
+    const sanitized = plain
+      // Quitar bullets comunes (•, -, etc.)
+      .replace(/[\u2022\u2023\u25E6\u2043\u2219\-•▪◦]/g, ' ')
+      // Convertir saltos de línea a espacios
+      .replace(/\r\n|\r|\n/g, ' ')
+      // Compactar espacios
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (!sanitized) return;
+
+    const target = e.currentTarget;
+    const { selectionStart, selectionEnd, value } = target;
+
+    const nextValue =
+      value.slice(0, selectionStart) + sanitized + value.slice(selectionEnd);
+
+    target.value = nextValue;
+    setNewItemText(nextValue);
+
+    // Auto-ajustar altura del textarea
+    target.style.height = 'auto';
+    target.style.height = target.scrollHeight + 'px';
+  };
+
   // Ajustar automáticamente la altura del contenedor cuando cambian los ítems
   useEffect(() => {
     if (!cardRef.current) return;
@@ -256,20 +344,14 @@ export default function TodoListElement(props: CommonElementProps) {
 
   const handleCopyAsText = async () => {
     try {
-      let text = `*${title || 'Lista de Tareas'}*\n\n`;
-
-      items.forEach((item: TodoItem) => {
-        if (item.completed) {
-          text += `✅ ${item.text}\n`;
-        } else {
-          text += `⬜ ${item.text}\n`;
-        }
-      });
+      // Copiar solo texto plano, una tarea por línea con bullet simple
+      const lines = items.map((item: TodoItem) => `• ${item.text}`);
+      const text = lines.join('\n');
 
       await navigator.clipboard.writeText(text);
       toast({
         title: 'Lista copiada',
-        description: 'La lista se ha copiado al portapapeles.',
+        description: 'La lista se ha copiado al portapapeles como texto plano.',
       });
     } catch (error) {
       console.error('Error al copiar:', error);
@@ -277,53 +359,6 @@ export default function TodoListElement(props: CommonElementProps) {
         variant: 'destructive',
         title: 'Error',
         description: 'No se pudo copiar la lista.',
-      });
-    }
-  };
-
-  const handleCopyFormat = async () => {
-    try {
-      // Formato ordenado con estructura clara
-      let formattedText = `📋 ${title || 'Lista de Tareas'}\n`;
-      formattedText += `═`.repeat(50) + `\n\n`;
-
-      if (items.length === 0) {
-        formattedText += `📝 No hay tareas pendientes\n`;
-      } else {
-        // Separar tareas completadas y pendientes
-        const pendingItems = items.filter(item => !item.completed);
-        const completedItems = items.filter(item => item.completed);
-
-        if (pendingItems.length > 0) {
-          formattedText += `⏳ PENDIENTES:\n`;
-          pendingItems.forEach((item, index) => {
-            formattedText += `   ${index + 1}. ☐ ${item.text}\n`;
-          });
-          formattedText += `\n`;
-        }
-
-        if (completedItems.length > 0) {
-          formattedText += `✅ COMPLETADAS:\n`;
-          completedItems.forEach((item, index) => {
-            formattedText += `   ${index + 1}. ✓ ${item.text}\n`;
-          });
-        }
-      }
-
-      formattedText += `\n═`.repeat(50);
-      formattedText += `\nGenerado por Micerebro APP`;
-
-      await navigator.clipboard.writeText(formattedText);
-      toast({
-        title: 'Formato copiado',
-        description: 'La lista se ha copiado con formato ordenado.',
-      });
-    } catch (error) {
-      console.error('Error al copiar formato:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'No se pudo copiar el formato.',
       });
     }
   };
@@ -399,8 +434,8 @@ export default function TodoListElement(props: CommonElementProps) {
 
 
   const handleClose = useCallback(() => {
-    onUpdate(id, { hidden: true });
-  }, [onUpdate, id]);
+    deleteElement?.(id);
+  }, [deleteElement, id]);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
@@ -494,7 +529,7 @@ export default function TodoListElement(props: CommonElementProps) {
       style={{
         backgroundColor: '#ffffff', // Fondo blanco para el card, color solo en header
         width: width || '100%',
-        height: height || 'auto',
+        height: 'auto',
         minWidth: '200px',
         minHeight: '150px',
         maxHeight: 'none',
@@ -502,7 +537,7 @@ export default function TodoListElement(props: CommonElementProps) {
       onClick={() => onEditElement(id)}
     >
       {/* Contenedor principal que permite altura automática */}
-      <div className="w-full h-full flex flex-col" style={{ minHeight: 'inherit' }}>
+      <div className="w-full flex flex-col" style={{ minHeight: 'inherit' }}>
       {/* Indicador de estado de guardado */}
       <div className="absolute top-2 right-2 z-10">
         <SaveStatusIndicator status={saveStatus} size="sm" />
@@ -628,13 +663,17 @@ export default function TodoListElement(props: CommonElementProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()} className="text-sm">
+                <DropdownMenuItem
+                  onClick={handleCopyAsElement}
+                  className="text-sm"
+                  title="Copia la lista como elemento para pegarla en otros tableros desde Cuadernos"
+                >
+                  <Copy className="mr-2 h-3 w-3" />
+                  <span>Copiar lista (entre tableros)</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleCopyAsText} className="text-sm" title="Copia la lista completa al portapapeles en formato texto">
                   <Copy className="mr-2 h-3 w-3" />
                   <span>Copiar lista como texto</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCopyFormat} className="text-sm" title="Copia la lista con formato ordenado y estructura clara">
-                  <FileText className="mr-2 h-3 w-3" />
-                  <span>Copiar formato</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleExportCapture} disabled={isCapturing} className="text-sm">
                   <Camera className="mr-2 h-3 w-3" />
@@ -756,6 +795,7 @@ export default function TodoListElement(props: CommonElementProps) {
                             <Button
                               variant="ghost"
                               size="icon"
+                              onMouseDown={(e) => e.stopPropagation()}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteItem(index);
@@ -799,7 +839,7 @@ export default function TodoListElement(props: CommonElementProps) {
               target.style.height = 'auto';
               target.style.height = target.scrollHeight + 'px';
             }}
-            onPaste={handlePaste}
+            onPaste={handlePasteNewTask}
             onInput={(e) => {
               // Sincronizar estado con el valor actual cuando cambie (incluyendo dictado)
               const currentValue = e.currentTarget.value;

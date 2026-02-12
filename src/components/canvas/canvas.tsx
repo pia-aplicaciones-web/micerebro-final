@@ -26,6 +26,7 @@ type CanvasProps = {
   onLocateElement: (id: string) => void;
   onGoToHome: () => void;
   onCenterView: () => void;
+  onCenterElementInView?: (element: WithId<CanvasElement>) => void;
   onEditElement: (id: string) => void;
   onGroupElements: (frameId: string) => void;
   addElement: (type: ElementType, props: any) => Promise<string>;
@@ -86,6 +87,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   onLocateElement,
   onGoToHome,
   onCenterView,
+  onCenterElementInView,
   onEditElement,
   onGroupElements,
   addElement,
@@ -551,6 +553,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       onChangeNotepadFormat={onChangeNotepadFormat}
                       onLocateElement={onLocateElement}
                       onSelectElement={onSelectElement}
+                      onCenterElementInView={onCenterElementInView}
                       onBringToFront={onBringToFront}
                       onSendToBack={onSendToBack}
                       onMoveBackward={onMoveBackward}

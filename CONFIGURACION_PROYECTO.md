@@ -1,6 +1,6 @@
 # 🚀 Configuración del Proyecto - Mi Cerebro App
 
-deploy iempre en alia: https://micerebroapp.vercel.app/ 
+REGLA FIJA : deploy siempre en aliaS: https://micerebroapp.vercel.app/ 
 
 ## 📋 Información General
 - **Nombre del proyecto:** micerebroapp
@@ -194,3 +194,12 @@ npm run deploy:vercel:preview
 ---
 
 *Este archivo contiene toda la configuración necesaria para el proyecto Mi Cerebro App. Mantener actualizado con cualquier cambio importante.*
+
+Cómo levantar el proyecto en local (lo que te interesa ahora)
+Según el archivo:
+npm run dev              # Desarrollo local, Puerto 3001npm run dev:clean        # Limpiar y ejecutar
+Y para build/deploy:
+npm run build            # Build
+npm run deploy:vercel    # Deploy a producción
+npm run deploy:vercel:preview  # Deploy de preview
+npm run build            # Buildnpm run deploy:vercel    # Deploy a producción

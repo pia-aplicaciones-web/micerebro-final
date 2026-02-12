@@ -3,10 +3,14 @@
 ## 📋 Información General del Proyecto Firebase
 
 ### 🏷️ **Detalles del Proyecto**
-- **Nombre del proyecto:** `micerebroapp`
+- **Nombre del proyecto:** MicerebroApp
 - **ID del proyecto:** `micerebroapp`
+- **Número del proyecto:** 967156176052
+- **Nombre público (config pública):** project-967156176052
+- **Correo de asistencia:** mpiafinlay@gmail.com
 - **Tipo:** Proyecto de Firebase con Firestore, Auth y Storage
 - **Ubicación:** `nam5` (us-central)
+- **Entorno:** Sin especificar
 - **Estado:** ✅ Configurado y funcionando
 
 ### 🌐 **URLs y Dominios**

@@ -247,7 +247,7 @@ export default function LibretaElement(props: CommonElementProps) {
   if (minimized && !hasParent) {
     return (
       <Card className="w-full flex items-center rounded-lg shadow-lg border border-gray-200/50 bg-white h-12" data-element-id={id}>
-        <div className="p-2 flex flex-row items-center gap-1 w-full drag-handle">
+        <div className="p-2 flex flex-row items-center gap-1 w-full drag-handle" data-notepad-header>
           <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" />
           <p className="font-headline text-sm font-semibold truncate flex-grow">{typedContent.title || 'Libreta'}</p>
           <Button variant="ghost" size="icon" className="h-6 w-6" title="Maximizar" onMouseDown={(e) => { e.stopPropagation(); toggleMinimize(e); }}>
@@ -267,7 +267,7 @@ export default function LibretaElement(props: CommonElementProps) {
       )} onClick={handleLibretaClick}>
         {/* HEADER - Solo mostrar si NO está dentro de un contenedor */}
         {!hasParent && (
-          <div className="p-3 border-b border-gray-200 bg-gray-50 flex flex-row items-center justify-between drag-handle">
+          <div className="p-3 border-b border-gray-200 bg-gray-50 flex flex-row items-center justify-between drag-handle" data-notepad-header>
             <GripVertical className="h-5 w-5 text-gray-400 cursor-grab" /> {/* Aquí a la izquierda */}
             {/* Título editable */}
             <div

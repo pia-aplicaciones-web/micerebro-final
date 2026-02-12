@@ -41,6 +41,8 @@ import NotesElement from './elements/notes-element';
 import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
 import DictadoElement from './elements/dictado-element';
+import BlockDibujoElement from './elements/block-dibujo-element';
+import TimeListElement from './elements/time-list-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -74,6 +76,8 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'mini': MiniElement,
   'countdown': CountdownElement,
   'dictado': DictadoElement,
+  'block-dibujo': BlockDibujoElement,
+  'time-list': TimeListElement,
 };
 
 type TransformableElementProps = {
@@ -89,6 +93,7 @@ type TransformableElementProps = {
   onChangeNotepadFormat: (id: string) => void;
   onLocateElement: (elementId: string) => void;
   onSelectElement: (id: string | null, isMultiSelect: boolean) => void;
+  onCenterElementInView?: (element: WithId<CanvasElement>) => void;
   onBringToFront: (id: string) => void;
   onSendToBack: (id: string) => void;
   onMoveBackward: (id: string) => void;
@@ -150,6 +155,7 @@ export default function TransformableElement({
   onChangeNotepadFormat,
   onLocateElement,
   onSelectElement,
+  onCenterElementInView,
   onBringToFront,
   onSendToBack,
   onMoveBackward,
@@ -204,101 +210,18 @@ export default function TransformableElement({
             (typeof size.height === 'number' && size.height > 0 ? size.height : 150)
   };
   
-  // Estado para centrar temporalmente el elemento en vista al hacer clic
-  const [originalPosition, setOriginalPosition] = useState<{ x: number; y: number } | null>(null);
-  const [isCenteredView, setIsCenteredView] = useState(false);
-  const [hasUserMovedWhileCentered, setHasUserMovedWhileCentered] = useState(false);
-
-  // Función: mover elemento al centro del área visible del canvas (sin cambiar tamaño)
-  const centerElementInView = useCallback(() => {
-    // Solo aplicar a elementos sin padre (no dentro de contenedores) para evitar conflictos
+  // Centrar elemento en vista: scroll del canvas (no mover el elemento) para edición cómoda
+  const requestCenterInView = useCallback(() => {
     if (element.parentId) return;
-    if (!canvasContainerRef.current) return;
-
-    const container = canvasContainerRef.current;
-
-    const scrollLeft = container.scrollLeft ?? 0;
-    const scrollTop = container.scrollTop ?? 0;
-    const visibleWidth = container.clientWidth;
-    const visibleHeight = container.clientHeight;
-
-    if (visibleWidth <= 0 || visibleHeight <= 0) return;
-
-    const targetX = Math.max(0, scrollLeft + visibleWidth / 2 - safeSize.width / 2);
-    const targetY = Math.max(0, scrollTop + visibleHeight / 2 - safeSize.height / 2);
-
-    // Guardar posición original solo la primera vez
-    if (!isCenteredView && !originalPosition) {
-      setOriginalPosition({ x: position.x, y: position.y });
-    }
-
-    setIsCenteredView(true);
-    setHasUserMovedWhileCentered(false);
-
-    const safeProperties = (typeof element.properties === 'object' && element.properties !== null
-      ? element.properties
-      : {}) as CanvasElementProperties;
-
-    const newPosition = { x: targetX, y: targetY };
-
-    const props = {
-      ...safeProperties,
-      size: {
-        ...(safeProperties.size || {}),
-        width: safeSize.width,
-        height: safeSize.height,
-      },
-      position: newPosition,
-      relativePosition: null,
-    };
-
-    Object.keys(props).forEach((k) => {
-      if ((props as any)[k] === undefined) delete (props as any)[k];
-    });
-
-    updateElement(element.id, {
-      x: newPosition.x,
-      y: newPosition.y,
-      properties: props,
-    });
-  }, [canvasContainerRef, element.parentId, element.properties, element.id, isCenteredView, originalPosition, position.x, position.y, safeSize.width, safeSize.height, updateElement]);
-
-  // Cuando se deselecciona el elemento, devolverlo a su posición original SI no fue movido mientras estaba centrado
-  useEffect(() => {
-    if (!isSelected) {
-      if (isCenteredView && originalPosition && !hasUserMovedWhileCentered && !element.parentId) {
-        const safeProperties = (typeof element.properties === 'object' && element.properties !== null
-          ? element.properties
-          : {}) as CanvasElementProperties;
-
-        const props = {
-          ...safeProperties,
-          size: {
-            ...(safeProperties.size || {}),
-            width: safeSize.width,
-            height: safeSize.height,
-          },
-          position: originalPosition,
-          relativePosition: null,
-        };
-
-        Object.keys(props).forEach((k) => {
-          if ((props as any)[k] === undefined) delete (props as any)[k];
-        });
-
-        updateElement(element.id, {
-          x: originalPosition.x,
-          y: originalPosition.y,
-          properties: props,
-        });
-      }
-
-      // Limpiar estado de centrado siempre que el elemento quede deseleccionado
-      setIsCenteredView(false);
-      setOriginalPosition(null);
-      setHasUserMovedWhileCentered(false);
-    }
-  }, [isSelected, isCenteredView, originalPosition, hasUserMovedWhileCentered, element.parentId, element.properties, element.id, safeSize.width, safeSize.height, updateElement]);
+    if (!onCenterElementInView) return;
+    onCenterElementInView({
+      ...element,
+      x: position.x,
+      y: position.y,
+      width: safeSize.width,
+      height: safeSize.height,
+    } as WithId<CanvasElement>);
+  }, [element, position.x, position.y, safeSize.width, safeSize.height, onCenterElementInView]);
 
   // FIX: Evitar estado "congelado" cuando isDraggingOrResizing queda true (ej. onDragStop no se disparó).
   // Reset al deseleccionar y al perder foco de ventana para que el header vuelva a ser clickeable.
@@ -416,15 +339,7 @@ export default function TransformableElement({
       properties: props,
     });
 
-    // Si el elemento estaba centrado en vista y el usuario lo movió manualmente, ya no debemos "volver" a la posición original
-    if (isCenteredView && originalPosition) {
-      const totalDx = Math.abs(newPosition.x - originalPosition.x);
-      const totalDy = Math.abs(newPosition.y - originalPosition.y);
-      if (totalDx > 1 || totalDy > 1) {
-        setHasUserMovedWhileCentered(true);
-      }
-    }
-  }, [element, updateElement, allElements, safeSize.width, safeSize.height, dragStartPos, isCenteredView, originalPosition]);
+  }, [element, updateElement, allElements, safeSize.width, safeSize.height, dragStartPos]);
 
   const onResizeStop = useCallback((e: MouseEvent | TouchEvent, direction: string, ref: HTMLElement, delta: ResizableDelta, newPosition: Position) => {
     const safeProperties = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
@@ -549,21 +464,23 @@ export default function TransformableElement({
   const isGroupedFrame = false;
 
   const handleMouseDown = (e: MouseEvent) => {
-    // Permitir que los eventos lleguen a los elementos editables
+    // Permitir que los eventos lleguen a los elementos editables (incl. hijos de contentEditable)
     const target = e.target as HTMLElement;
-    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-    if (isEditable) {
-      return; // Permitir que el navegador maneje el foco y el cursor
+    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable || target.closest('[contenteditable="true"]');
+    const isButton = target.tagName === 'BUTTON' || target.closest('button');
+    if (isEditable || isButton) {
+      return; // Permitir foco/click nativo sin interferir (ej. botón X para borrar tarea)
     }
     // Solo seleccionar si no estamos en proceso de arrastre
     if (!isDraggingOrResizing) {
       const isMultiSelect = e.altKey || e.shiftKey || e.metaKey || e.ctrlKey;
       onSelectElement(element.id, isMultiSelect);
 
-      // Regla general: al pinchar, llevar el elemento al centro de la vista en la capa más alta
-      // Solo si no estaba ya seleccionado y no es multi-selección
-      if (!isSelected && !isMultiSelect) {
-        centerElementInView();
+      // Regla general: al pinchar, centrar el elemento en la vista (scroll suave, sin mover el elemento)
+      // Excepción: no centrar si el clic es en el header del notepad (permite editar título sin que salte la vista)
+      const isNotepadHeader = (target as HTMLElement).closest('[data-notepad-header]');
+      if (!isSelected && !isMultiSelect && !isNotepadHeader) {
+        requestCenterInView();
       }
     }
   };

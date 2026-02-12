@@ -56,7 +56,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { ElementType, CanvasElement, Board, WithId, NotepadContent, TodoContent } from '@/lib/types';
+import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 type AuthUser = {
@@ -247,7 +247,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         },
         {
           label: 'Cerrados',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'todo', 'dictado'].includes(el.type) && el.hidden === true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden === true).map(element => {
             let title = 'Sin título';
             const elementType = element.type as ElementType;
             switch (elementType) {
@@ -269,10 +269,6 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               case 'dictado':
                 const dictadoContent = element.content as any;
                 title = dictadoContent?.title || 'iPhone';
-                break;
-              case 'todo':
-                const todoContent = element.content as TodoContent;
-                title = todoContent?.title || 'Lista de tareas';
                 break;
               default:
                 title = 'Elemento';
@@ -299,7 +295,16 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
     {
       label: 'Lista de Tareas',
       icon: List,
-      onClick: () => handleAddElement('todo'),
+      subMenu: [
+        {
+          label: 'Lista de Tareas',
+          onClick: () => handleAddElement('todo'),
+        },
+        {
+          label: 'Time List',
+          onClick: () => handleAddElement('time-list'),
+        },
+      ],
     },
     {
       label: 'Contenedor',

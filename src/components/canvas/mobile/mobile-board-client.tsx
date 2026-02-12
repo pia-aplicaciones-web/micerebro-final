@@ -423,6 +423,80 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     }
   }, [board?.password, isPasswordVerified, isPasswordDialogOpen]);
 
+  // Pegar imagen desde portapapeles al tablero (cuando el foco no está en un elemento editable)
+  const addElementRef = useRef(addElement);
+  const getViewportCenterRef = useRef(getViewportCenter);
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    addElementRef.current = addElement;
+    getViewportCenterRef.current = getViewportCenter;
+    toastRef.current = toast;
+  }, [addElement, getViewportCenter, toast]);
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const target = e.target as Node;
+      if (!target || !(target instanceof HTMLElement)) return;
+      if (
+        target.closest('textarea') ||
+        target.closest('input:not([readonly])') ||
+        target.closest('[contenteditable="true"]')
+      ) {
+        return;
+      }
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      let imageBlob: Blob | null = null;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          imageBlob = item.getAsFile();
+          if (imageBlob) break;
+        }
+      }
+      if (!imageBlob) {
+        try {
+          const clipboardItems = await navigator.clipboard.read();
+          for (const item of clipboardItems) {
+            if (item.types.includes('image/png')) {
+              imageBlob = await item.getType('image/png');
+              break;
+            }
+            if (item.types.includes('image/jpeg')) {
+              imageBlob = await item.getType('image/jpeg');
+              break;
+            }
+          }
+        } catch (_) {
+          return;
+        }
+      }
+      if (!imageBlob) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const url = URL.createObjectURL(imageBlob);
+      try {
+        const center = getViewportCenterRef.current();
+        await addElementRef.current('image', {
+          content: { url },
+          properties: { size: { width: 300, height: 200 } },
+          x: center.x - 150,
+          y: center.y - 100,
+          width: 300,
+          height: 200,
+        });
+        toastRef.current({ title: 'Imagen pegada en el tablero' });
+      } catch (err) {
+        toastRef.current({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudo pegar la imagen.',
+        });
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    document.addEventListener('paste', handlePaste, true);
+    return () => document.removeEventListener('paste', handlePaste, true);
+  }, []);
 
   // Buscar elemento gallery
   const galleryElement = useMemo(() => {
@@ -542,19 +616,32 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
             {/* Nombre del tablero en esquina superior izquierda */}
             <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
 
-            {/* Botón de menú móvil */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="fixed top-4 right-4 z-[1001] bg-white border border-gray-200 shadow-md hover:bg-gray-100"
-              onClick={handleToggleMobileMenu}
+            {/* Botón de menú móvil: flotante y arrastrable, siempre visible */}
+            <Rnd
+              default={{
+                x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
+                y: 16,
+                width: 48,
+                height: 48,
+              }}
+              bounds="window"
+              enableResizing={false}
+              dragHandleClassName="mobile-menu-drag-handle"
+              style={{ position: 'fixed', zIndex: 11000 }}
             >
-              {isMobileMenuOpen ? (
-                <CloseIcon className="h-6 w-6 text-black" />
-              ) : (
-                <Menu className="h-6 w-6 text-black" />
-              )}
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-100 flex items-center justify-center"
+                onClick={handleToggleMobileMenu}
+              >
+                {isMobileMenuOpen ? (
+                  <CloseIcon className="h-6 w-6 text-black" />
+                ) : (
+                  <Menu className="h-6 w-6 text-black" />
+                )}
+              </Button>
+            </Rnd>
 
             {/* MobileMenu */}
             <MobileMenu
@@ -624,6 +711,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onMoveBackward={() => {}}
               onGoToHome={() => canvasRef.current?.goToHome()}
               onCenterView={() => {}}
+              onCenterElementInView={(el) => canvasRef.current?.centerOnElement(el)}
               onGroupElements={() => {}} // Lógica de grupo para móvil
               saveLastView={() => {}} // Lógica para guardar vista
               onActivateDrag={() => {}} // Lógica para activar drag

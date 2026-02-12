@@ -495,6 +495,7 @@ export default function NotesElement(props: CommonElementProps) {
       {/* Header */}
       <div
         className="flex items-center justify-between px-4 py-3 drag-handle"
+        data-notepad-header
         style={{
           backgroundColor: '#F7D946',
           color: '#000000',

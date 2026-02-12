@@ -43,7 +43,8 @@ import { BookCopy,
   Highlighter,
   Menu,
   X as CloseIcon,
-  Crop
+  Crop,
+  Pencil
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -165,6 +166,7 @@ interface ToolsSidebarProps {
   onDeleteAllUserImages: () => void;
   isListening: boolean;
   onToggleDictation: () => void;
+  onSaveSelectionBeforeMic?: () => void;
   onOpenNotepad: (id: string) => void;
   onLocateElement: (id: string) => void;
   onAddComment: () => void;
@@ -181,6 +183,16 @@ interface ToolsSidebarProps {
   canvasScale: number;
   isGalleryPanelOpen: boolean;
   onToggleGalleryPanel: () => void;
+  drawingMode?: {
+    isDrawingMode: boolean;
+    drawingColor: 'black' | 'teal' | 'red' | 'lime' | 'purple';
+    strokeWidth: 2 | 4 | 6;
+    toggleDrawingMode: () => void;
+    setColor: (color: 'black' | 'teal' | 'red' | 'lime' | 'purple') => void;
+    setStrokeWidth: (width: 2 | 4 | 6) => void;
+    getColorHex: () => string;
+    getStrokeWidth: () => number;
+  };
 }
 
 const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
@@ -198,6 +210,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   onDeleteAllUserImages,
   isListening,
   onToggleDictation,
+  onSaveSelectionBeforeMic,
   onOpenNotepad,
   onLocateElement,
   onAddComment,
@@ -214,6 +227,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   canvasScale,
   isGalleryPanelOpen,
   onToggleGalleryPanel,
+  drawingMode,
 }, ref) => {
   const { toast } = useToast();
   const router = useRouter();
@@ -310,7 +324,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
@@ -323,6 +337,15 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   const hiddenElements = useMemo(
     () => (Array.isArray(elements) ? elements : []).filter((el) => el.hidden === true),
     [elements]
+  );
+
+  // Solo cuadernos/notas ocultos (para el bloque \"Cerrados\" en Cuadernos)
+  const hiddenNotebooks = useMemo(
+    () =>
+      hiddenElements.filter((el) =>
+        ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo'].includes(el.type)
+      ),
+    [hiddenElements]
   );
 
   const COPIED_KEY = 'micerebro-copied-element';
@@ -352,7 +375,11 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
     try {
       const raw = localStorage.getItem(COPIED_KEY);
       if (!raw) {
-        toast({ variant: 'destructive', title: 'Nada para pegar', description: 'Copia un elemento desde Cuadernos primero.' });
+        toast({
+          variant: 'destructive',
+          title: 'Nada para pegar',
+          description: 'Copia primero un cuaderno, lista de tareas u otro elemento compatible.',
+        });
         return;
       }
       const copied = JSON.parse(raw) as { type: ElementType; content?: any; width?: number; height?: number; properties?: any };
@@ -554,7 +581,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       onToggleDictation();
                     }
                   }}
-                  onMouseDown={(e) => e.preventDefault()}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    onSaveSelectionBeforeMic?.();
+                  }}
                   className={cn(
                     'w-full justify-start hover:bg-[#ADD8E6] active:bg-white',
                     isListening && 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse'
@@ -600,6 +630,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       <Plus className="mr-2 h-4 w-4" />
                       <span>iPhone</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>BLOCK DIBUJO</span>
+                    </DropdownMenuItem>
                     {elementsOnCanvas.length > 0 && (
                       <>
                         <DropdownMenuSeparator />
@@ -633,6 +667,11 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                                 case 'dictado': {
                                   const dictadoContentOpen = element.content as any;
                                   title = dictadoContentOpen?.title || 'iPhone';
+                                  break;
+                                }
+                                case 'block-dibujo': {
+                                  const blockDibujoContent = element.content as any;
+                                  title = blockDibujoContent?.title || 'BLOCK DIBUJO';
                                   break;
                                 }
                                 default:
@@ -697,13 +736,26 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 </DropdownMenu>
 
                 {/* Tareas */}
-                <button
-                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
-                  onClick={() => handleAddElement('todo')}
-                >
-                  <List className="w-4 h-4" />
-                  <span>Lista de Tareas</span>
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
+                    >
+                      <List className="w-4 h-4" />
+                      <span>Lista de Tareas</span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent side="right" align="start" sideOffset={5}>
+                    <DropdownMenuItem onClick={() => handleAddElement('todo')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Lista de Tareas</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('time-list')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Time List</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
                 {/* Sticky Note */}
                 <button
@@ -793,7 +845,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                 onToggleDictation();
               }
             }}
-            onMouseDown={(e) => e.preventDefault()}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onSaveSelectionBeforeMic?.();
+            }}
             className={cn(
               isListening && 'bg-red-500 text-white hover:bg-red-600 animate-pulse'
             )}
@@ -805,7 +860,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <SidebarButton icon={BookCopy} label="Cuadernos" title="Gestionar cuadernos y notas" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
-              <DropdownMenuItem onClick={handlePasteElement}>
+              <DropdownMenuItem
+                onClick={handlePasteElement}
+                title="Pega aquí cuadernos, listas de tareas u otros elementos copiados entre tableros"
+              >
                 <ClipboardPaste className="mr-2 h-4 w-4" />
                 <span>Pegar</span>
               </DropdownMenuItem>
@@ -837,6 +895,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>iPhone</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>BLOCK DIBUJO</span>
               </DropdownMenuItem>
               {elementsOnCanvas.length > 0 && (
                 <>
@@ -884,6 +946,11 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             const dictadoContentOpen = element.content as any;
                             title = dictadoContentOpen?.title || 'iPhone';
                             break;
+                          case 'block-dibujo': {
+                            const blockDibujoContent = element.content as any;
+                            title = blockDibujoContent?.title || 'BLOCK DIBUJO';
+                            break;
+                          }
                           default:
                             title = 'Elemento';
                         }
@@ -921,35 +988,21 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   </DropdownMenuSub>
                 </>
               )}
-              {hiddenElements.length > 0 && (
+              {hiddenNotebooks.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuSub>
                     <DropdownMenuSubTrigger>
-                      <span>Cerrados ({hiddenElements.length})</span>
+                      <span>Cerrados ({hiddenNotebooks.length})</span>
                     </DropdownMenuSubTrigger>
                     <DropdownMenuSubContent>
-                      {hiddenElements.map((element) => {
+                      {hiddenNotebooks.map((element) => {
                         let title = 'Sin título';
                         switch (element.type) {
                           case 'notepad':
                           case 'yellow-notepad':
                             const notepadContent = element.content as NotepadContent;
                             title = notepadContent?.title || 'Cuaderno';
-                            break;
-                          // case 'cuaderno': // DESACTIVADO - causando problemas
-                          //   const cuadernoContent = element.content as NotepadContent;
-                          //   title = cuadernoContent?.title || 'Cuaderno A3';
-                          //   break;
-                          case 'photo-grid':
-                          case 'photo-grid-horizontal':
-                          case 'photo-grid-adaptive':
-                            const photoGridContent = element.content as PhotoGridContent;
-                            title = photoGridContent?.title || 'Guía de Fotos';
-                            break;
-                          case 'photo-grid-free':
-                            const photoGridFreeContent = element.content as PhotoGridFreeContent;
-                            title = photoGridFreeContent?.title || 'Guía de Fotos Libre';
                             break;
                           case 'libreta':
                             const libretaContent = element.content as LibretaContent;
@@ -965,10 +1018,11 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                             const dictadoContentHidden = element.content as any;
                             title = dictadoContentHidden?.title || 'iPhone';
                             break;
-                          case 'todo':
-                            const todoContent = element.content as TodoContent;
-                            title = todoContent?.title || 'Lista de tareas';
+                          case 'block-dibujo': {
+                            const blockDibujoContentHidden = element.content as any;
+                            title = blockDibujoContentHidden?.title || 'BLOCK DIBUJO';
                             break;
+                          }
                           default:
                             title = 'Elemento';
                         }
@@ -1009,7 +1063,38 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
           </DropdownMenu>
 
           {/* To-do */}
-          <SidebarButton icon={List} label="To-do" title="Crear lista de tareas" onClick={() => handleAddElement('todo')} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarButton
+                icon={List}
+                label="To-do"
+                title="Crear o pegar lista de tareas"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuItem onClick={handlePasteElement}>
+                <ClipboardPaste className="mr-2 h-4 w-4" />
+                <span>Pegar</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <List className="mr-2 h-4 w-4" />
+                  <span>Lista de Tareas</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem onClick={() => handleAddElement('todo')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span>Lista de Tareas</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddElement('time-list')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span>Time List</span>
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Contenedor */}
           <SidebarButton
@@ -1078,6 +1163,73 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <DropdownMenuItem onClick={onAddImageFromUrlWithCrop}>
                 <LinkIcon className="mr-2 h-4 w-4" />
                 <span>Desde URL + Crop</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Lápiz */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarButton
+                icon={Pencil}
+                label="Lápiz"
+                title={drawingMode?.isDrawingMode ? "Desactivar modo dibujo" : "Activar modo dibujo"}
+                isActive={drawingMode?.isDrawingMode}
+                className={drawingMode?.isDrawingMode ? 'bg-teal-100 border-teal-500' : ''}
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuItem onClick={() => drawingMode?.toggleDrawingMode()}>
+                {drawingMode?.isDrawingMode ? 'Desactivar' : 'Activar'} modo dibujo
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Colores:</div>
+              <DropdownMenuItem onClick={() => drawingMode?.setColor('black')}>
+                <div className="w-4 h-4 rounded-full bg-black mr-2 border border-gray-300" />
+                <span>Negro</span>
+                {drawingMode?.drawingColor === 'black' && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setColor('teal')}>
+                <div className="w-4 h-4 rounded-full bg-teal-500 mr-2 border border-gray-300" />
+                <span>Teal</span>
+                {drawingMode?.drawingColor === 'teal' && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setColor('red')}>
+                <div className="w-4 h-4 rounded-full bg-red-500 mr-2 border border-gray-300" />
+                <span>Rojo</span>
+                {drawingMode?.drawingColor === 'red' && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setColor('lime')}>
+                <div className="w-4 h-4 rounded-full bg-lime-500 mr-2 border border-gray-300" />
+                <span>Verde Lima</span>
+                {drawingMode?.drawingColor === 'lime' && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setColor('purple')}>
+                <div className="w-4 h-4 rounded-full bg-purple-500 mr-2 border border-gray-300" />
+                <span>Morado</span>
+                {drawingMode?.drawingColor === 'purple' && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Grosor:</div>
+              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(2)}>
+                <div className="w-6 h-1 rounded-full bg-gray-700 mr-2" style={{ height: 2 }} />
+                <span>Fino</span>
+                {drawingMode?.strokeWidth === 2 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(4)}>
+                <div className="w-6 rounded-full bg-gray-700 mr-2" style={{ height: 4 }} />
+                <span>Medio</span>
+                {drawingMode?.strokeWidth === 4 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(6)}>
+                <div className="w-6 rounded-full bg-gray-700 mr-2" style={{ height: 6 }} />
+                <span>Grueso</span>
+                {drawingMode?.strokeWidth === 6 && <span className="ml-auto text-xs">✓</span>}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Crear BLOCK DIBUJO</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1151,18 +1303,24 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       No hay guías guardadas
                     </DropdownMenuItem>
                   ) : (
-                    savedGuides.map((guide) => (
-                      <DropdownMenuItem
-                        key={guide.id}
-                        onClick={() => {
-                          if (selectElement) {
-                            selectElement(guide.id);
-                          }
-                        }}
-                      >
-                        {guide.title}
-                      </DropdownMenuItem>
-                    ))
+                    savedGuides
+                      .filter((guide) =>
+                        ['photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free'].includes(
+                          guide.type as string
+                        )
+                      )
+                      .map((guide) => (
+                        <DropdownMenuItem
+                          key={guide.id}
+                          onClick={() => {
+                            if (selectElement) {
+                              selectElement(guide.id);
+                            }
+                          }}
+                        >
+                          {guide.title}
+                        </DropdownMenuItem>
+                      ))
                   )}
                 </DropdownMenuSubContent>
               </DropdownMenuSub>

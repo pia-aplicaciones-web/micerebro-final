@@ -19,6 +19,8 @@ export default function HomePage() {
   const hasProcessedRef = useRef(false);
 
   // Manejar resultado de redirect de Google al cargar la página
+  // Nota: Con la nueva implementación siempre usamos popup, pero mantenemos esto
+  // para procesar redirects pendientes de sesiones anteriores
   useEffect(() => {
     const handleRedirectResult = async () => {
       if (hasProcessedRef.current) return;
@@ -39,6 +41,16 @@ export default function HomePage() {
           await redirectToBoard(result.user);
         }
       } catch (error) {
+        // Solo loggear errores críticos, no mostrar al usuario
+        // Los errores de sessionStorage/initial state son normales cuando no hay redirect pendiente
+        const errorMessage = error?.message || '';
+        if (errorMessage.includes('sessionStorage') || 
+            errorMessage.includes('initial state') || 
+            errorMessage.includes('missing initial state')) {
+          // Esto es normal cuando no hay redirect pendiente (flujo normal con popup)
+          console.log('ℹ️ No hay redirect pendiente (normal cuando se usa popup)');
+          return;
+        }
         console.error('❌ Error procesando redirect de Google:', error);
         // No mostrar toast para errores de redirect ya que pueden ser normales
       }

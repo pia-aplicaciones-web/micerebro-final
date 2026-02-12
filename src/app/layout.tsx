@@ -31,6 +31,16 @@ export default function RootLayout({
             </Providers>
           </ErrorBoundary>
           <Toaster />
+          {/* Indicador de build (solo en Vercel): ver qué commit está en producción */}
+          {typeof process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA === 'string' && process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+            <div
+              aria-hidden
+              className="fixed bottom-1 right-1 text-[10px] text-muted-foreground/60 font-mono select-none pointer-events-none z-[9999]"
+              title={`Commit: ${process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA}`}
+            >
+              Build: {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0, 7)}
+            </div>
+          )}
       </body>
     </html>
   );

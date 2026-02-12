@@ -65,7 +65,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
 
     // REGLAS GENERALES: Elementos de cuadernos y contenedores inician con zIndex -1
     // Otros elementos van a la primera capa (zIndex máximo + 1)
-    const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns'].includes(type);
+    const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns', 'block-dibujo', 'time-list'].includes(type);
     const zIndex = getNextZIndexRef.current(); // ✅ REGLA: Todos los elementos nuevos aparecen en primera capa
 
     // REGLA #1: Los elementos se abren centrados en el viewport del usuario
@@ -143,13 +143,14 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
 
     switch (type) {
       case 'notepad':
-        // Dimensiones dependen del formato, por defecto 20x15 (20cm x 15cm)
-        const notepadFormat = (props?.properties as any)?.format || 'letter';
+        // Dimensiones dependen del formato, por defecto 20x15 (20cm alto x 15cm ancho)
+        const notepadFormat = (props?.properties as any)?.format || '20x15';
         let notepadSize;
         if (notepadFormat === '10x15') {
           notepadSize = { width: 378, height: 567 }; // 10cm x 15cm
         } else if (notepadFormat === '20x15') {
-          notepadSize = { width: 756, height: 567 }; // 20cm x 15cm
+          // 20cm alto x 15cm ancho (vertical)
+          notepadSize = { width: 567, height: 756 };
         } else {
           notepadSize = { width: 794, height: 978 }; // letter (8.5" x 11")
         }
@@ -218,6 +219,10 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         const todoSize = { width: 300, height: 150 };
         const todoPos = getCenteredPosition(todoSize.width, todoSize.height);
         newElementData = { type, x: todoPos.x, y: todoPos.y, width: todoSize.width, height: todoSize.height, userId, properties: { ...baseProperties, position: todoPos, size: todoSize }, content: props?.content || { title: 'Lista de Tareas', items: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+      case 'time-list':
+        const timeListSize = { width: 320, height: 200 };
+        const timeListPos = getCenteredPosition(timeListSize.width, timeListSize.height);
+        newElementData = { type, x: timeListPos.x, y: timeListPos.y, width: timeListSize.width, height: timeListSize.height, userId, properties: { ...baseProperties, position: timeListPos, size: timeListSize }, content: props?.content || { title: 'Time List', items: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'image':
         const imagePos = getCenteredPosition(sizeWidth, sizeHeight);
         newElementData = { type, x: imagePos.x, y: imagePos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: imagePos, size: { width: sizeWidth, height: sizeHeight } }, content: props?.content || { url: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
@@ -256,9 +261,15 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         const yellowNotepadPos = getCenteredPosition(yellowNotepadSize.width, yellowNotepadSize.height);
         newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { pages: [''], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'notes':
-        const notesSize = { width: 794, height: 567 }; // 21cm x 15cm (horizontal)
+        // Ajuste estándar iPad: 20cm alto x 15cm ancho (similar a notepad 20x15)
+        const notesSize = { width: 567, height: 756 };
         const notesPos = getCenteredPosition(notesSize.width, notesSize.height);
         newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { pages: ['<div><br></div>'], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+      case 'block-dibujo':
+        // Estándar iPad: 20cm alto x 15cm ancho (vertical)
+        const blockDibujoSize = { width: 567, height: 756 };
+        const blockDibujoPos = getCenteredPosition(blockDibujoSize.width, blockDibujoSize.height);
+        newElementData = { type, x: blockDibujoPos.x, y: blockDibujoPos.y, width: blockDibujoSize.width, height: blockDibujoSize.height, userId, properties: { ...baseProperties, position: blockDibujoPos, size: blockDibujoSize, backgroundColor: '#FFFFFF' }, content: props?.content || { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] }, zIndex: -1, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'mini-notes':
         const miniNotesSize = { width: 227, height: 378 }; // 6cm x 10cm
         const miniNotesPos = getCenteredPosition(miniNotesSize.width, miniNotesSize.height);

@@ -14,6 +14,15 @@ export const useDictation = (
   const lastTranscriptRef = useRef('');
   const interimNodeRef = useRef<HTMLSpanElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const savedInputRef = useRef<{ element: HTMLInputElement | HTMLTextAreaElement; start: number; end: number } | null>(null);
+
+  // Modos de formato avanzados (solo para contentEditable)
+  const underlineModeRef = useRef(false);
+  const titleModeRef = useRef(false);
+  const subtitleModeRef = useRef(false);
+  const uppercaseModeRef = useRef(false);
+  const listModeRef = useRef<'none' | 'bulleted' | 'numbered'>('none');
+  const listIndexRef = useRef(1);
 
   // Remover el nodo interim
   const removeInterimNode = useCallback(() => {
@@ -23,53 +32,84 @@ export const useDictation = (
     }
   }, []);
 
-  // Guardar la posición inicial del cursor cuando empieza el dictado (solo como fallback)
-  // REGLA: CURSOR MANDA - siempre se usará la posición ACTUAL del cursor al insertar
+  // Guardar la selección/cursor actual (llamar desde onMouseDown del botón micrófono, antes de que el foco cambie)
+  const saveSelectionBeforeMic = useCallback(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
+      savedInputRef.current = {
+        element: active,
+        start: active.selectionStart ?? 0,
+        end: active.selectionEnd ?? 0,
+      };
+      savedRangeRef.current = null;
+      return;
+    }
+    savedInputRef.current = null;
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const editable = range.commonAncestorContainer?.nodeType === Node.TEXT_NODE
+        ? (range.commonAncestorContainer as Text).parentElement?.closest?.('[contenteditable="true"]')
+        : (range.commonAncestorContainer as Node)?.parentElement?.closest?.('[contenteditable="true"]');
+      if (editable) {
+        savedRangeRef.current = range.cloneRange();
+      }
+    }
+  }, []);
+
+  // Guardar la posición inicial del cursor cuando empieza el dictado (fallback si no se llamó saveSelectionBeforeMic)
   useEffect(() => {
     if (isListening) {
-      // Resetear el transcript anterior cuando se inicia el dictado para evitar duplicaciones
       lastTranscriptRef.current = '';
-      
-      // Guardar la posición inicial solo como fallback (si no hay cursor actual al insertar)
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-      } else {
-        // Si no hay cursor, crear uno al final del elemento activo como fallback
-        const activeElement = document.activeElement;
-        if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
-          const range = document.createRange();
-          range.selectNodeContents(activeElement);
-          range.collapse(false); // Colapsar al final
-          selection?.removeAllRanges();
-          selection?.addRange(range);
-          savedRangeRef.current = range.cloneRange();
+      if (!savedRangeRef.current && !savedInputRef.current) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          savedRangeRef.current = selection.getRangeAt(0).cloneRange();
+        } else {
+          const activeElement = document.activeElement;
+          if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
+            const range = document.createRange();
+            range.selectNodeContents(activeElement);
+            range.collapse(false);
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            savedRangeRef.current = range.cloneRange();
+          }
         }
       }
     } else {
       savedRangeRef.current = null;
+      savedInputRef.current = null;
       removeInterimNode();
       lastTranscriptRef.current = '';
     }
   }, [isListening, removeInterimNode]);
 
-  // Insertar texto en el cursor actual
-  // REGLA: CURSOR MANDA - siempre usar la posición ACTUAL del cursor
+  // Insertar texto en el cursor actual (o en el input/textarea guardado si el foco ya se movió al mic)
   const insertTextAtCursor = useCallback((text: string, isInterim: boolean = false) => {
     const activeElement = document.activeElement;
-    
-    // Si es un input o textarea
-    if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
-      if (isInterim) return; // No mostramos interim en inputs
-      
-      // Usar la posición ACTUAL del cursor (CURSOR MANDA)
-      const start = activeElement.selectionStart || 0;
-      const end = activeElement.selectionEnd || 0;
-      const value = activeElement.value;
-      
-      activeElement.value = value.slice(0, start) + text + value.slice(end);
-      activeElement.selectionStart = activeElement.selectionEnd = start + text.length;
-      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+
+    // Input o textarea: usar el activo o el guardado (por si el foco está en el botón mic)
+    const inputTarget = (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement)
+      ? activeElement
+      : savedInputRef.current?.element;
+    if (inputTarget && document.contains(inputTarget)) {
+      if (isInterim) return;
+      const start = inputTarget === activeElement
+        ? (inputTarget.selectionStart ?? 0)
+        : savedInputRef.current!.start;
+      const end = inputTarget === activeElement
+        ? (inputTarget.selectionEnd ?? 0)
+        : savedInputRef.current!.end;
+      const value = inputTarget.value;
+      const newValue = value.slice(0, start) + text + value.slice(end);
+      const newPos = start + text.length;
+      inputTarget.value = newValue;
+      inputTarget.setSelectionRange(newPos, newPos);
+      if (savedInputRef.current && savedInputRef.current.element === inputTarget) {
+        savedInputRef.current = { element: inputTarget, start: newPos, end: newPos };
+      }
+      inputTarget.dispatchEvent(new Event('input', { bubbles: true }));
       return;
     }
 
@@ -127,14 +167,70 @@ export const useDictation = (
       selection.removeAllRanges();
       selection.addRange(range);
     } else {
-      // Insertar texto final en la posición ACTUAL del cursor
-      const textNode = document.createTextNode(text);
-      range.insertNode(textNode);
-      range.setStartAfter(textNode);
-      range.setEndAfter(textNode);
+      let finalText = text;
+      if (!finalText) return;
+
+      // Modo mayúsculas (solo una vez)
+      if (uppercaseModeRef.current) {
+        finalText = finalText.toUpperCase();
+        uppercaseModeRef.current = false;
+      }
+
+      // Prefijos de lista
+      if (listModeRef.current === 'bulleted') {
+        finalText = (finalText.startsWith('\n') ? '' : '\n') + '• ' + finalText;
+      } else if (listModeRef.current === 'numbered') {
+        const index = listIndexRef.current;
+        listIndexRef.current = index + 1;
+        finalText = `\n${index}.- ` + finalText;
+      }
+
+      // Insertar nodo según modo activo
+      let node: Node;
+
+      if (titleModeRef.current) {
+        const el = document.createElement('div');
+        el.style.fontSize = '24px';
+        el.style.fontWeight = '600';
+        el.style.textAlign = 'center';
+        el.style.display = 'block';
+        el.textContent = finalText.trim();
+        node = el;
+        titleModeRef.current = false;
+      } else if (subtitleModeRef.current) {
+        const wrapper = document.createElement('div');
+        wrapper.style.fontSize = '14px';
+        wrapper.style.fontWeight = '600';
+        wrapper.style.textTransform = 'uppercase';
+        wrapper.style.color = '#374151';
+        wrapper.style.marginTop = '8px';
+        wrapper.style.marginBottom = '4px';
+        wrapper.textContent = finalText.trim();
+
+        const line = document.createElement('div');
+        line.style.borderBottom = '1px solid #D1D5DB';
+        line.style.marginBottom = '8px';
+
+        range.insertNode(line);
+        range.insertNode(wrapper);
+        node = line;
+        subtitleModeRef.current = false;
+      } else if (underlineModeRef.current) {
+        const span = document.createElement('span');
+        span.style.textDecoration = 'underline';
+        span.style.textDecorationColor = 'teal';
+        span.textContent = finalText;
+        node = span;
+      } else {
+        node = document.createTextNode(finalText);
+      }
+
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.setEndAfter(node);
       selection.removeAllRanges();
       selection.addRange(range);
-      
+
       // Actualizar la posición guardada para el próximo insert (pero siempre priorizar posición actual)
       savedRangeRef.current = range.cloneRange();
     }
@@ -143,6 +239,45 @@ export const useDictation = (
   // Procesar comandos especiales de dictado
   const processDictationCommand = useCallback((text: string) => {
     let processedText = text;
+
+    const raw = processedText.trim();
+    const lower = raw.toLowerCase();
+
+    // Modos que solo cambian estado y NO insertan texto
+    if (lower === 'subrayar') {
+      underlineModeRef.current = true;
+      return '';
+    }
+    if (lower === 'fin subrayar' || lower === 'fin sub-rayar') {
+      underlineModeRef.current = false;
+      return '';
+    }
+    if (lower === 'titulo' || lower === 'título') {
+      titleModeRef.current = true;
+      return '';
+    }
+    if (lower === 'mayuscula' || lower === 'mayúscula' || lower === 'mayusculas' || lower === 'mayúsculas') {
+      uppercaseModeRef.current = true;
+      return '';
+    }
+    if (lower === 'subtitulo' || lower === 'sub título' || lower === 'subtítulo') {
+      subtitleModeRef.current = true;
+      return '';
+    }
+    if (lower === 'lista') {
+      listModeRef.current = 'bulleted';
+      return '\n';
+    }
+    if (lower === 'fin lista' || lower === 'fin de lista') {
+      listModeRef.current = 'none';
+      listIndexRef.current = 1;
+      return '';
+    }
+    if (lower === 'numeros' || lower === 'números' || lower === 'lista numerica') {
+      listModeRef.current = 'numbered';
+      listIndexRef.current = 1;
+      return '\n';
+    }
 
     // Comandos de dictado - frases completas que se convierten en símbolos
     // Hacer las búsquedas más flexibles para manejar variaciones del reconocimiento de voz
@@ -153,6 +288,24 @@ export const useDictation = (
     processedText = processedText.replace(/\bresaltar\b/gi, '-*-');
     processedText = processedText.replace(/\blineas\b/gi, '//');
     processedText = processedText.replace(/\bmarca\b/gi, '#');
+
+    // parrafo -> doble salto de línea
+    processedText = processedText.replace(/\bparrafo\b/gi, '\n\n');
+
+    // ENTER -> salto de línea simple
+    processedText = processedText.replace(/\benter\b/gi, '\n');
+
+    // fecha -> fecha actual amigable
+    if (/\bfecha\b/i.test(processedText)) {
+      const now = new Date();
+      const fechaStr = now.toLocaleDateString('es-ES', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+      processedText = processedText.replace(/\bfecha\b/gi, fechaStr);
+    }
 
     // Añadir espacios después de puntuación (solo si no hay espacio ya)
     processedText = processedText.replace(/\.([^ \n])/g, '. $1'); // Punto seguido de texto -> . espacio
@@ -220,4 +373,6 @@ export const useDictation = (
       removeInterimNode();
     };
   }, [removeInterimNode]);
+
+  return { saveSelectionBeforeMic };
 };

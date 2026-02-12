@@ -527,6 +527,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
       {/* Header - Color amarillo claro */}
       <div
         className="flex items-center justify-between px-4 py-3"
+        data-notepad-header
         style={{
           backgroundColor: '#FFF9C4',
           color: '#000000',

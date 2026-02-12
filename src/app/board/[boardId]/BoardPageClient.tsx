@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 // Componentes del Canvas
 import Canvas from '@/components/canvas/canvas';
 import ToolsSidebar from '@/components/canvas/tools-sidebar';
+import { DrawingOverlay } from '@/components/canvas/drawing-overlay';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
 import GalleryElement from '@/components/canvas/elements/gallery-element';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
+import { StorageUsageDisplay } from '@/components/user-settings/StorageUsageDisplay';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
 import MobileMenu from '@/components/canvas/mobile-menu';
 
@@ -46,6 +48,7 @@ import MobileMenu from '@/components/canvas/mobile-menu';
 // Hooks de dictado
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useDictation } from '@/hooks/use-dictation';
+import { useDrawingMode } from '@/hooks/use-drawing-mode';
 
 interface BoardPageClientProps {
   boardId: string;
@@ -109,9 +112,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     stopListening,
   } = useSpeechToText();
 
-  // Dictado global: inserta texto donde esté el cursor (CURSOR MANDA),
-  // independientemente de qué elemento esté activo (notas, mini, dictado, etc.)
-  useDictation(isListening, transcript, interimTranscript);
+  // Dictado global: inserta texto donde esté el cursor (CURSOR MANDA)
+  const { saveSelectionBeforeMic } = useDictation(isListening, transcript, interimTranscript);
+
+  // Modo de dibujo global
+  const drawingMode = useDrawingMode();
 
   // CRÍTICO: Cleanup del listener cuando el componente se desmonta o cambia boardId
   useEffect(() => {
@@ -409,6 +414,88 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       };
     }
   }, [addElement, getViewportCenter]);
+
+  // Pegar imagen desde portapapeles al tablero (cuando el foco no está en un elemento editable)
+  const addElementRef = useRef(addElement);
+  const getViewportCenterRef = useRef(getViewportCenter);
+  const toastRef = useRef(toast);
+  useEffect(() => {
+    addElementRef.current = addElement;
+    getViewportCenterRef.current = getViewportCenter;
+    toastRef.current = toast;
+  }, [addElement, getViewportCenter, toast]);
+
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      const target = e.target as Node;
+      if (!target || !(target instanceof HTMLElement)) return;
+      // No interceptar si el usuario está pegando dentro de un campo editable (texto o contenido rico)
+      if (
+        target.closest('textarea') ||
+        target.closest('input:not([readonly])') ||
+        target.closest('[contenteditable="true"]')
+      ) {
+        return;
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      let imageBlob: Blob | null = null;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          imageBlob = item.getAsFile();
+          if (imageBlob) break;
+        }
+      }
+      if (!imageBlob) {
+        // Intentar API async por si el paste solo tiene imagen (ej. copiar página Block Dibujo)
+        try {
+          const clipboardItems = await navigator.clipboard.read();
+          for (const item of clipboardItems) {
+            if (item.types.includes('image/png')) {
+              imageBlob = await item.getType('image/png');
+              break;
+            }
+            if (item.types.includes('image/jpeg')) {
+              imageBlob = await item.getType('image/jpeg');
+              break;
+            }
+          }
+        } catch (_) {
+          // Sin permiso o clipboard vacío
+          return;
+        }
+      }
+      if (!imageBlob) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+      const url = URL.createObjectURL(imageBlob);
+      try {
+        const center = getViewportCenterRef.current();
+        await addElementRef.current('image', {
+          content: { url },
+          properties: { size: { width: 300, height: 200 } },
+          x: center.x - 150,
+          y: center.y - 100,
+          width: 300,
+          height: 200,
+        });
+        toastRef.current({ title: 'Imagen pegada en el tablero' });
+      } catch (err) {
+        toastRef.current({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudo pegar la imagen.',
+        });
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    document.addEventListener('paste', handlePaste, true);
+    return () => document.removeEventListener('paste', handlePaste, true);
+  }, []);
 
   // Sincronizar selección
   const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
@@ -892,6 +979,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
             isListening={isListening}
             onToggleDictation={toggleListening}
+            onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+            drawingMode={drawingMode}
           />
         )}
 
@@ -919,6 +1008,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onMoveBackward={() => {}}
           onGoToHome={() => canvasRef.current?.goToHome()}
           onCenterView={() => {}}
+          onCenterElementInView={(el) => canvasRef.current?.centerOnElement(el)}
           onGroupElements={() => {}}
           saveLastView={() => {}}
           onActivateDrag={() => {}}
@@ -934,6 +1024,13 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           toast={toast}
           isPreview={false}
         />
+
+        {drawingMode.isDrawingMode && (
+          <DrawingOverlay
+            color={drawingMode.getColorHex()}
+            strokeWidth={drawingMode.getStrokeWidth()}
+          />
+        )}
 
         <FormattingToolbar
           isOpen={isFormatToolbarOpen}
@@ -999,6 +1096,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onLocateElement={handleLocateElement}
         />
 
+        {/* Display de Uso de Almacenamiento (para pruebas) */}
+        {user?.uid && <StorageUsageDisplay userId={user.uid} />}
 
         {/* Panel lateral Galería */}
         <div

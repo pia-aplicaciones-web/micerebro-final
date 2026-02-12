@@ -11,7 +11,48 @@ import {
 import { initFirebase, getFirebaseAuth } from './firebase';
 
 /**
- * Inicia sesión con Google usando popup
+ * Detecta si el dispositivo es móvil o si hay problemas con sessionStorage
+ * Siempre retorna true para móviles para evitar problemas con redirect
+ */
+function shouldUsePopup() {
+  if (typeof window === 'undefined') return true;
+  
+  // Verificar si estamos en un dispositivo móvil (mejorado)
+  const userAgent = navigator.userAgent || navigator.vendor || (typeof window.opera !== 'undefined' ? window.opera : '');
+  const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+  
+  // Verificar tamaño de pantalla (móviles generalmente tienen ancho < 768px)
+  const isSmallScreen = window.innerWidth < 768;
+  
+  // Verificar si sessionStorage está disponible y funciona correctamente
+  let sessionStorageAvailable = false;
+  try {
+    const testKey = '__firebase_auth_test__';
+    sessionStorage.setItem(testKey, 'test');
+    const retrieved = sessionStorage.getItem(testKey);
+    sessionStorage.removeItem(testKey);
+    sessionStorageAvailable = retrieved === 'test';
+  } catch (e) {
+    console.warn('⚠️ sessionStorage no disponible:', e);
+    sessionStorageAvailable = false;
+  }
+  
+  // Verificar si estamos en modo de almacenamiento particionado (común en móviles)
+  const isStoragePartitioned = !sessionStorageAvailable || 
+    (navigator.userAgentData && navigator.userAgentData.mobile);
+  
+  // Usar popup si es móvil, pantalla pequeña, o hay problemas con sessionStorage
+  const usePopup = isMobile || isSmallScreen || !sessionStorageAvailable || isStoragePartitioned;
+  
+  if (usePopup) {
+    console.log('📱 Usando popup para login (móvil o problemas con sessionStorage detectados)');
+  }
+  
+  return usePopup;
+}
+
+/**
+ * Inicia sesión con Google usando popup (siempre en móviles para evitar problemas con sessionStorage)
  */
 export async function signInWithGoogle() {
   if (typeof window === 'undefined') {
@@ -32,6 +73,13 @@ export async function signInWithGoogle() {
     // client_id será configurado automáticamente por Firebase
   });
   
+  // Siempre usar popup en móviles o si hay problemas con sessionStorage
+  const usePopup = shouldUsePopup();
+  
+  if (!usePopup) {
+    console.warn('⚠️ Se detectó desktop pero se recomienda usar popup para evitar problemas. Usando popup de todas formas.');
+  }
+  
   try {
     console.log('🔄 Iniciando sesión con Google (popup)...');
     const result = await signInWithPopup(auth, provider);
@@ -40,12 +88,19 @@ export async function signInWithGoogle() {
   } catch (error) {
     console.error("❌ Error during Google sign-in popup:", error);
     
+    // Manejar errores específicos
     if (error.code === 'auth/popup-blocked') {
-      throw new Error('El popup fue bloqueado. Por favor, permite popups para este sitio e intenta de nuevo.');
+      throw new Error('El popup fue bloqueado. Por favor, permite popups para este sitio en la configuración del navegador e intenta de nuevo.');
     }
     
     if (error.code === 'auth/popup-closed-by-user') {
       throw new Error('El popup fue cerrado antes de completar el login. Por favor, intenta de nuevo.');
+    }
+    
+    // Si hay error relacionado con sessionStorage, dar mensaje más claro
+    if (error.message?.includes('sessionStorage') || error.message?.includes('initial state') || error.message?.includes('missing initial state')) {
+      console.error('❌ Error de sessionStorage detectado. Esto no debería pasar con popup.');
+      throw new Error('Error de autenticación. Por favor, intenta cerrar y abrir el navegador, o usa otro navegador.');
     }
     
     throw error;
@@ -129,13 +184,16 @@ export const createUserWithEmail = async (email, password) => {
 
 /**
  * Maneja el resultado de Google sign-in (tanto popup como redirect).
+ * Nota: Con la nueva implementación, siempre usamos popup, pero mantenemos esto
+ * por compatibilidad por si hay redirects pendientes de sesiones anteriores.
  */
 export async function handleGoogleSignInResult(auth) {
   try {
-    // Intentar obtener resultado de redirect (por si se usó redirect)
+    // Intentar obtener resultado de redirect (por si se usó redirect en una sesión anterior)
+    // Esto es solo para limpiar redirects pendientes, no para el flujo normal
     const redirectResult = await getRedirectResult(auth);
     if (redirectResult) {
-      console.log('✅ Login con Google exitoso (redirect):', redirectResult.user.email);
+      console.log('✅ Login con Google exitoso (redirect pendiente procesado):', redirectResult.user.email);
       return redirectResult;
     }
 
@@ -144,13 +202,19 @@ export async function handleGoogleSignInResult(auth) {
   } catch (error) {
     console.error('❌ Error getting redirect result:', error);
 
-    // Si hay un error relacionado con sessionStorage, sugerir usar popup
-    if (error.message?.includes('sessionStorage') || error.message?.includes('initial state')) {
-      console.warn('⚠️ Problema con sessionStorage detectado.');
-      throw new Error('Problema con el almacenamiento del navegador. Intenta desde una pestaña de incógnito o usa otro navegador.');
+    // Si hay un error relacionado con sessionStorage, es porque se intentó usar redirect
+    // pero ahora siempre usamos popup, así que este error no debería ocurrir en el flujo normal
+    if (error.message?.includes('sessionStorage') || 
+        error.message?.includes('initial state') || 
+        error.message?.includes('missing initial state')) {
+      console.warn('⚠️ Problema con sessionStorage detectado en redirect. Esto no debería pasar ya que usamos popup.');
+      // No lanzar error, solo loggear, porque el flujo normal usa popup
+      return null;
     }
 
-    throw error;
+    // Para otros errores, solo loggear pero no fallar
+    console.warn('⚠️ Error procesando redirect result (no crítico):', error);
+    return null;
   }
 }
 
@@ -158,6 +222,9 @@ export async function handleGoogleSignInResult(auth) {
  * Cierra la sesión del usuario actual
  */
 export const signOut = async () => {
+  if (typeof window !== 'undefined') {
+    await initFirebase();
+  }
   const auth = getFirebaseAuth();
   if (!auth) {
     throw new Error('Firebase Auth no está inicializado');

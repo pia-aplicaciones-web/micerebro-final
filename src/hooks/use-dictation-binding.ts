@@ -51,11 +51,13 @@ export function useDictationBinding({
     boundElementRef.current = element;
   }, []);
 
-  // Escuchar cambios en transcripts cuando el elemento está seleccionado
+  // Escuchar cambios en transcripts cuando el elemento está seleccionado.
+  // Input/textarea lo maneja el dictado global (useDictation) para no insertar dos veces.
   useEffect(() => {
     if (!isSelected || !boundElementRef.current) return;
+    const el = boundElementRef.current;
+    if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) return;
 
-    // Procesar transcript final
     if (finalTranscript && finalTranscript !== lastTranscriptRef.current) {
       const newText = finalTranscript.slice(lastTranscriptRef.current.length);
       if (newText) {

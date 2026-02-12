@@ -9,12 +9,13 @@ import type { CanvasElement, ElementType, WithId } from './types';
 const VALID_ELEMENT_TYPES: ElementType[] = [
   'image', 'text', 'sticky', 'notepad', // 'cuaderno', // DESACTIVADO COMPLETAMENTE
   'comment', 'comment-small', 'comment-r',
-  'todo', 'moodboard', 'gallery', 'yellow-notepad',
+  'todo', 'time-list', 'moodboard', 'gallery', 'yellow-notepad',
   'stopwatch', 'countdown', 'highlight-text',
   'weekly-planner', 'vertical-weekly-planner', 'weekly-menu',
   'container', 'two-columns',
   'locator', 'image-frame',
-  'photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free', 'libreta'
+  'photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free', 'libreta',
+  'block-dibujo'
 ];
 
 // Dimensiones por defecto por tipo
@@ -40,6 +41,8 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'photo-grid-adaptive': { width: 480, height: 420 },
   'photo-grid-free': { width: 600, height: 500 },
   'libreta': { width: 378, height: 567 },
+  'block-dibujo': { width: 567, height: 756 },
+  'time-list': { width: 320, height: 200 },
   'default': { width: 200, height: 200 }
 };
 
@@ -133,6 +136,30 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
       }
       return { title: 'Lista', items: [] };
 
+    case 'time-list':
+      if (typeof content === 'object' && content !== null) {
+        const timeListContent = content as Record<string, unknown>;
+        return {
+          title: typeof timeListContent.title === 'string' ? timeListContent.title : 'Time List',
+          items: Array.isArray(timeListContent.items)
+            ? timeListContent.items.filter((item): item is Record<string, unknown> => 
+                item && typeof item === 'object' && 'id' in item && 'text' in item
+              ).map(item => ({
+                id: typeof item.id === 'string' ? item.id : `item-${Date.now()}`,
+                text: typeof item.text === 'string' ? sanitizeHtml(item.text) : '',
+                completed: typeof item.completed === 'boolean' ? item.completed : false,
+                timerMinutes: typeof item.timerMinutes === 'number' && item.timerMinutes > 0 && item.timerMinutes <= 120 ? item.timerMinutes : undefined,
+                timerSeconds: typeof item.timerSeconds === 'number' && item.timerSeconds >= 0 ? item.timerSeconds : undefined,
+                timerRunning: typeof item.timerRunning === 'boolean' ? item.timerRunning : false,
+                timerFinished: typeof item.timerFinished === 'boolean' ? item.timerFinished : false,
+                waitingForReadyWord: typeof item.waitingForReadyWord === 'boolean' ? item.waitingForReadyWord : false,
+                lastAnnouncedMinutes: typeof item.lastAnnouncedMinutes === 'number' ? item.lastAnnouncedMinutes : undefined,
+              }))
+            : []
+        };
+      }
+      return { title: 'Time List', items: [] };
+
     case 'notepad':
     case 'yellow-notepad':
       if (typeof content === 'object' && content !== null) {
@@ -144,6 +171,18 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
         };
       }
       return { title: '', text: '', content: '' };
+
+    case 'block-dibujo':
+      if (typeof content === 'object' && content !== null) {
+        const blockContent = content as Record<string, unknown>;
+        return {
+          title: typeof blockContent.title === 'string' ? blockContent.title : 'BLOCK DIBUJO',
+          text: typeof blockContent.text === 'string' ? sanitizeHtml(blockContent.text) : '',
+          searchQuery: typeof blockContent.searchQuery === 'string' ? blockContent.searchQuery : '',
+          images: Array.isArray(blockContent.images) ? blockContent.images : [],
+        };
+      }
+      return { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] };
 
     case 'image':
       if (typeof content === 'object' && content !== null) {
@@ -255,9 +294,13 @@ function getDefaultContent(type: ElementType): unknown {
       return { label: 'Localizador' };
     case 'todo':
       return { title: 'Lista', items: [] };
+    case 'time-list':
+      return { title: 'Time List', items: [] };
     case 'notepad':
     case 'yellow-notepad':
       return { title: '', text: '', content: '' };
+    case 'block-dibujo':
+      return { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] };
     case 'image':
       return { url: '' };
     case 'moodboard':

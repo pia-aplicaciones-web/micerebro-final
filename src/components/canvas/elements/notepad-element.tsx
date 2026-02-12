@@ -166,6 +166,8 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, [typedContent.title, toast]);
 
+  const COPIED_KEY = 'micerebro-block-dibujo-clipboard';
+
   const escapeHtml = useCallback((text: string) => {
     return text
       .replace(/&/g, '&amp;')
@@ -411,10 +413,10 @@ export default function NotepadElement(props: CommonElementProps) {
   // Función para calcular líneas disponibles por formato
   const getLinesPerPage = useCallback((format: string) => {
     switch (format) {
-      case '10x15': return 33; // 33 líneas en formato pequeño
-      case '20x15': return 33; // 33 líneas en formato mediano
+      case '10x15': return 32;
+      case '20x15': return 32;
       case 'letter':
-      default: return 33; // 33 líneas en formato letter (8.5x11)
+      default: return 32;
     }
   }, []);
 
@@ -426,14 +428,39 @@ export default function NotepadElement(props: CommonElementProps) {
     linesPerPage: number;
   } | null>(null);
 
+  // Convierte un array de líneas en HTML preservando interlineado (cada línea = div)
+  const linesToHtml = useCallback((lineArray: string[]) => {
+    return lineArray
+      .map((line) =>
+        line === '' ? '<div><br></div>' : `<div>${escapeHtml(line)}</div>`
+      )
+      .join('');
+  }, [escapeHtml]);
+
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     e.preventDefault();
 
-    // Limpiar estilos HTML y obtener texto plano
+    // Primero verificar si hay contenido de BLOCK DIBUJO en localStorage
+    try {
+      const blockDibujoData = localStorage.getItem(COPIED_KEY);
+      if (blockDibujoData) {
+        const payload = JSON.parse(blockDibujoData);
+        if (payload.type === 'block-dibujo' && payload.html) {
+          // Insertar HTML del BLOCK DIBUJO (incluye imágenes si las hay)
+          document.execCommand('insertHTML', false, payload.html);
+          toast({ title: 'Contenido pegado desde BLOCK DIBUJO' });
+          localStorage.removeItem(COPIED_KEY); // Limpiar después de pegar
+          return;
+        }
+      }
+    } catch (error) {
+      // Si hay error, continuar con el pegado normal
+      console.error('Error al pegar desde BLOCK DIBUJO:', error);
+    }
+
     const clipboardData = e.clipboardData;
     let pastedText = clipboardData.getData('text/plain');
 
-    // Si no hay texto plano, intentar limpiar HTML
     if (!pastedText) {
       const htmlContent = clipboardData.getData('text/html');
       if (htmlContent) {
@@ -445,29 +472,26 @@ export default function NotepadElement(props: CommonElementProps) {
 
     if (!pastedText) return;
 
-    // Limpiar y normalizar el texto
+    // Normalizar saltos de línea y remover caracteres de control
     pastedText = pastedText
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remover caracteres de control
-      .trim();
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 
-    if (!pastedText) return;
+    if (!pastedText.trim()) return;
 
-    // Contar líneas del texto pegado
     const lines = pastedText.split('\n');
     const totalLines = lines.length;
 
-    // Obtener formato actual y calcular líneas por página
     const notepadFormat = (properties as any)?.format || 'letter';
-    const linesPerPage = getLinesPerPage(notepadFormat);
-
-    // Usar las líneas por página completas (33 líneas)
-    const maxLinesPerPage = linesPerPage; // Usar todas las líneas disponibles
+    const maxLinesPerPage = getLinesPerPage(notepadFormat);
 
     if (totalLines <= maxLinesPerPage) {
-      // Texto pequeño, pegar normalmente
-      document.execCommand('insertText', false, pastedText);
+      // Texto pequeño: insertar como HTML preservando interlineado (1 línea = 1 div)
+      const html = linesToHtml(lines);
+      document.execCommand('insertHTML', false, html);
     } else {
-      // Texto grande, mostrar diálogo de auto-paginación
+      // Texto grande: autopaginación, cada página almacenada como HTML
       const pages: string[] = [];
       let currentPageLines: string[] = [];
       let currentLineCount = 0;
@@ -476,28 +500,25 @@ export default function NotepadElement(props: CommonElementProps) {
         currentPageLines.push(line);
         currentLineCount++;
 
-        // Crear nueva página cuando se alcance el límite de líneas (dejando 2 líneas de margen)
         if (currentLineCount >= maxLinesPerPage) {
-          pages.push(currentPageLines.join('\n'));
+          pages.push(linesToHtml(currentPageLines));
           currentPageLines = [];
           currentLineCount = 0;
         }
       }
 
-      // Agregar la última página si tiene contenido
       if (currentPageLines.length > 0) {
-        pages.push(currentPageLines.join('\n'));
+        pages.push(linesToHtml(currentPageLines));
       }
 
-      // Mostrar diálogo de confirmación
       setAutoPageDialog({
         isOpen: true,
         pages,
         totalLines,
-        linesPerPage: maxLinesPerPage
+        linesPerPage: maxLinesPerPage,
       });
     }
-  }, [properties, getLinesPerPage]);
+  }, [properties, getLinesPerPage, linesToHtml, toast]);
   
 
   const handlePageChange = useCallback((newPage: number) => {
@@ -593,9 +614,10 @@ export default function NotepadElement(props: CommonElementProps) {
     let originalSize;
 
     if (notepadFormat === '10x15') {
-      originalSize = { width: 378, height: 567 }; // 10cm x 15cm
+      originalSize = { width: 378, height: 567 }; // 10cm ancho x 15cm alto
     } else if (notepadFormat === '20x15') {
-      originalSize = { width: 756, height: 567 }; // 20cm x 15cm
+      // 20cm alto x 15cm ancho (vertical)
+      originalSize = { width: 567, height: 756 };
     } else {
       originalSize = { width: 794, height: 978 }; // letter (8.5" x 11")
     }
@@ -613,61 +635,48 @@ export default function NotepadElement(props: CommonElementProps) {
     e.stopPropagation();
     e.preventDefault();
     if (isPreview) return;
-    
-      const isMinimized = !!minimized;
-      const currentSize = (properties as CanvasElementProperties)?.size || { width: 794, height: 1021 };
-      
-      // Convertir currentSize a valores numéricos para originalSize
-      const currentSizeNumeric = {
-        width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 794,
-        height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 1021,
+
+    const isMinimized = !!minimized;
+    const currentSize = (properties as CanvasElementProperties)?.size || { width: 794, height: 1021 };
+
+    // Convertir currentSize a valores numéricos para originalSize
+    const currentSizeNumeric = {
+      width: typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 794,
+      height: typeof currentSize.height === 'number' ? currentSize.height : parseFloat(String(currentSize.height)) || 1021,
+    };
+
+    if (isMinimized) {
+      // Restaurar: recuperar tamaño original SIN tocar el contenido
+      const { originalSize, ...restProps } = (properties || {}) as Partial<CanvasElementProperties>;
+      const restoredSize = originalSize || { width: 794, height: 1021 };
+      const newProperties: Partial<CanvasElementProperties> = {
+        ...restProps,
+        size: restoredSize,
       };
 
-      if (isMinimized) {
-          // Restaurar: recuperar tamaño original y asegurar que el contenido se mantiene
-          const { originalSize, ...restProps } = (properties || {}) as Partial<CanvasElementProperties>;
-          const restoredSize = originalSize || { width: 794, height: 1021 };
-          const newProperties: Partial<CanvasElementProperties> = { 
-            ...restProps, 
-            size: restoredSize 
-          };
-          
-        // DEBUG: Log para verificar el título antes de restaurar
-        console.log('RESTAURANDO - Título actual en typedContent:', typedContent.title);
-        console.log('RESTAURANDO - Título en titleRef:', titleRef.current?.innerText);
+      onUpdate(id, {
+        minimized: false,
+        properties: newProperties,
+      });
+    } else {
+      // Guardar contenido antes de minimizar (autoguardado se encarga del content)
+      saveContent();
 
-        // FIX: Preservar el contenido al restaurar (incluyendo el título)
-          onUpdate(id, {
-              minimized: false,
-              properties: newProperties,
-            content: typedContent, // PASAR EL CONTENT PARA ASEGURAR QUE EL TÍTULO SE PRESERVE
-        });
+      // Minimizar: guardar tamaño actual y reducir altura, sin enviar content
+      const currentWidth =
+        typeof currentSize.width === 'number'
+          ? currentSize.width
+          : parseFloat(String(currentSize.width)) || 794;
 
-        // FIX CRÍTICO: Forzar sincronización del título inmediatamente después de restaurar
-        setTimeout(() => {
-          if (titleRef.current && typedContent.title) {
-            titleRef.current.innerText = typedContent.title;
-            console.log('RESTAURANDO - Título forzado:', typedContent.title);
-          }
-        }, 10);
-      } else {
-        // FIX: Guardar contenido Y título ANTES de minimizar
-        saveContent();
-        const titleText = titleRef.current?.innerText || '';
-        const updatedContent = { ...typedContent, title: titleText };
-
-          // Minimizar: guardar tamaño actual y reducir altura
-          const currentWidth = typeof currentSize.width === 'number' ? currentSize.width : parseFloat(String(currentSize.width)) || 794;
-          onUpdate(id, {
-              minimized: true,
-              properties: { 
-                ...properties, 
-                size: { width: currentWidth, height: 48 }, 
-                originalSize: currentSizeNumeric 
-              },
-            content: updatedContent, // Guardar el contenido actualizado con el título
-          });
-      }
+      onUpdate(id, {
+        minimized: true,
+        properties: {
+          ...properties,
+          size: { width: currentWidth, height: 48 },
+          originalSize: currentSizeNumeric,
+        },
+      });
+    }
   }, [isPreview, minimized, properties, onUpdate, id, saveContent]);
   
   const handleCloseNotepad = useCallback((e: React.MouseEvent) => { 
@@ -1098,7 +1107,7 @@ export default function NotepadElement(props: CommonElementProps) {
   if (minimized) {
       return (
           <Card className="notepad-card w-full h-full flex items-center shadow-lg rounded-lg bg-card border-2 border-primary/50 group" data-element-id={id}>
-               <div className="p-2 flex flex-row items-center gap-1 w-full cursor-grab active:cursor-grabbing drag-handle">
+               <div className="p-2 flex flex-row items-center gap-1 w-full cursor-grab active:cursor-grabbing drag-handle" data-notepad-header>
                   <div className="p-1"><GripVertical className="size-5 text-muted-foreground" /></div>
                   <p className="font-headline text-sm font-semibold truncate flex-grow">{typedContent.title || 'Sin título'}</p>
                   <Button variant="ghost" size="icon" className="size-7" title="Maximizar" onMouseDown={(e) => {e.stopPropagation(); toggleMinimize(e)}}>
@@ -1116,7 +1125,7 @@ export default function NotepadElement(props: CommonElementProps) {
       style={{ backgroundColor: notepadBackgroundColor }}
       onClick={handleNotepadClick}
     >
-        <div className="p-2 border-b flex flex-row items-center gap-1">
+        <div className="p-2 border-b flex flex-row items-center gap-1" data-notepad-header>
             <div className="p-1 drag-handle cursor-grab active:cursor-grabbing"><GripVertical className="size-5 text-muted-foreground" /></div>
             <div
                 ref={titleRef}
@@ -1288,9 +1297,26 @@ export default function NotepadElement(props: CommonElementProps) {
                        />
                     )}
                     {isInfoOpen && (
-                      <div className='absolute inset-0 bg-white/95 z-20 p-4 text-xs overflow-y-auto' onClick={() => setIsInfoOpen(false)}>
-                        <h3 className='font-bold mb-2 text-base'>Comandos de Dictado por Voz</h3>
-                        <p>WIP</p>
+                      <div className="absolute inset-0 bg-white/95 z-20 p-4 text-xs overflow-y-auto" onClick={() => setIsInfoOpen(false)}>
+                        <h3 className="font-bold mb-2 text-base">Comandos de Dictado por Voz</h3>
+                        <p className="mb-2 text-gray-600">
+                          Estos comandos funcionan cuando el dictado está activo y el cursor está dentro del cuaderno.
+                          Di exactamente las palabras indicadas (sin necesidad de decir la puntuación).
+                        </p>
+                        <ul className="list-disc pl-4 space-y-1 text-gray-700">
+                          <li><strong>lineas</strong>: inserta <code>//</code> en la posición del cursor.</li>
+                          <li><strong>ENTER</strong>: inserta un salto de línea sencillo.</li>
+                          <li><strong>parrafo</strong>: inserta un doble salto de línea (nuevo párrafo).</li>
+                          <li><strong>fecha</strong>: inserta la fecha actual en formato largo donde esté el cursor.</li>
+                          <li><strong>subrayar</strong>: activa el modo subrayado en color teal para el texto que dictes a continuación.</li>
+                          <li><strong>FIN subrayar</strong>: desactiva el modo subrayado.</li>
+                          <li><strong>Titulo</strong>: el siguiente texto se inserta como título (24px, centrado, en bloque).</li>
+                          <li><strong>Mayuscula</strong>: el siguiente bloque dictado se inserta totalmente en MAYÚSCULAS.</li>
+                          <li><strong>subTitulo</strong>: inserta un subtítulo en gris oscuro, en mayúsculas, alineado a la izquierda, con una línea horizontal debajo.</li>
+                          <li><strong>Lista</strong>: comienza una lista con viñetas; cada frase que dictes se añade como ítem.</li>
+                          <li><strong>fin lista</strong>: termina la lista con viñetas.</li>
+                          <li><strong>Numeros</strong>: comienza una lista numerada (1.-, 2.-, 3.- ...); cada nueva frase avanza el número.</li>
+                        </ul>
                         <p className="text-center mt-4 text-gray-500">Haz clic en cualquier lugar para cerrar</p>
                       </div>
                     )}
