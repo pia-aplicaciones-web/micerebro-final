@@ -11,6 +11,7 @@ import {
   Plus,
   LogOut,
   Upload,
+  Folder,
   Link as LinkIcon,
   EyeOff,
   Highlighter,
@@ -334,26 +335,24 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       icon: ImageIcon,
       subMenu: [
         { label: 'Desde URL', onClick: onAddImageFromUrl },
-        { label: 'Subir', onClick: onUploadImage },
         { label: 'Marco de foto', onClick: () => handleAddElement('image-frame') },
         { label: 'Subir + Crop', onClick: onCropImage },
         { label: 'Desde URL + Crop', onClick: onAddImageFromUrlWithCrop },
       ],
     },
     {
-      label: 'Texto',
-      icon: MessageCircle,
-      subMenu: [
-        { label: 'Texto', onClick: () => handleAddElement('text', { properties: { backgroundColor: '#ffffff' } }) },
-        { label: 'Texto destacado', icon: Highlighter, onClick: () => handleAddElement('highlight-text') },
-        { label: 'Añadir texto', onClick: () => handleAddElement('comment-small') },
-        { label: 'Comentario R', onClick: () => handleAddElement('comment-r') },
-      ],
+      label: 'Subir',
+      icon: Folder,
+      onClick: onUploadImage,
     },
     {
       label: 'Más opciones',
       icon: MoreHorizontal,
       subMenu: [
+        { label: 'Texto', onClick: () => handleAddElement('text', { properties: { backgroundColor: '#ffffff' } }) },
+        { label: 'Texto destacado', icon: Highlighter, onClick: () => handleAddElement('highlight-text') },
+        { label: 'Añadir texto', onClick: () => handleAddElement('comment-small') },
+        { label: 'Comentario R', onClick: () => handleAddElement('comment-r') },
         { label: 'Renombrar Tablero', onClick: () => { onOpenRenameBoardDialog(); onClose(); } },
         {
           label: 'Eliminar Tablero',

@@ -1,6 +1,16 @@
 # 🚀 Configuración del Proyecto - Mi Cerebro App
 
-REGLA FIJA : deploy siempre en aliaS: https://micerebroapp.vercel.app/ 
+REGLA FIJA : deploy siempre en aliaS: https://micerebroapp.vercel.app/
+
+## REGLA: Sincronización versión escritorio / móvil / iPad
+
+**Al hacer cambios en elementos del canvas (nuevos tipos, props, comportamientos o correcciones), se debe actualizar y verificar en las tres versiones:**
+
+1. **Escritorio** – `src/app/board/[boardId]/BoardPageClient.tsx` + `ToolsSidebar` + `Canvas` (elementos vía `transformable-element.tsx`).
+2. **Móvil** – `src/components/canvas/mobile/mobile-board-client.tsx` + `MobileMenu` + mismo `Canvas`/elementos. El menú debe ser **flotante** (icono arrastrable, siempre visible).
+3. **iPad / tablet** – Misma app: en viewport ≤ 768px se usa la rama móvil de `BoardPageClient` (menú hamburguesa flotante + `MobileMenu`); en rutas `/movil/*` se usa `MobileBoardClient`.
+
+**Checklist al tocar elementos:** ¿El tipo está en `transformable-element.tsx` (ELEMENT_COMPONENTS)? ¿Aparece en `MobileMenu` para añadir desde móvil? ¿`canvasElements` en móvil incluye el tipo (solo se excluyen `gallery` y `photo-ideas-guide`)? ¿Timer Lista, Notepad, Block dibujo, etc. están en el menú móvil? 
 
 ## 📋 Información General
 - **Nombre del proyecto:** micerebroapp

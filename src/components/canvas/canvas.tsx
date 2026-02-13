@@ -48,6 +48,7 @@ type CanvasProps = {
   finalTranscript?: string;
   interimTranscript?: string;
   onRequestStartDictation?: () => void;
+  onStopDictation?: () => void;
 };
 
 type CanvasHandle = {
@@ -110,6 +111,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   finalTranscript,
   interimTranscript,
   onRequestStartDictation,
+  onStopDictation,
 }, ref) => {
   const [scale, setScale] = useState(1);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -578,6 +580,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       finalTranscript={finalTranscript}
                       interimTranscript={interimTranscript}
                       onRequestStartDictation={onRequestStartDictation}
+                      onStopDictation={onStopDictation}
                     />
                   );
                 })}

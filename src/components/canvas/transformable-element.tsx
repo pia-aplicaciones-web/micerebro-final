@@ -6,6 +6,7 @@ import type { CanvasElement, WithId, ElementType, CanvasElementProperties, Conta
 import { cn } from '@/lib/utils';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
 import { Button } from '@/components/ui/button';
+import { Link as LinkIcon } from 'lucide-react';
 import DeleteElementDialog from './elements/delete-element-dialog';
 
 // IMPORTACIONES DIRECTAS: Cambiar de lazy a imports directos para evitar problemas con chunks de webpack
@@ -114,6 +115,7 @@ type TransformableElementProps = {
   finalTranscript?: string;
   interimTranscript?: string;
   onRequestStartDictation?: () => void;
+  onStopDictation?: () => void;
   user?: any;
   storage?: any;
   toast?: any;
@@ -177,6 +179,7 @@ export default function TransformableElement({
   finalTranscript,
   interimTranscript,
   onRequestStartDictation,
+  onStopDictation,
   user,
   storage,
   toast,
@@ -621,7 +624,26 @@ export default function TransformableElement({
           data-element-type={element.type}
           className="w-full h-full relative group"
           style={{ pointerEvents: 'auto' }}
-          onTouchStart={(e) => {
+        >
+          {/* Mango para arrastrar a Mi galería (drag nativo HTML5) */}
+          <div
+            draggable
+            onMouseDown={(e) => e.stopPropagation()}
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/element-id', element.id);
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
+            className={cn(
+              'absolute top-1 right-1 z-10 rounded p-1 bg-white/90 border border-gray-200 shadow-sm cursor-grab active:cursor-grabbing hover:bg-gray-50',
+              (isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')
+            )}
+            title="Arrastra a Mi galería"
+          >
+            <LinkIcon className="h-3.5 w-3.5 text-gray-600" />
+          </div>
+          <div
+            className="w-full h-full"
+            onTouchStart={(e) => {
             // Verificar si el toque es en un elemento editable antes de manejar
             const target = e.target as HTMLElement;
             const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
@@ -686,6 +708,7 @@ export default function TransformableElement({
               finalTranscript={finalTranscript}
               interimTranscript={interimTranscript}
               onRequestStartDictation={onRequestStartDictation}
+              onStopDictation={onStopDictation}
               {...(element.type === 'photo-grid-free' && {
                 user,
                 storage,
@@ -696,6 +719,7 @@ export default function TransformableElement({
                 storage
               })}
           />
+        </div>
         </div>
       </Rnd>
 

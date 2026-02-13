@@ -95,6 +95,8 @@ export const useDictation = (
       : savedInputRef.current?.element;
     if (inputTarget && document.contains(inputTarget)) {
       if (isInterim) return;
+      // No insertar en inputs que gestionan el dictado por su cuenta (evita duplicar texto)
+      if (inputTarget.getAttribute('data-dictation-controlled') === 'true') return;
       const start = inputTarget === activeElement
         ? (inputTarget.selectionStart ?? 0)
         : savedInputRef.current!.start;

@@ -275,6 +275,8 @@ export interface GalleryImage {
 export interface GalleryContent {
   title?: string;
   images: GalleryImage[];
+  /** IDs de elementos del canvas guardados en la galería (cualquier tipo). Al pulsar ancla se sueltan al centro del viewport. */
+  elementIds?: string[];
 }
 
 // Alias para compatibilidad (ahora tipados correctamente)
@@ -512,7 +514,8 @@ export interface CommonElementProps {
     liveTranscript?: string;
     finalTranscript?: string;
     interimTranscript?: string;
-    onRequestStartDictation?: () => void; 
+    onRequestStartDictation?: () => void;
+    onStopDictation?: () => void; 
     
     // Callbacks opcionales/específicas
     onDuplicateElement?: (id: string) => void;

@@ -103,12 +103,13 @@ export default function ImageElement(props: CommonElementProps) {
             style={{ transform: `rotate(${rotation || 0}deg)` }}
             draggable
             onDragStart={(e) => {
+              e.dataTransfer.setData('application/element-id', id);
               e.dataTransfer.setData('application/canvas-image', JSON.stringify({
                 id,
                 url: imageUrl,
                 filename: label || 'imagen'
               }));
-              e.dataTransfer.effectAllowed = 'move';
+              e.dataTransfer.effectAllowed = 'copy';
             }}
         >
           <div className="relative w-full h-full bg-card">

@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { Play, Pause, Plus, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getDefaultSpeechVoice } from '@/lib/speech-voice';
+import { useDictationBinding } from '@/hooks/use-dictation-binding';
 
 // --- Alarma persistente (módulo) ---
 let alarmIntervalRef: ReturnType<typeof setInterval> | null = null;
@@ -117,7 +118,7 @@ function getDefaultContent(content: unknown): TimerListaContent {
 }
 
 export default function TimerListaElement(props: CommonElementProps) {
-  const { id, content, onUpdate, deleteElement, isSelected, onSelectElement, width, height, finalTranscript, onRequestStartDictation } = props;
+  const { id, content, onUpdate, deleteElement, isSelected, onSelectElement, width, height, finalTranscript, liveTranscript, interimTranscript, isListening, onRequestStartDictation, onStopDictation } = props;
   const { toast } = useToast();
 
   const timerListContent = getDefaultContent(content);
@@ -140,6 +141,18 @@ export default function TimerListaElement(props: CommonElementProps) {
   const lastAppliedTimerRef = useRef<{ target: string; minutes: number } | null>(null);
   const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const taskInputRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+
+  // Mismo enfoque que Time List: un solo escritor (dictado global) + binding al foco
+  const { bindDictationTarget } = useDictationBinding({
+    isListening: isListening || false,
+    finalTranscript: finalTranscript || '',
+    interimTranscript: interimTranscript || liveTranscript || '',
+    isSelected: isSelected || false,
+  });
+  const handleInputFocus = useCallback((element: HTMLElement) => {
+    onSelectElement?.(id, false);
+    bindDictationTarget(element);
+  }, [id, onSelectElement, bindDictationTarget]);
 
   contentRef.current = timerListContent;
   onUpdateRef.current = onUpdate;
@@ -212,24 +225,27 @@ export default function TimerListaElement(props: CommonElementProps) {
     }
   }, [waitingForListoIndex, onRequestStartDictation]);
 
-  // Comando "listo" por voz (solo cuando el elemento está seleccionado)
+  // Comando "listo" por voz: cuando está seleccionado O cuando estamos esperando "listo" (alarma sonando)
   useEffect(() => {
     if (!finalTranscript) {
       lastTranscriptRef.current = finalTranscript || '';
       return;
     }
-    if (isSelected) {
-      const readyMatch = finalTranscript.toLowerCase().match(/\blisto\b/);
-    if (readyMatch) {
-      const lastIdx = finalTranscript.toLowerCase().lastIndexOf('listo');
-      const prevIdx = (lastTranscriptRef.current || '').toLowerCase().lastIndexOf('listo');
-      if (lastIdx > prevIdx && waitingForListoIndex !== null) {
+    const canReactToListo = isSelected || waitingForListoIndex !== null;
+    if (canReactToListo) {
+      const transcriptLower = finalTranscript.toLowerCase().trim();
+      const readyMatch = transcriptLower.match(/\blisto\b/);
+      if (readyMatch) {
+        const lastIdx = transcriptLower.lastIndexOf('listo');
+        const prevIdx = (lastTranscriptRef.current || '').toLowerCase().trim().lastIndexOf('listo');
+        if (lastIdx > prevIdx && waitingForListoIndex !== null) {
         stopPersistentAlarm();
         const list = contentRef.current;
         const newItems = list.items.map((it, i) => (i === waitingForListoIndex ? { ...it, completed: true } : it));
         onUpdateRef.current(idRef.current, { content: { ...list, items: newItems } });
         const next = newItems.findIndex((it) => !it.completed);
         setWaitingForListoIndex(null);
+        onStopDictation?.(); // Apagar micrófono tras decir "listo"
         if (next >= 0) {
           const nextTotal = newItems[next].minutes * 60;
           secondsLeftRef.current = nextTotal;
@@ -241,8 +257,8 @@ export default function TimerListaElement(props: CommonElementProps) {
           speakFinishedMessage();
           toast({ title: 'Listo', description: 'Todas las tareas han terminado.' });
         }
+        }
       }
-    }
     }
 
     // Dictado "timer X minutos": funciona con foco en el input o con elemento seleccionado
@@ -269,7 +285,7 @@ export default function TimerListaElement(props: CommonElementProps) {
     }
 
     lastTranscriptRef.current = finalTranscript;
-  }, [finalTranscript, isSelected, waitingForListoIndex, toast]);
+  }, [finalTranscript, isSelected, waitingForListoIndex, toast, onStopDictation]);
 
   const handlePlay = useCallback(() => {
     if (intervalRef.current) return;
@@ -412,20 +428,13 @@ export default function TimerListaElement(props: CommonElementProps) {
         <X className="h-4 w-4" />
       </Button>
       {/* Header: diseño nuevo, oscuro — arrastrable desde la barra */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2.5 flex items-center justify-between gap-2">
-        <div className="drag-handle cursor-grab active:cursor-grabbing shrink-0 w-6 h-6 grid grid-cols-3 grid-rows-3 gap-0.5 place-items-center" title="Arrastrar">
+      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-3 py-2.5 flex items-center gap-2">
+        <div className="drag-handle cursor-grab active:cursor-grabbing shrink-0 w-4 h-4 grid grid-cols-3 grid-rows-3 gap-px place-items-center self-center" title="Arrastrar">
           {Array.from({ length: 9 }).map((_, i) => (
-            <span key={i} className="w-1 h-1 rounded-full bg-white/70" />
+            <span key={i} className="w-0.5 h-0.5 rounded-full bg-white/80" />
           ))}
         </div>
-        <input
-          value={title}
-          onChange={handleTitleChange}
-          className="bg-transparent text-white font-semibold text-sm flex-1 min-w-0 border-none outline-none placeholder:text-slate-400"
-          placeholder="Timer Lista"
-          onClick={(e) => e.stopPropagation()}
-        />
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex-1 flex justify-center min-w-0">
           {!isRunning ? (
             <Button
               size="sm"
@@ -452,6 +461,13 @@ export default function TimerListaElement(props: CommonElementProps) {
             </Button>
           )}
         </div>
+        <input
+          value={title}
+          onChange={handleTitleChange}
+          className="bg-transparent text-white font-semibold text-sm flex-1 min-w-0 border-none outline-none placeholder:text-slate-400 text-right"
+          placeholder="Timer Lista"
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
 
       {/* Countdown grande */}
@@ -492,7 +508,7 @@ export default function TimerListaElement(props: CommonElementProps) {
                 )}
               >
                 <div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300"
+                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300 blur-0"
                   title="Handler"
                 />
                 <Checkbox
@@ -507,8 +523,10 @@ export default function TimerListaElement(props: CommonElementProps) {
                     if (el) {
                       el.style.height = 'auto';
                       el.style.height = el.scrollHeight + 'px';
+                      handleInputFocus(el);
                     }
                   }}
+                  data-dictation-controlled="true"
                   value={item.text}
                   onChange={(e) => handleItemTextChange(index, e.target.value)}
                   placeholder="Tarea"
@@ -516,6 +534,7 @@ export default function TimerListaElement(props: CommonElementProps) {
                   className="flex-1 min-w-0 min-h-[1.75rem] py-1 px-2 text-sm border-0 border-b border-slate-200 rounded-none bg-transparent resize-none overflow-hidden focus:ring-0 focus-visible:ring-0"
                   style={{ minHeight: '1.75rem', fontSize: '14px' }}
                   onClick={(e) => e.stopPropagation()}
+                  onFocus={(e) => handleInputFocus(e.currentTarget)}
                   onInput={(e) => {
                     const t = e.currentTarget;
                     t.style.height = 'auto';
@@ -541,7 +560,7 @@ export default function TimerListaElement(props: CommonElementProps) {
                     max={120}
                     value={item.minutes}
                     onChange={(e) => handleMinutesChange(index, Number(e.target.value))}
-                    className="w-10 h-6 text-center text-xs border-0 rounded-none"
+                    className="w-10 h-6 text-center text-xs border-0 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     onClick={(e) => e.stopPropagation()}
                   />
                   <Button
@@ -571,9 +590,14 @@ export default function TimerListaElement(props: CommonElementProps) {
         )}
         <div className="flex gap-2 mt-1.5">
           <Input
-            ref={newTaskInputRef}
+            ref={(el) => {
+              newTaskInputRef.current = el;
+              if (el) handleInputFocus(el);
+            }}
+            data-dictation-controlled="true"
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
+            onFocus={(e) => handleInputFocus(e.currentTarget)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

@@ -301,6 +301,22 @@ export default function ContainerElement(
     return element.type.charAt(0).toUpperCase() + element.type.slice(1);
   };
 
+  const getThumbFooterStyle = (element: WithId<CanvasElement>):
+    | { simple: true; label: string; bg: string }
+    | { simple: false } => {
+    const typeStr = String(element.type);
+    if (typeStr === 'notepad' || typeStr === 'yellow-notepad') {
+      return { simple: true, label: 'Notepad', bg: '#fef9c3' };
+    }
+    if (typeStr === 'mini') {
+      return { simple: true, label: 'Mini', bg: '#a5f3fc' };
+    }
+    if (typeStr === 'block-dibujo') {
+      return { simple: true, label: 'Block dibujo', bg: '#fed7aa' };
+    }
+    return { simple: false };
+  };
+
   const getElementThumbnail = (element: WithId<CanvasElement>): React.ReactNode => {
     const size =
       typeof element.properties === 'object' && element.properties !== null && element.properties.size
@@ -794,33 +810,52 @@ export default function ContainerElement(
                   {getElementThumbnail(element)}
                 </div>
 
-                <div className="px-3 py-2 border-t border-gray-100 flex flex-col gap-1">
-                  <div className="text-xs font-medium text-gray-700 truncate">{getElementName(element)}</div>
-                  <div className="text-[10px] text-gray-500">
-                    {(() => {
-                      const props = element.properties as any;
-                      const size = props?.size || element.properties?.size;
-                      if (size && typeof size === 'object') {
-                        const width = size.width || element.width || 'Auto';
-                        const height = size.height || element.height || 'Auto';
-                        return `${width} × ${height}`;
-                      }
-                      return `${element.width || 'Auto'} × ${element.height || 'Auto'}`;
-                    })()}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                    title="Soltar elemento del contenedor"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleReleaseElement(elementId);
-                    }}
-                  >
-                    <LinkIcon className="h-3 w-3" />
-                  </Button>
-                </div>
+                {(() => {
+                  const footerStyle = getThumbFooterStyle(element);
+                  const anclaButton = (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
+                      title="Soltar elemento del contenedor"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleReleaseElement(elementId);
+                      }}
+                    >
+                      <LinkIcon className="h-3 w-3" />
+                    </Button>
+                  );
+                  if (footerStyle.simple) {
+                    return (
+                      <div
+                        className="px-3 py-2 border-t border-gray-100 flex flex-row items-center justify-between gap-2"
+                        style={{ backgroundColor: footerStyle.bg }}
+                      >
+                        <span className="text-xs font-medium text-gray-800 truncate">{footerStyle.label}</span>
+                        {anclaButton}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="px-3 py-2 border-t border-gray-100 flex flex-col gap-1">
+                      <div className="text-xs font-medium text-gray-700 truncate">{getElementName(element)}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {(() => {
+                          const props = element.properties as any;
+                          const size = props?.size || element.properties?.size;
+                          if (size && typeof size === 'object') {
+                            const width = size.width || element.width || 'Auto';
+                            const height = size.height || element.height || 'Auto';
+                            return `${width} × ${height}`;
+                          }
+                          return `${element.width || 'Auto'} × ${element.height || 'Auto'}`;
+                        })()}
+                      </div>
+                      {anclaButton}
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>

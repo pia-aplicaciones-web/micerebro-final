@@ -159,6 +159,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     interimTranscript,
     toggleListening,
     startListening,
+    stopListening,
   } = useSpeechToText();
 
   // Funciones auxiliares para el Canvas
@@ -613,80 +614,80 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
         onSave={(name) => { handleRenameBoard(name); setIsRenameBoardDialogOpen(false); }}
       />
 
+          {/* Botón de menú móvil: flotante y arrastrable, fuera del overflow para que siempre sea visible */}
+          <Rnd
+            default={{
+              x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
+              y: 16,
+              width: 48,
+              height: 48,
+            }}
+            bounds="window"
+            enableResizing={false}
+            dragHandleClassName="mobile-menu-drag-handle"
+            style={{ position: 'fixed', zIndex: 11000, pointerEvents: 'auto' }}
+          >
+            <Button
+              variant="ghost"
+              size="icon"
+              className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border-2 border-gray-200 shadow-xl hover:bg-gray-100 flex items-center justify-center"
+              onClick={handleToggleMobileMenu}
+            >
+              {isMobileMenuOpen ? (
+                <CloseIcon className="h-6 w-6 text-black" />
+              ) : (
+                <Menu className="h-6 w-6 text-black" />
+              )}
+            </Button>
+          </Rnd>
+
+          {/* MobileMenu (flotante, fuera del overflow) */}
+          <MobileMenu
+            isOpen={isMobileMenuOpen}
+            onClose={handleToggleMobileMenu}
+            elements={elements || []}
+            boards={boards || []}
+            boardId={boardId}
+            user={user}
+            isListening={isListening}
+            onToggleDictation={toggleListening}
+            onOpenNotepad={handleOpenNotepad}
+            onLocateElement={handleLocateElement}
+            addElement={addElement}
+            onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
+            onDeleteBoard={handleDeleteBoard}
+            onUploadImage={handleUploadImage}
+            onAddImageFromUrl={handleAddImageFromUrl}
+            onCropImage={handleCropImage}
+            onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+            onExportBoardToPng={handleExportToPng}
+            onDeleteAllUserImages={async () => {
+              if (!user) {
+                toast({
+                  variant: 'destructive',
+                  title: 'Error',
+                  description: 'Usuario no autenticado'
+                });
+                return;
+              }
+              const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
+              navigator.clipboard?.writeText(firebaseUrl).then(() => {
+                toast({
+                  title: 'URL copiada al portapapeles',
+                  description: firebaseUrl
+                });
+              }).catch(() => {
+                toast({
+                  title: 'URL (cópiala manualmente)',
+                  description: firebaseUrl
+                });
+              });
+            }}
+          />
+
           <div className="h-screen w-screen relative overflow-hidden">
             {/* Nombre del tablero en esquina superior izquierda */}
             <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
-
-            {/* Botón de menú móvil: flotante y arrastrable, siempre visible */}
-            <Rnd
-              default={{
-                x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
-                y: 16,
-                width: 48,
-                height: 48,
-              }}
-              bounds="window"
-              enableResizing={false}
-              dragHandleClassName="mobile-menu-drag-handle"
-              style={{ position: 'fixed', zIndex: 11000 }}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-100 flex items-center justify-center"
-                onClick={handleToggleMobileMenu}
-              >
-                {isMobileMenuOpen ? (
-                  <CloseIcon className="h-6 w-6 text-black" />
-                ) : (
-                  <Menu className="h-6 w-6 text-black" />
-                )}
-              </Button>
-            </Rnd>
-
-            {/* MobileMenu */}
-            <MobileMenu
-              isOpen={isMobileMenuOpen}
-              onClose={handleToggleMobileMenu}
-              elements={elements || []}
-              boards={boards || []}
-              boardId={boardId}
-              user={user}
-              isListening={isListening}
-              onToggleDictation={toggleListening}
-              onOpenNotepad={handleOpenNotepad}
-              onLocateElement={handleLocateElement}
-              addElement={addElement}
-              onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
-              onDeleteBoard={handleDeleteBoard}
-              onUploadImage={handleUploadImage}
-              onAddImageFromUrl={handleAddImageFromUrl}
-              onCropImage={handleCropImage}
-              onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-              onExportBoardToPng={handleExportToPng}
-              onDeleteAllUserImages={async () => {
-                if (!user) {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: 'Usuario no autenticado'
-                  });
-                  return;
-                }
-                const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
-                navigator.clipboard?.writeText(firebaseUrl).then(() => {
-                  toast({
-                    title: 'URL copiada al portapapeles',
-                    description: firebaseUrl
-                  });
-                }).catch(() => {
-                  toast({
-                    title: 'URL (cópiala manualmente)',
-                    description: firebaseUrl
-                  });
-                });
-              }}
-            />
 
             {/* Canvas Principal */}
             <Canvas
@@ -728,6 +729,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               finalTranscript={transcript}
               interimTranscript={interimTranscript}
               onRequestStartDictation={startListening}
+              onStopDictation={stopListening}
             />
 
             {/* FormattingToolbar para móvil (visible en la parte inferior) */}

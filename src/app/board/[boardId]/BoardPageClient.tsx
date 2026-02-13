@@ -1035,6 +1035,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           finalTranscript={transcript}
           interimTranscript={interimTranscript}
           onRequestStartDictation={startListening}
+          onStopDictation={stopListening}
           onEditComment={handleEditComment}
           onDuplicateElement={() => {}}
           onUngroup={() => {}}
@@ -1118,11 +1119,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         {/* Display de Uso de Almacenamiento (para pruebas) */}
         {user?.uid && <StorageUsageDisplay userId={user.uid} />}
 
-        {/* Panel lateral Galería */}
+        {/* Panel lateral Galería: z-index alto para que reciba el drop por encima del sidebar/canvas */}
         <div
           key={`gallery-panel-${isGalleryOpen ? 'open' : 'closed'}`}
           className="fixed left-0 top-0 h-screen flex items-center"
-          style={{ zIndex: isGalleryOpen ? 999 : -1 }}
+          style={{ zIndex: isGalleryOpen ? 10002 : -1 }}
         >
           {/* Panel completo */}
           <div
@@ -1132,7 +1133,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               ${isGalleryOpen ? 'w-96' : 'w-0 overflow-hidden'}
             `}
             style={{
-              zIndex: isGalleryOpen ? 999 : -1,
+              zIndex: isGalleryOpen ? 10002 : -1,
               backgroundColor: 'white',
               border: '1px solid #e5e7eb'
             }}
@@ -1155,6 +1156,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                       userId={user?.uid}
                       onLocateElement={() => {}}
                       onEditComment={() => {}}
+                      getViewportCenter={getViewportCenter}
                     />
                   </div>
                 </div>

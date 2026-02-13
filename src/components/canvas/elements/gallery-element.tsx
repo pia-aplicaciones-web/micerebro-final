@@ -19,16 +19,16 @@ function isGalleryContent(content: unknown): content is GalleryContent {
   return typeof content === 'object' && content !== null && 'images' in content;
 }
 
-export default function GalleryElement(props: CommonElementProps) {
-  const { id, content, onUpdate, allElements = [], addElement, isSelected, isPreview } = props;
+export default function GalleryElement(props: CommonElementProps & { getViewportCenter?: () => { x: number; y: number } }) {
+  const { id, content, onUpdate, allElements = [], addElement, isSelected, isPreview, getViewportCenter } = props;
 
   const { user } = useAuthContext();
   const storage = getFirebaseStorage();
   const { toast } = useToast();
 
   const galleryContent: GalleryContent = isGalleryContent(content)
-    ? { ...content, images: Array.isArray(content.images) ? content.images : [] }
-    : { title: 'Galería', images: [] };
+    ? { ...content, images: Array.isArray(content.images) ? content.images : [], elementIds: Array.isArray((content as GalleryContent).elementIds) ? (content as GalleryContent).elementIds : [] }
+    : { title: 'Galería', images: [], elementIds: [] };
 
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
   const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
@@ -141,14 +141,44 @@ export default function GalleryElement(props: CommonElementProps) {
     });
   }, [galleryContent.images, updateGalleryContent, toast]);
 
-  // Handler para limpiar todas las imágenes
+  // Soltar elemento de la galería al centro del viewport (solo para elementos no-imagen)
+  const handleReleaseToViewportCenter = useCallback((elementId: string) => {
+    const element = allElements.find(el => el.id === elementId);
+    if (!element || !getViewportCenter) return;
+
+    const center = getViewportCenter();
+    const w = (element.width ?? (element.properties as any)?.size?.width) ?? 300;
+    const h = (element.height ?? (element.properties as any)?.size?.height) ?? 200;
+    const width = typeof w === 'number' ? w : parseFloat(String(w)) || 300;
+    const height = typeof h === 'number' ? h : parseFloat(String(h)) || 200;
+    const x = center.x - width / 2;
+    const y = center.y - height / 2;
+
+    const currentElementIds = galleryContent.elementIds || [];
+    updateGalleryContent({ elementIds: currentElementIds.filter(eid => eid !== elementId) });
+    onUpdate(elementId, {
+      parentId: undefined,
+      hidden: false,
+      x,
+      y,
+      properties: {
+        ...(typeof element.properties === 'object' && element.properties ? element.properties : {}),
+        position: { x, y },
+      },
+    });
+    toast({ title: 'Elemento en el tablero', description: 'Se colocó en el centro de la vista' });
+  }, [allElements, getViewportCenter, galleryContent.elementIds, onUpdate, updateGalleryContent, toast]);
+
+  // Handler para limpiar todo (imágenes y elementos): elementos se sueltan al centro
   const handleClearAll = useCallback(() => {
-    updateGalleryContent({ images: [] });
+    const ids = galleryContent.elementIds || [];
+    ids.forEach((elementId) => handleReleaseToViewportCenter(elementId));
+    updateGalleryContent({ images: [], elementIds: [] });
     toast({
       title: 'Galería limpiada',
-      description: 'Todas las imágenes han sido eliminadas'
+      description: ids.length ? 'Elementos enviados al tablero; imágenes eliminadas.' : 'Todas las imágenes han sido eliminadas'
     });
-  }, [updateGalleryContent, toast]);
+  }, [updateGalleryContent, toast, galleryContent.elementIds, handleReleaseToViewportCenter]);
 
   // Drag and Drop handlers para reordenar imágenes dentro de la galería
   const handleDragStart = useCallback((e: React.DragEvent, imageId: string) => {
@@ -208,45 +238,45 @@ export default function GalleryElement(props: CommonElementProps) {
     setDragOverIndex(null);
   }, [id, galleryContent, draggedImageId, onUpdate]);
 
-  // Drag and Drop: Recibir imágenes del canvas o archivos del sistema
+  // Drag and Drop: Recibir imágenes o cualquier elemento desde el canvas
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
-    // Primero intentar recibir elementos de imagen desde el canvas (por ID de elemento)
     const elementId = e.dataTransfer.getData('application/element-id');
     if (elementId) {
       const draggedElement = allElements.find(el => el.id === elementId);
-      if (draggedElement && draggedElement.type === 'image') {
-        const imageContent = draggedElement.content as { url: string };
-        if (imageContent && imageContent.url) {
-          // Verificar si la imagen ya existe en la galería
-          const currentImages = galleryContent.images || [];
-          const exists = currentImages.some(img => img.url === imageContent.url);
-
-          if (!exists) {
-            const newImage: GalleryImage = {
-              id: `img_${Date.now()}`,
-              url: imageContent.url,
-              filename: `imagen_${Date.now()}`,
-              uploadedAt: new Date().toISOString()
-            };
-
-            updateGalleryContent({
-              images: [...currentImages, newImage]
-            });
-
-            toast({
-              title: 'Imagen agregada',
-              description: 'Imagen movida desde el canvas a la galería'
-            });
-          } else {
-            toast({
-              title: 'Imagen ya existe',
-              description: 'Esta imagen ya está en la galería'
-            });
+      if (draggedElement) {
+        if (draggedElement.type === 'image') {
+          const imageContent = draggedElement.content as { url: string };
+          if (imageContent?.url) {
+            const currentImages = galleryContent.images || [];
+            const exists = currentImages.some(img => img.url === imageContent.url);
+            if (!exists) {
+              const newImage: GalleryImage = {
+                id: `img_${Date.now()}`,
+                url: imageContent.url,
+                filename: `imagen_${Date.now()}`,
+                uploadedAt: new Date().toISOString()
+              };
+              updateGalleryContent({ images: [...currentImages, newImage] });
+              toast({ title: 'Imagen agregada', description: 'Imagen movida desde el canvas a la galería' });
+            } else {
+              toast({ title: 'Imagen ya existe', description: 'Esta imagen ya está en la galería' });
+            }
+            return;
           }
+        }
+        // Cualquier otro tipo de elemento: guardar por referencia en elementIds
+        const currentElementIds = galleryContent.elementIds || [];
+        if (currentElementIds.includes(elementId)) {
+          toast({ title: 'Ya en galería', description: 'Este elemento ya está en la galería' });
           return;
         }
+        updateGalleryContent({ elementIds: [...currentElementIds, elementId] });
+        onUpdate(elementId, { parentId: id, hidden: true });
+        toast({ title: 'Elemento agregado', description: 'Elemento movido a la galería. Usa el icono de ancla para sacarlo al tablero.' });
+        return;
       }
     }
 
@@ -332,22 +362,24 @@ export default function GalleryElement(props: CommonElementProps) {
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const images = galleryContent.images || [];
+  const elementIds = galleryContent.elementIds || [];
+  const hasAnyItems = images.length > 0 || elementIds.length > 0;
 
   return (
     <Card className="w-full h-full flex flex-col overflow-hidden rounded-lg shadow-lg border border-gray-200/50 bg-white">
-      {/* HEADER */}
-      <CardHeader className="p-3 border-b border-green-600 bg-[#bad324] flex flex-row items-center justify-between">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
+      {/* HEADER: título "Mi galería" a la izquierda y abajo */}
+      <CardHeader className="p-3 pt-4 border-b border-green-600 bg-[#bad324] flex flex-col justify-end min-h-[52px]">
+        <div className="flex flex-row items-end justify-between w-full mt-auto">
           <span className="text-sm font-semibold text-white font-['Space_Grotesk']">
             {galleryContent.title || 'Mi galería'}
           </span>
-        </div>
-        
-        {/* Dropdown con opciones */}
-        <div className="flex items-center gap-1 flex-shrink-0">
+          {/* Dropdown con opciones */}
+          <div className="flex items-center gap-1 flex-shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-6 w-6 text-white hover:bg-green-600">
@@ -373,6 +405,7 @@ export default function GalleryElement(props: CommonElementProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </div>
       </CardHeader>
 
@@ -383,15 +416,16 @@ export default function GalleryElement(props: CommonElementProps) {
         onDrop={handleDrop} // This is for dropping images from canvas or files into the gallery
         onDragOver={handleDragOver}
       >
-        {images.length === 0 ? (
+        {!hasAnyItems ? (
           <div className="flex flex-col items-center justify-center h-full text-sm text-gray-400 space-y-4">
             <ImageIcon className="h-12 w-12 text-gray-300" />
             <div className="text-center">
-              <p>No hay imágenes en la galería</p>
-              <p className="text-xs mt-1">Arrastra imágenes aquí o usa los botones arriba</p>
+              <p>No hay elementos en la galería</p>
+              <p className="text-xs mt-1">Arrastra imágenes o cualquier elemento del tablero aquí</p>
             </div>
           </div>
         ) : (
+          <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             {images.map((image, index) => (
                 <div
@@ -441,6 +475,38 @@ export default function GalleryElement(props: CommonElementProps) {
                 </p>
               </div>
             ))}
+          </div>
+
+          {/* Elementos (no-imagen): icono ancla para sacar al centro del viewport */}
+          {elementIds.length > 0 && (
+            <div className="border-t border-gray-200 pt-3">
+              <p className="text-xs font-medium text-gray-500 mb-2">Elementos del tablero</p>
+              <div className="grid grid-cols-2 gap-3">
+                {elementIds.map((elementId) => {
+                  const element = allElements.find(el => el.id === elementId);
+                  if (!element) return null;
+                  const label = element.type === 'text' ? (typeof element.content === 'string' ? element.content.slice(0, 20) : 'Texto') : element.type === 'notepad' || element.type === 'yellow-notepad' ? (element.content as any)?.title || 'Cuaderno' : element.type;
+                  return (
+                    <div
+                      key={elementId}
+                      className="relative group bg-gray-50 rounded-lg border border-gray-200 p-2 flex flex-col items-center justify-center min-h-[80px]"
+                    >
+                      <span className="text-[10px] text-gray-600 truncate w-full text-center mb-1">{String(label)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        title="Sacar al tablero (centro de la vista)"
+                        onClick={() => handleReleaseToViewportCenter(elementId)}
+                      >
+                        <LinkIcon className="h-4 w-4 text-gray-600" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           </div>
         )}
       </CardContent>
