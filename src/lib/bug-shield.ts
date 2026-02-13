@@ -9,7 +9,7 @@ import type { CanvasElement, ElementType, WithId } from './types';
 const VALID_ELEMENT_TYPES: ElementType[] = [
   'image', 'text', 'sticky', 'notepad', // 'cuaderno', // DESACTIVADO COMPLETAMENTE
   'comment', 'comment-small', 'comment-r',
-  'todo', 'time-list', 'moodboard', 'gallery', 'yellow-notepad',
+  'todo', 'time-list', 'timer-lista', 'moodboard', 'gallery', 'yellow-notepad',
   'stopwatch', 'countdown', 'highlight-text',
   'weekly-planner', 'vertical-weekly-planner', 'weekly-menu',
   'container', 'two-columns',
@@ -43,6 +43,7 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'libreta': { width: 378, height: 567 },
   'block-dibujo': { width: 567, height: 756 },
   'time-list': { width: 320, height: 200 },
+  'timer-lista': { width: 320, height: 280 },
   'default': { width: 200, height: 200 }
 };
 
@@ -159,6 +160,23 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
         };
       }
       return { title: 'Time List', items: [] };
+
+    case 'timer-lista':
+      if (typeof content === 'object' && content !== null) {
+        const c = content as Record<string, unknown>;
+        return {
+          title: typeof c.title === 'string' ? c.title : 'Timer Lista',
+          items: Array.isArray(c.items)
+            ? (c.items as Record<string, unknown>[]).filter((item) => item && typeof item === 'object' && 'id' in item && 'text' in item).map((item) => ({
+                id: typeof item.id === 'string' ? item.id : `item-${Date.now()}`,
+                text: typeof item.text === 'string' ? item.text : '',
+                completed: typeof item.completed === 'boolean' ? item.completed : false,
+                minutes: typeof item.minutes === 'number' && item.minutes >= 1 && item.minutes <= 120 ? item.minutes : 5,
+              }))
+            : [],
+        };
+      }
+      return { title: 'Timer Lista', items: [] };
 
     case 'notepad':
     case 'yellow-notepad':
@@ -296,6 +314,8 @@ function getDefaultContent(type: ElementType): unknown {
       return { title: 'Lista', items: [] };
     case 'time-list':
       return { title: 'Time List', items: [] };
+    case 'timer-lista':
+      return { title: 'Timer Lista', items: [] };
     case 'notepad':
     case 'yellow-notepad':
       return { title: '', text: '', content: '' };

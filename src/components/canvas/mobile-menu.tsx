@@ -304,6 +304,10 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
           label: 'Time List',
           onClick: () => handleAddElement('time-list'),
         },
+        {
+          label: 'Timer Lista',
+          onClick: () => handleAddElement('timer-lista'),
+        },
       ],
     },
     {

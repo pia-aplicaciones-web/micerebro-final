@@ -754,6 +754,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                       <Plus className="mr-2 h-4 w-4" />
                       <span>Time List</span>
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddElement('timer-lista')}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>Timer Lista</span>
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
@@ -1090,6 +1094,10 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
                   <DropdownMenuItem onClick={() => handleAddElement('time-list')}>
                     <Plus className="mr-2 h-4 w-4" />
                     <span>Time List</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAddElement('timer-lista')}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    <span>Timer Lista</span>
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>

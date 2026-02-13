@@ -46,6 +46,7 @@ import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { useDictationBinding } from '@/hooks/use-dictation-binding';
+import { getDefaultSpeechVoice } from '@/lib/speech-voice';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
 const EXTENDED_PALETTES = {
@@ -159,59 +160,31 @@ const stopPersistentAlarm = () => {
   activeAlarmTaskId = null;
 };
 
-// Función para alertas de voz
+// Función para alertas de voz (voz por defecto: femenina, amable, acento neutro)
 const speakTimeRemaining = (minutes: number) => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  
-  // Cancelar cualquier voz anterior
   window.speechSynthesis.cancel();
-  
   const utterance = new SpeechSynthesisUtterance(`${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`);
   utterance.lang = 'es-ES';
-  
-  // Buscar voz femenina, tranquila, acento neutro
-  const voices = window.speechSynthesis.getVoices();
-  const femaleNeutral = voices.find(v => 
-    v.lang.startsWith('es') && 
-    (/female|mujer|woman|femenina/i.test(v.name) || v.name.includes('Google') || v.name.includes('Microsoft'))
-  );
-  
-  if (femaleNeutral) {
-    utterance.voice = femaleNeutral;
-  }
-  
+  const voice = getDefaultSpeechVoice();
+  if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
   utterance.volume = 0.8;
-  
   window.speechSynthesis.speak(utterance);
 };
 
 // Función para voz final "Terminaste"
 const speakFinishedMessage = () => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
-  
-  // Cancelar cualquier voz anterior
   window.speechSynthesis.cancel();
-  
-  const utterance = new SpeechSynthesisUtterance('Terminaste. Todas tus tareas con temporizador han sido completadas.');
+  const utterance = new SpeechSynthesisUtterance('Bien! Terminaste la lista.');
   utterance.lang = 'es-ES';
-  
-  // Buscar voz femenina, tranquila, acento neutro
-  const voices = window.speechSynthesis.getVoices();
-  const femaleNeutral = voices.find(v => 
-    v.lang.startsWith('es') && 
-    (/female|mujer|woman|femenina/i.test(v.name) || v.name.includes('Google') || v.name.includes('Microsoft'))
-  );
-  
-  if (femaleNeutral) {
-    utterance.voice = femaleNeutral;
-  }
-  
+  const voice = getDefaultSpeechVoice();
+  if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
   utterance.volume = 0.8;
-  
   window.speechSynthesis.speak(utterance);
 };
 

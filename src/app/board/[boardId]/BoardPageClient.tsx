@@ -900,14 +900,32 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       {/* Solo mostrar el tablero si la contraseña está verificada */}
       {isPasswordVerified && (
         <>
-          {isMobile && !isMobileMenuOpen && (
-            <Button
-              variant="ghost"
-              className="fixed top-4 left-4 z-[1001] bg-white rounded-md border border-gray-700 w-14 h-14 p-3"
-              onClick={handleToggleMobileMenu}
+          {isMobile && (
+            <Rnd
+              default={{
+                x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
+                y: 16,
+                width: 48,
+                height: 48,
+              }}
+              bounds="window"
+              enableResizing={false}
+              dragHandleClassName="mobile-menu-drag-handle"
+              style={{ position: 'fixed', zIndex: 11000 }}
             >
-              <Menu className="h-8 w-8 text-black" />
-            </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-100 flex items-center justify-center"
+                onClick={handleToggleMobileMenu}
+              >
+                {isMobileMenuOpen ? (
+                  <CloseIcon className="h-6 w-6 text-black" />
+                ) : (
+                  <Menu className="h-6 w-6 text-black" />
+                )}
+              </Button>
+            </Rnd>
           )}
           {isMobile && (
             <MobileMenu
@@ -1016,6 +1034,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           liveTranscript={transcript}
           finalTranscript={transcript}
           interimTranscript={interimTranscript}
+          onRequestStartDictation={startListening}
           onEditComment={handleEditComment}
           onDuplicateElement={() => {}}
           onUngroup={() => {}}

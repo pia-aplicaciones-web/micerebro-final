@@ -28,6 +28,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import ExportPdfDialog from './export-pdf-dialog';
 import { MiniPasswordDialog } from '@/components/MiniPasswordDialog';
+import { getDefaultSpeechVoice } from '@/lib/speech-voice';
 import './notepad-element.css';
 
 
@@ -1013,7 +1014,7 @@ export default function NotepadElement(props: CommonElementProps) {
     // Buscar la voz por el nombre seleccionado y el idioma español\n    if (selectedVoiceName === 'Agustina') {\n      selectedVoice = voices.find(v => v.name === 'Autonoe'); // Eliminar startsWith('es') para Agustina/Autonoe\n    } else {\n      selectedVoice = voices.find(v => v.name.includes(selectedVoiceName) && v.lang.startsWith('es'));\n    }\n\n    console.log(\"Voces disponibles:\", voices.map(v => v.name + \" (\" + v.lang + \")\")); // DEBUG\n    console.log(\"Voz seleccionada (intentado):\
 
 
-    const fallbackVoice = voices.find(v => v.lang.startsWith('es'));
+    const fallbackVoice = getDefaultSpeechVoice();
     utterance.voice = selectedVoice || fallbackVoice || null;
     utterance.lang = 'es-ES'; // Cambiar a es-ES para un español más neutro por defecto
     utterance.rate = speechRate;

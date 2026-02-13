@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
+import { getDefaultSpeechVoice } from '@/lib/speech-voice';
 
 export default function DictadoElement(props: CommonElementProps) {
   const { 
@@ -191,6 +192,10 @@ export default function DictadoElement(props: CommonElementProps) {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'es-ES';
     utterance.rate = 0.85;
+    const voice = getDefaultSpeechVoice();
+    if (voice) utterance.voice = voice;
+    utterance.pitch = 1.0;
+    utterance.volume = 0.8;
 
     utterance.onend = () => {
       setIsReading(false);

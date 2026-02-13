@@ -43,6 +43,7 @@ import CountdownElement from './elements/countdown-element';
 import DictadoElement from './elements/dictado-element';
 import BlockDibujoElement from './elements/block-dibujo-element';
 import TimeListElement from './elements/time-list-element';
+import TimerListaElement from './elements/timer-lista-element';
 
 const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   notepad: NotepadElement,
@@ -78,6 +79,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'dictado': DictadoElement,
   'block-dibujo': BlockDibujoElement,
   'time-list': TimeListElement,
+  'timer-lista': TimerListaElement,
 };
 
 type TransformableElementProps = {
@@ -111,6 +113,7 @@ type TransformableElementProps = {
   liveTranscript?: string;
   finalTranscript?: string;
   interimTranscript?: string;
+  onRequestStartDictation?: () => void;
   user?: any;
   storage?: any;
   toast?: any;
@@ -173,6 +176,7 @@ export default function TransformableElement({
   liveTranscript,
   finalTranscript,
   interimTranscript,
+  onRequestStartDictation,
   user,
   storage,
   toast,
@@ -681,6 +685,7 @@ export default function TransformableElement({
               liveTranscript={liveTranscript}
               finalTranscript={finalTranscript}
               interimTranscript={interimTranscript}
+              onRequestStartDictation={onRequestStartDictation}
               {...(element.type === 'photo-grid-free' && {
                 user,
                 storage,

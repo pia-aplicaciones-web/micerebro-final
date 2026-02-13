@@ -65,7 +65,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
 
     // REGLAS GENERALES: Elementos de cuadernos y contenedores inician con zIndex -1
     // Otros elementos van a la primera capa (zIndex máximo + 1)
-    const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns', 'block-dibujo', 'time-list'].includes(type);
+    const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns', 'block-dibujo', 'time-list', 'timer-lista'].includes(type);
     const zIndex = getNextZIndexRef.current(); // ✅ REGLA: Todos los elementos nuevos aparecen en primera capa
 
     // REGLA #1: Los elementos se abren centrados en el viewport del usuario
@@ -223,6 +223,10 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         const timeListSize = { width: 320, height: 200 };
         const timeListPos = getCenteredPosition(timeListSize.width, timeListSize.height);
         newElementData = { type, x: timeListPos.x, y: timeListPos.y, width: timeListSize.width, height: timeListSize.height, userId, properties: { ...baseProperties, position: timeListPos, size: timeListSize }, content: props?.content || { title: 'Time List', items: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+      case 'timer-lista':
+        const timerListaSize = { width: 320, height: 280 };
+        const timerListaPos = getCenteredPosition(timerListaSize.width, timerListaSize.height);
+        newElementData = { type, x: timerListaPos.x, y: timerListaPos.y, width: timerListaSize.width, height: timerListaSize.height, userId, properties: { ...baseProperties, position: timerListaPos, size: timerListaSize }, content: props?.content || { title: 'Timer Lista', items: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'image':
         const imagePos = getCenteredPosition(sizeWidth, sizeHeight);
         newElementData = { type, x: imagePos.x, y: imagePos.y, width: sizeWidth, height: sizeHeight, userId, properties: { ...baseProperties, position: imagePos, size: { width: sizeWidth, height: sizeHeight } }, content: props?.content || { url: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;

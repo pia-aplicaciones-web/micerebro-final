@@ -158,6 +158,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     transcript,
     interimTranscript,
     toggleListening,
+    startListening,
   } = useSpeechToText();
 
   // Funciones auxiliares para el Canvas
@@ -726,6 +727,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               liveTranscript={transcript}
               finalTranscript={transcript}
               interimTranscript={interimTranscript}
+              onRequestStartDictation={startListening}
             />
 
             {/* FormattingToolbar para móvil (visible en la parte inferior) */}

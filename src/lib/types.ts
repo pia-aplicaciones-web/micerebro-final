@@ -35,7 +35,8 @@ export type ElementType =
   'pomodoro-timer' |
   'libreta' |
   'dictado' |
-  'block-dibujo';
+  'block-dibujo' |
+  'timer-lista';
 
 // Interfaz para propiedades de elementos del canvas
 export interface CanvasElementProperties {
@@ -152,6 +153,18 @@ export interface TimeListContent {
   title?: string;
   label?: string;
   items: TimeListItem[];
+}
+
+export interface TimerListaItem {
+  id: string;
+  text: string;
+  completed: boolean;
+  minutes: number; // duración del timer en minutos (1-120)
+}
+
+export interface TimerListaContent {
+  title?: string;
+  items: TimerListaItem[];
 }
 
 export interface ContainerContent {
@@ -458,6 +471,7 @@ export type ElementContent =
   | LibretaContent
   | MiniContent
   | TimeListContent
+  | TimerListaContent
   | ContainerContent
   | DictadoContent
   | Record<string, unknown>;
@@ -497,7 +511,8 @@ export interface CommonElementProps {
     isListening?: boolean;
     liveTranscript?: string;
     finalTranscript?: string;
-    interimTranscript?: string; 
+    interimTranscript?: string;
+    onRequestStartDictation?: () => void; 
     
     // Callbacks opcionales/específicas
     onDuplicateElement?: (id: string) => void;
