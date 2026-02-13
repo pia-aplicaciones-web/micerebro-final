@@ -10,6 +10,7 @@ import { BookCopy,
   Wrench,
   ImageIcon,
   FileText,
+  Folder,
   Link,
   MoreHorizontal,
   Move,
@@ -803,7 +804,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
         bounds="window"
         dragHandleClassName="drag-handle"
         onDragStop={onDragStop}
-        className="z-[10001]"
+        className="z-[10003]"
       >
         <div className="flex flex-row gap-[2px] flex-nowrap justify-start p-2">
           <div className="drag-handle cursor-grab active:cursor-grabbing py-1 px-1 mr-1 rounded-md bg-background border border-border flex justify-center" title="Arrastrar menú">
@@ -1335,17 +1336,27 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Comentario */}
+          {/* Subir (icono carpeta) */}
+          <SidebarButton
+            icon={Folder}
+            label="Subir"
+            title="Subir imagen"
+            onClick={onUploadImage}
+          />
+
+          {/* Tools */}
+          <SidebarButton icon={Wrench} label="Tools" title="Herramientas de formato" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
+
+
+          {/* Más */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <SidebarButton icon={MessageCircle} label="Texto" title="Agregar comentarios y texto" />
+              <SidebarButton icon={MoreHorizontal} label="Más" title="Más opciones" className="!w-[62px]" />
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" sideOffset={5}>
-              <DropdownMenuLabel>Insertar</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('text', {
-                properties: { backgroundColor: '#ffffff' }
-              })}>
+              <DropdownMenuLabel>Texto</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleAddElement('text', { properties: { backgroundColor: '#ffffff' } })}>
+                <MessageCircle className="mr-2 h-4 w-4" />
                 Texto
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('highlight-text')}>
@@ -1358,20 +1369,7 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               <DropdownMenuItem onClick={() => handleAddElement('comment-r')}>
                 Comentario R
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-
-          {/* Tools */}
-          <SidebarButton icon={Wrench} label="Tools" title="Herramientas de formato" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
-
-
-          {/* Más */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarButton icon={MoreHorizontal} label="Más" title="Más opciones" className="!w-[62px]" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onExportBoardToPng} className={isFormatToolbarOpen ? "bg-[#ADD8E6]/20" : ""}>
                 <FileImage className="mr-2 h-4 w-4" />
                 <span>Exportar a PNG: alta resolución</span>

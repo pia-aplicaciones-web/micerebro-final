@@ -1047,6 +1047,20 @@ export default function NotepadElement(props: CommonElementProps) {
     setIsSelectAllDialogOpen(true);
   }, [getAllPagesText, toast]);
 
+  const handleSelectAllAndCopy = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const text = getAllPagesText();
+    if (!text.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para copiar' });
+      return;
+    }
+    navigator.clipboard.writeText(text).then(
+      () => toast({ title: 'Texto de todas las páginas copiado' }),
+      () => toast({ variant: 'destructive', title: 'No se pudo copiar' })
+    );
+  }, [getAllPagesText, toast]);
+
   const handleDelete = useCallback(() => {
     setIsDeleteDialogOpen(true);
   }, []);
@@ -1151,15 +1165,28 @@ export default function NotepadElement(props: CommonElementProps) {
                     >
                       <Sparkles className="size-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7"
-                      title="Seleccionar todo"
-                      onClick={handleSelectAllText}
-                    >
-                      <FileSignature className="size-4" />
-                    </Button>
+                    <DropdownMenu modal={false}>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7"
+                          title="Seleccionar todo (todas las páginas)"
+                        >
+                          <FileSignature className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem onClick={handleSelectAllText}>
+                          <Copy className="mr-2 h-4 w-4" />
+                          <span>Seleccionar + copiar</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleSelectAllAndCopy}>
+                          <FileSignature className="mr-2 h-4 w-4" />
+                          <span>Seleccionar todo (selecciona todo el texto de todas las páginas)</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     <Button
                       variant={isReading ? 'secondary' : 'ghost'}
                       size="icon"
