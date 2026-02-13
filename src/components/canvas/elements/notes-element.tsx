@@ -332,13 +332,13 @@ export default function NotesElement(props: CommonElementProps) {
   const handleInsertDate = useCallback(() => {
     if (!contentRef.current) return;
     const now = new Date();
-    const dateStr = now.toLocaleDateString('es-ES', {
+    const dateStr = now.toLocaleDateString('es-CL', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    const timeStr = now.toLocaleTimeString('es-ES');
+    const timeStr = now.toLocaleTimeString('es-CL');
     const dateTimeStr = `${dateStr} ${timeStr}`;
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {

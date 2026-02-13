@@ -10,6 +10,7 @@ import { Play, Pause, Plus, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getDefaultSpeechVoice } from '@/lib/speech-voice';
 import { useDictationBinding } from '@/hooks/use-dictation-binding';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 // --- Alarma persistente (módulo) ---
 let alarmIntervalRef: ReturnType<typeof setInterval> | null = null;
@@ -60,7 +61,8 @@ function speakTimeRemaining(minutes: number) {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(`${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`);
-  utterance.lang = 'es-ES';
+  // Español de Latinoamérica, acento Chile
+  utterance.lang = 'es-CL';
   const voice = getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
@@ -73,7 +75,8 @@ function speakFinishedMessage() {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance('Bien! Terminaste la lista.');
-  utterance.lang = 'es-ES';
+  // Español de Latinoamérica, acento Chile
+  utterance.lang = 'es-CL';
   const voice = getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
@@ -216,7 +219,8 @@ export default function TimerListaElement(props: CommonElementProps) {
         intervalRef.current = null;
       }
     };
-  }, [runningTaskIndex, toast]);
+    // Solo dependencia de runningTaskIndex; toast no se usa en el interval (evita re-ejecuciones si toast cambia)
+  }, [runningTaskIndex]);
 
   // Activar micrófono automáticamente cuando está esperando "listo"
   useEffect(() => {
@@ -343,6 +347,40 @@ export default function TimerListaElement(props: CommonElementProps) {
     [items, title, onUpdate, id]
   );
 
+  // Reordenar tareas arrastrando el punto izquierdo
+  const handleDragEnd = useCallback(
+    (result: DropResult) => {
+      if (!result.destination) return;
+      const sourceIndex = result.source.index;
+      const destIndex = result.destination.index;
+      if (sourceIndex === destIndex) return;
+
+      const currentItems = [...items];
+
+      // Recordar qué tareas están en ejecución / esperando "listo"
+      const runningId =
+        runningTaskIndex !== null && runningTaskIndex >= 0 && runningTaskIndex < currentItems.length
+          ? currentItems[runningTaskIndex].id
+          : null;
+      const waitingId =
+        waitingForListoIndex !== null && waitingForListoIndex >= 0 && waitingForListoIndex < currentItems.length
+          ? currentItems[waitingForListoIndex].id
+          : null;
+
+      const [moved] = currentItems.splice(sourceIndex, 1);
+      currentItems.splice(destIndex, 0, moved);
+
+      // Recalcular índices en base a los ids
+      const nextRunningIndex = runningId ? currentItems.findIndex((it) => it.id === runningId) : null;
+      const nextWaitingIndex = waitingId ? currentItems.findIndex((it) => it.id === waitingId) : null;
+
+      onUpdate(id, { content: { title, items: currentItems } });
+      setRunningTaskIndex(nextRunningIndex !== -1 ? nextRunningIndex : null);
+      setWaitingForListoIndex(nextWaitingIndex !== -1 ? nextWaitingIndex : null);
+    },
+    [items, title, id, onUpdate, runningTaskIndex, waitingForListoIndex]
+  );
+
   const handleAddTask = useCallback(() => {
     const raw = (newTaskInputRef.current?.value ?? newTaskText).trim();
     const pending = pendingTimerMinutes ?? (newTaskInputRef.current as unknown as { pendingTimerMinutes?: number })?.pendingTimerMinutes;
@@ -402,10 +440,11 @@ export default function TimerListaElement(props: CommonElementProps) {
     return { totalEstimatedMinutes: total, remainingMinutes: remaining };
   }, [items]);
 
+  // Sin overlay ni fullscreen: el timer no bloquea la pantalla en móvil; el usuario puede seguir desplazando e interactuando
   return (
     <div
       className={cn(
-        'relative flex flex-col rounded-xl overflow-visible shadow-lg border',
+        'relative flex flex-col rounded-xl overflow-visible shadow-lg border touch-manipulation',
         isSelected ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200'
       )}
       style={{ width: width ?? 320, minHeight: height ?? 280 }}
@@ -497,88 +536,104 @@ export default function TimerListaElement(props: CommonElementProps) {
         {items.length === 0 ? (
           <p className="text-slate-400 text-sm py-2">Añade tareas (di &quot;timer X minutos&quot;).</p>
         ) : (
-          <ul className="space-y-1.5">
-            {items.map((item, index) => (
-              <li
-                key={item.id}
-                className={cn(
-                  'relative flex items-stretch gap-2 rounded-lg border p-1.5 pl-4 transition-colors',
-                  item.completed ? 'bg-slate-50 border-slate-100' : 'bg-white border-slate-200',
-                  runningTaskIndex === index && 'ring-1 ring-emerald-400 bg-emerald-50/50'
-                )}
-              >
-                <div
-                  className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300 blur-0"
-                  title="Handler"
-                />
-                <Checkbox
-                  checked={item.completed}
-                  onCheckedChange={() => handleToggleComplete(index)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="h-4 w-4 shrink-0 mt-1"
-                />
-                <textarea
-                  ref={(el) => {
-                    taskInputRefs.current[index] = el;
-                    if (el) {
-                      el.style.height = 'auto';
-                      el.style.height = el.scrollHeight + 'px';
-                      handleInputFocus(el);
-                    }
-                  }}
-                  data-dictation-controlled="true"
-                  value={item.text}
-                  onChange={(e) => handleItemTextChange(index, e.target.value)}
-                  placeholder="Tarea"
-                  rows={1}
-                  className="flex-1 min-w-0 min-h-[1.75rem] py-1 px-2 text-sm border-0 border-b border-slate-200 rounded-none bg-transparent resize-none overflow-hidden focus:ring-0 focus-visible:ring-0"
-                  style={{ minHeight: '1.75rem', fontSize: '14px' }}
-                  onClick={(e) => e.stopPropagation()}
-                  onFocus={(e) => handleInputFocus(e.currentTarget)}
-                  onInput={(e) => {
-                    const t = e.currentTarget;
-                    t.style.height = 'auto';
-                    t.style.height = Math.max(28, t.scrollHeight) + 'px';
-                  }}
-                />
-                <div className="flex flex-col shrink-0 border border-slate-200 rounded overflow-hidden">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 min-w-6 p-0 rounded-none border-b border-slate-200"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMinutesChange(index, Math.min(120, item.minutes + 1));
-                    }}
-                  >
-                    <ChevronUp className="h-3 w-3" />
-                  </Button>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={120}
-                    value={item.minutes}
-                    onChange={(e) => handleMinutesChange(index, Number(e.target.value))}
-                    className="w-10 h-6 text-center text-xs border-0 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-4 w-4 min-w-6 p-0 rounded-none"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMinutesChange(index, Math.max(1, item.minutes - 1));
-                    }}
-                  >
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId={`timer-list-${id}`}>
+              {(dropProvided) => (
+                <ul
+                  className="space-y-1.5"
+                  ref={dropProvided.innerRef}
+                  {...dropProvided.droppableProps}
+                >
+                  {items.map((item, index) => (
+                    <Draggable key={item.id} draggableId={item.id} index={index}>
+                      {(dragProvided) => (
+                        <li
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={cn(
+                            'relative flex items-stretch gap-2 rounded-lg border p-1.5 pl-4 transition-colors',
+                            item.completed ? 'bg-slate-50 border-slate-100' : 'bg-white border-slate-200',
+                            runningTaskIndex === index && 'ring-1 ring-emerald-400 bg-emerald-50/50'
+                          )}
+                        >
+                          <div
+                            {...dragProvided.dragHandleProps}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300 blur-0"
+                            title="Arrastrar para reordenar"
+                          />
+                          <Checkbox
+                            checked={item.completed}
+                            onCheckedChange={() => handleToggleComplete(index)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="h-4 w-4 shrink-0 mt-1"
+                          />
+                          <textarea
+                            ref={(el) => {
+                              taskInputRefs.current[index] = el;
+                              if (el) {
+                                el.style.height = 'auto';
+                                el.style.height = el.scrollHeight + 'px';
+                              }
+                            }}
+                            data-dictation-controlled="true"
+                            value={item.text}
+                            onChange={(e) => handleItemTextChange(index, e.target.value)}
+                            placeholder="Tarea"
+                            rows={1}
+                            className="flex-1 min-w-0 min-h-[1.75rem] py-1 px-2 text-sm border-0 border-b border-slate-200 rounded-none bg-transparent resize-none overflow-hidden focus:ring-0 focus-visible:ring-0"
+                            style={{ minHeight: '1.75rem', fontSize: '14px' }}
+                            onClick={(e) => e.stopPropagation()}
+                            onFocus={(e) => handleInputFocus(e.currentTarget)}
+                            onInput={(e) => {
+                              const t = e.currentTarget;
+                              t.style.height = 'auto';
+                              t.style.height = Math.max(28, t.scrollHeight) + 'px';
+                            }}
+                          />
+                          <div className="flex flex-col shrink-0 border border-slate-200 rounded overflow-hidden">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 min-w-6 p-0 rounded-none border-b border-slate-200"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMinutesChange(index, Math.min(120, item.minutes + 1));
+                              }}
+                            >
+                              <ChevronUp className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={120}
+                              value={item.minutes}
+                              onChange={(e) => handleMinutesChange(index, Number(e.target.value))}
+                              className="w-10 h-6 text-center text-xs border-0 rounded-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 min-w-6 p-0 rounded-none"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMinutesChange(index, Math.max(1, item.minutes - 1));
+                              }}
+                            >
+                              <ChevronDown className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </li>
+                      )}
+                    </Draggable>
+                  ))}
+                  {dropProvided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
         {items.length > 0 && (
           <div className="mt-2 mb-1 px-2 py-1 rounded bg-slate-100 border border-slate-200 text-sm font-semibold text-slate-700">
@@ -592,7 +647,6 @@ export default function TimerListaElement(props: CommonElementProps) {
           <Input
             ref={(el) => {
               newTaskInputRef.current = el;
-              if (el) handleInputFocus(el);
             }}
             data-dictation-controlled="true"
             value={newTaskText}

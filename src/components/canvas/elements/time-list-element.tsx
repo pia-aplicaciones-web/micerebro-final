@@ -165,7 +165,8 @@ const speakTimeRemaining = (minutes: number) => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(`${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`);
-  utterance.lang = 'es-ES';
+  // Español de Latinoamérica, acento Chile
+  utterance.lang = 'es-CL';
   const voice = getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
@@ -179,7 +180,8 @@ const speakFinishedMessage = () => {
   if (typeof window === 'undefined' || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance('Bien! Terminaste la lista.');
-  utterance.lang = 'es-ES';
+  // Español de Latinoamérica, acento Chile
+  utterance.lang = 'es-CL';
   const voice = getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;

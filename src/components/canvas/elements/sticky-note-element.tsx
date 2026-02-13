@@ -440,7 +440,8 @@ export default function StickyNoteElement(props: CommonElementProps) {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
+    // Español de Latinoamérica, acento Chile
+    utterance.lang = 'es-CL';
     utterance.rate = 0.85;
 
     utterance.onend = () => {

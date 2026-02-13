@@ -34,7 +34,8 @@ export const useSpeechToText = () => {
       }
 
       const recognition = new SpeechRecognition();
-      recognition.lang = 'es-ES';
+      // Configurar reconocimiento en español de Chile (Latinoamérica)
+      recognition.lang = 'es-CL';
       recognition.interimResults = true;
       recognition.continuous = true;
       recognition.maxAlternatives = 1;
@@ -127,7 +128,9 @@ export const useSpeechToText = () => {
     try {
       recognitionRef.current.start();
     } catch (e) {
-      // Si ya está corriendo, ignorar
+      console.warn('Error al iniciar reconocimiento de voz:', e);
+      setIsListening(false);
+      shouldBeListening.current = false;
     }
   }, []);
 

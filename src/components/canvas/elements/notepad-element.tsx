@@ -1016,7 +1016,8 @@ export default function NotepadElement(props: CommonElementProps) {
 
     const fallbackVoice = getDefaultSpeechVoice();
     utterance.voice = selectedVoice || fallbackVoice || null;
-    utterance.lang = 'es-ES'; // Cambiar a es-ES para un español más neutro por defecto
+    // Español de Latinoamérica, acento Chile
+    utterance.lang = 'es-CL';
     utterance.rate = speechRate;
     utterance.pitch = 1; // Tono medio
     utterance.volume = 1; // Volumen medio
@@ -1073,13 +1074,13 @@ export default function NotepadElement(props: CommonElementProps) {
   const handleInsertDate = useCallback(() => {
     if (!contentRef.current) return;
     const now = new Date();
-    const dateStr = now.toLocaleDateString('es-ES', {
+    const dateStr = now.toLocaleDateString('es-CL', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-    const timeStr = now.toLocaleTimeString('es-ES');
+    const timeStr = now.toLocaleTimeString('es-CL');
     const dateTimeStr = `${dateStr} ${timeStr}`;
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
@@ -1332,9 +1333,9 @@ export default function NotepadElement(props: CommonElementProps) {
                           Di exactamente las palabras indicadas (sin necesidad de decir la puntuación).
                         </p>
                         <ul className="list-disc pl-4 space-y-1 text-gray-700">
-                          <li><strong>lineas</strong>: inserta <code>//</code> en la posición del cursor.</li>
+                          <li><strong>lineas</strong>, <strong>líneas</strong>, <strong>linea</strong> o <strong>línea</strong>: inserta <code>//</code> en la posición del cursor.</li>
                           <li><strong>ENTER</strong>: inserta un salto de línea sencillo.</li>
-                          <li><strong>parrafo</strong>: inserta un doble salto de línea (nuevo párrafo).</li>
+                          <li><strong>parrafo</strong> o <strong>párrafo</strong>: inserta un doble salto de línea (nuevo párrafo).</li>
                           <li><strong>fecha</strong>: inserta la fecha actual en formato largo donde esté el cursor.</li>
                           <li><strong>subrayar</strong>: activa el modo subrayado en color teal para el texto que dictes a continuación.</li>
                           <li><strong>FIN subrayar</strong>: desactiva el modo subrayado.</li>
@@ -1344,6 +1345,8 @@ export default function NotepadElement(props: CommonElementProps) {
                           <li><strong>Lista</strong>: comienza una lista con viñetas; cada frase que dictes se añade como ítem.</li>
                           <li><strong>fin lista</strong>: termina la lista con viñetas.</li>
                           <li><strong>Numeros</strong>: comienza una lista numerada (1.-, 2.-, 3.- ...); cada nueva frase avanza el número.</li>
+                          <li><strong>Crea lista</strong> o <strong>Crear lista</strong>: con texto ya seleccionado, lo transforma en lista con viñetas (cada línea pasa a ser <code>• texto</code>).</li>
+                          <li><strong>Crea numeros</strong> / <strong>Crea números</strong> / <strong>Crear numeros</strong> / <strong>Crear números</strong>: con texto ya seleccionado, lo transforma en lista numerada empezando en <code>1.-</code> (1.-, 2.-, 3.- ...).</li>
                         </ul>
                         <p className="text-center mt-4 text-gray-500">Haz clic en cualquier lugar para cerrar</p>
                       </div>

@@ -190,7 +190,8 @@ export default function DictadoElement(props: CommonElementProps) {
     }
 
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'es-ES';
+    // Español de Latinoamérica, acento Chile
+    utterance.lang = 'es-CL';
     utterance.rate = 0.85;
     const voice = getDefaultSpeechVoice();
     if (voice) utterance.voice = voice;
@@ -275,11 +276,11 @@ export default function DictadoElement(props: CommonElementProps) {
     >
       {/* Contenedor interno estilo celular */}
       <div
-        className="flex-1 bg-white rounded-3xl m-2 flex flex-col overflow-hidden"
+        className="flex-1 bg-white rounded-3xl m-2 flex flex-col overflow-hidden overflow-y-auto"
         style={{ margin: '8px' }}
       >
-        {/* Header web */}
-        <div className="flex items-center justify-between p-2 border-b bg-white">
+        {/* Header web - fijo dentro del elemento (scroll solo en el contenido) */}
+        <div className="flex items-center justify-between p-2 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center gap-1">
             <Button
               variant="ghost"
@@ -372,7 +373,7 @@ export default function DictadoElement(props: CommonElementProps) {
 
         {/* Contenido web con scroll infinito */}
         {!minimized && (
-          <div className="flex-1 overflow-y-auto p-3" style={{ minHeight: '100%' }}>
+          <div className="flex-1 p-3" style={{ minHeight: '100%' }}>
             <div
               ref={contentRef}
               contentEditable={!isPreview}

@@ -15,6 +15,9 @@ export const useDictation = (
   const interimNodeRef = useRef<HTMLSpanElement | null>(null);
   const savedRangeRef = useRef<Range | null>(null);
   const savedInputRef = useRef<{ element: HTMLInputElement | HTMLTextAreaElement; start: number; end: number } | null>(null);
+  // Último elemento editable que tuvo foco (por si al pulsar Dictar el foco ya está en el botón)
+  const lastFocusedInputRef = useRef<{ element: HTMLInputElement | HTMLTextAreaElement; start: number; end: number } | null>(null);
+  const lastFocusedRangeRef = useRef<Range | null>(null);
 
   // Modos de formato avanzados (solo para contentEditable)
   const underlineModeRef = useRef(false);
@@ -32,7 +35,8 @@ export const useDictation = (
     }
   }, []);
 
-  // Guardar la selección/cursor actual (llamar desde onMouseDown del botón micrófono, antes de que el foco cambie)
+  // Guardar la selección/cursor actual (llamar desde onMouseDown del botón micrófono).
+  // Si el foco ya pasó al botón, usa el último editable que tuvo foco (lastFocusedInputRef/lastFocusedRangeRef).
   const saveSelectionBeforeMic = useCallback(() => {
     const active = document.activeElement;
     if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) {
@@ -44,7 +48,6 @@ export const useDictation = (
       savedRangeRef.current = null;
       return;
     }
-    savedInputRef.current = null;
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -53,27 +56,127 @@ export const useDictation = (
         : (range.commonAncestorContainer as Node)?.parentElement?.closest?.('[contenteditable="true"]');
       if (editable) {
         savedRangeRef.current = range.cloneRange();
+        savedInputRef.current = null;
+        return;
       }
     }
+    // Fallback: usar el último editable que tuvo foco (el clic en Dictar ya movió el foco al botón)
+    const lastInput = lastFocusedInputRef.current?.element;
+    if (lastInput && document.contains(lastInput)) {
+      savedInputRef.current = {
+        element: lastInput,
+        start: lastInput.selectionStart ?? 0,
+        end: lastInput.selectionEnd ?? 0,
+      };
+      savedRangeRef.current = null;
+      return;
+    }
+    if (lastFocusedRangeRef.current) {
+      try {
+        const startContainer = lastFocusedRangeRef.current.startContainer;
+        if (document.contains(startContainer.nodeType === Node.TEXT_NODE ? startContainer.parentNode : startContainer)) {
+          savedRangeRef.current = lastFocusedRangeRef.current.cloneRange();
+          savedInputRef.current = null;
+          return;
+        }
+      } catch (_) { /* range inválido */ }
+    }
+    savedInputRef.current = null;
+    savedRangeRef.current = null;
   }, []);
 
-  // Guardar la posición inicial del cursor cuando empieza el dictado (fallback si no se llamó saveSelectionBeforeMic)
+  // Recordar el último input/textarea/contentEditable que recibió foco (para saveSelectionBeforeMic cuando el foco ya está en el botón)
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      const target = e.target as Node;
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        lastFocusedInputRef.current = {
+          element: target,
+          start: target.selectionStart ?? 0,
+          end: target.selectionEnd ?? 0,
+        };
+        lastFocusedRangeRef.current = null;
+        return;
+      }
+      if (target instanceof HTMLElement && target.isContentEditable) {
+        lastFocusedInputRef.current = null;
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const range = sel.getRangeAt(0);
+          const editable = range.commonAncestorContainer?.nodeType === Node.TEXT_NODE
+            ? (range.commonAncestorContainer as Text).parentElement?.closest?.('[contenteditable="true"]')
+            : (range.commonAncestorContainer as Node)?.parentElement?.closest?.('[contenteditable="true"]');
+          if (editable === target) {
+            try {
+              lastFocusedRangeRef.current = range.cloneRange();
+            } catch (_) {}
+          }
+        }
+        return;
+      }
+      if (target instanceof HTMLElement && target.closest?.('[contenteditable="true"]')) {
+        const editable = target.closest('[contenteditable="true"]');
+        lastFocusedInputRef.current = null;
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          try {
+            lastFocusedRangeRef.current = sel.getRangeAt(0).cloneRange();
+          } catch (_) {}
+        }
+      }
+    };
+    document.addEventListener('focusin', onFocusIn, true);
+    return () => document.removeEventListener('focusin', onFocusIn, true);
+  }, []);
+
+  // Guardar la posición inicial del cursor cuando empieza el dictado (fallback si no se llamó saveSelectionBeforeMic, p. ej. en móvil)
   useEffect(() => {
     if (isListening) {
       lastTranscriptRef.current = '';
       if (!savedRangeRef.current && !savedInputRef.current) {
         const selection = window.getSelection();
         if (selection && selection.rangeCount > 0) {
-          savedRangeRef.current = selection.getRangeAt(0).cloneRange();
-        } else {
+          const range = selection.getRangeAt(0);
+          const editable = range.commonAncestorContainer?.nodeType === Node.TEXT_NODE
+            ? (range.commonAncestorContainer as Text).parentElement?.closest?.('[contenteditable="true"]')
+            : (range.commonAncestorContainer as Node)?.parentElement?.closest?.('[contenteditable="true"]');
+          if (editable) {
+            savedRangeRef.current = range.cloneRange();
+          }
+        }
+        if (!savedRangeRef.current) {
           const activeElement = document.activeElement;
-          if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
+          if (activeElement instanceof HTMLInputElement || activeElement instanceof HTMLTextAreaElement) {
+            savedInputRef.current = {
+              element: activeElement,
+              start: activeElement.selectionStart ?? 0,
+              end: activeElement.selectionEnd ?? 0,
+            };
+          } else if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
             const range = document.createRange();
             range.selectNodeContents(activeElement);
             range.collapse(false);
             selection?.removeAllRanges();
             selection?.addRange(range);
             savedRangeRef.current = range.cloneRange();
+          }
+        }
+        // Si sigue sin haber nada (p. ej. se pulsó Dictar en móvil y el foco está en el menú), usar último editable con foco
+        if (!savedRangeRef.current && !savedInputRef.current) {
+          const lastInput = lastFocusedInputRef.current?.element;
+          if (lastInput && document.contains(lastInput)) {
+            savedInputRef.current = {
+              element: lastInput,
+              start: lastInput.selectionStart ?? 0,
+              end: lastInput.selectionEnd ?? 0,
+            };
+          } else if (lastFocusedRangeRef.current) {
+            try {
+              const startNode = lastFocusedRangeRef.current.startContainer;
+              if (document.contains(startNode.nodeType === Node.TEXT_NODE ? startNode.parentNode : startNode)) {
+                savedRangeRef.current = lastFocusedRangeRef.current.cloneRange();
+              }
+            } catch (_) {}
           }
         }
       }
@@ -127,10 +230,20 @@ export const useDictation = (
       // Usar la posición ACTUAL del cursor (el usuario puede haberla movido)
       range = selection.getRangeAt(0);
     } else if (savedRangeRef.current) {
-      // Si no hay cursor actual, usar el guardado como fallback
-      range = savedRangeRef.current;
-      selection.removeAllRanges();
-      selection.addRange(range);
+      const saved = savedRangeRef.current;
+      try {
+        const startNode = saved.startContainer;
+        if (!document.contains(startNode.nodeType === Node.TEXT_NODE ? startNode.parentNode : startNode)) {
+          savedRangeRef.current = null;
+          return;
+        }
+        range = saved;
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } catch (_) {
+        savedRangeRef.current = null;
+        return;
+      }
     } else {
       // Si no hay cursor ni posición guardada, intentar crear uno al final del elemento activo
       if (activeElement && (activeElement instanceof HTMLElement) && activeElement.isContentEditable) {
@@ -192,7 +305,7 @@ export const useDictation = (
 
       if (titleModeRef.current) {
         const el = document.createElement('div');
-        el.style.fontSize = '24px';
+        el.style.fontSize = '22px';
         el.style.fontWeight = '600';
         el.style.textAlign = 'center';
         el.style.display = 'block';
@@ -238,6 +351,42 @@ export const useDictation = (
     }
   }, [removeInterimNode]);
 
+  // Transformar texto seleccionado en lista (por comandos de voz)
+  const transformSelectionToList = useCallback((mode: 'bulleted' | 'numbered') => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+    const selectedText = range.toString();
+    if (!selectedText.trim()) return;
+
+    const lines = selectedText
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    if (lines.length === 0) return;
+
+    const newText =
+      mode === 'bulleted'
+        ? lines.map((l) => `• ${l}`).join('\n')
+        : lines.map((l, i) => `${i + 1}.- ${l}`).join('\n');
+
+    const textNode = document.createTextNode(newText);
+    range.deleteContents();
+    range.insertNode(textNode);
+
+    // Colocar el cursor al final de la nueva lista
+    const newRange = document.createRange();
+    newRange.setStartAfter(textNode);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    // Actualizar posición guardada para futuros dictados
+    savedRangeRef.current = newRange.cloneRange();
+  }, []);
+
   // Procesar comandos especiales de dictado
   const processDictationCommand = useCallback((text: string) => {
     let processedText = text;
@@ -281,6 +430,23 @@ export const useDictation = (
       return '\n';
     }
 
+    // NUEVOS COMANDOS: transformar selección en lista
+    // "crea lista": texto resaltado -> lista con bullets
+    if (lower === 'crea lista' || lower === 'crear lista') {
+      transformSelectionToList('bulleted');
+      return '';
+    }
+    // "crea numeros": texto resaltado -> lista numerada 1.-, 2.-, ...
+    if (
+      lower === 'crea numeros' ||
+      lower === 'crea números' ||
+      lower === 'crear numeros' ||
+      lower === 'crear números'
+    ) {
+      transformSelectionToList('numbered');
+      return '';
+    }
+
     // Comandos de dictado - frases completas que se convierten en símbolos
     // Hacer las búsquedas más flexibles para manejar variaciones del reconocimiento de voz
     processedText = processedText.replace(/\bnew\b/gi, '\n');
@@ -288,11 +454,11 @@ export const useDictation = (
     processedText = processedText.replace(/\bcoma\b/gi, ',');
     processedText = processedText.replace(/agrega coma/gi, ',');
     processedText = processedText.replace(/\bresaltar\b/gi, '-*-');
-    processedText = processedText.replace(/\blineas\b/gi, '//');
+    processedText = processedText.replace(/\b(?:lineas|líneas|linea|línea)\b/gi, '//');
     processedText = processedText.replace(/\bmarca\b/gi, '#');
 
-    // parrafo -> doble salto de línea
-    processedText = processedText.replace(/\bparrafo\b/gi, '\n\n');
+    // parrafo / párrafo -> doble salto de línea
+    processedText = processedText.replace(/\b(?:parrafo|párrafo)\b/gi, '\n\n');
 
     // ENTER -> salto de línea simple
     processedText = processedText.replace(/\benter\b/gi, '\n');
@@ -300,7 +466,7 @@ export const useDictation = (
     // fecha -> fecha actual amigable
     if (/\bfecha\b/i.test(processedText)) {
       const now = new Date();
-      const fechaStr = now.toLocaleDateString('es-ES', {
+      const fechaStr = now.toLocaleDateString('es-CL', {
         weekday: 'long',
         year: 'numeric',
         month: 'long',
@@ -314,7 +480,7 @@ export const useDictation = (
     processedText = processedText.replace(/,([^ \n])/g, ', $1'); // Coma seguida de texto -> , espacio
 
     return processedText;
-  }, []);
+  }, [transformSelectionToList]);
 
   // Procesar cambios en transcript (texto final)
   useEffect(() => {
