@@ -28,7 +28,7 @@ type CreateBoardDialogProps = {
   onCreated?: (boardId: string) => void;
 };
 
-export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardDialogProps) {
+export default function CreateBoardDialog({ isOpen, onOpenChange, onCreated }: CreateBoardDialogProps) {
   const [boardName, setBoardName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [isPasswordProtected, setIsPasswordProtected] = useState(false);

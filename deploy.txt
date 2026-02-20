@@ -16,13 +16,23 @@ vercel           # o: vercel deploy
 # 5. Deploy producción con Vercel (usar --yes para evitar prompts)
 vercel deploy --prod --yes
 
-# 6. Flujo con git + Vercel (producción → https://micerebroapp.vercel.app/)
+# 6. Mantener la web app actualizada por Git (recomendado)
+#    Vercel hace el build en la nube → no consume recursos locales
+#    Producción: https://micerebroapp.vercel.app/
 
-vercel --prod --yes
-
+# Paso 1: Añadir todos los cambios
 git add -A
+
+# Paso 2: Crear commit con descripción de los cambios
 git commit -m "Descripción de los cambios"
-git push origin main   # Vercel hará deploy automático si el proyecto está vinculado
+
+# Paso 3: Subir a GitHub (Vercel hace deploy automático si el proyecto está vinculado)
+git push origin main
+
+# Verificar: entra a vercel.com → Deployments → el último debe estar Building o Ready
 
 # Si "ECANCELED: operation canceled" → ejecutar en Terminal del sistema (fuera de Cursor)
-# y asegurarse de usar: vercel --prod --yes
+
+# --- Alternativa: deploy manual con Vercel CLI ---
+# 7. Deploy producción con Vercel CLI (sin usar git)
+vercel deploy --prod --yes
