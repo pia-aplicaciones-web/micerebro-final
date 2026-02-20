@@ -36,7 +36,8 @@ export type ElementType =
   'libreta' |
   'dictado' |
   'block-dibujo' |
-  'timer-lista';
+  'timer-lista' |
+  'url-doc';
 
 // Interfaz para propiedades de elementos del canvas
 export interface CanvasElementProperties {
@@ -400,6 +401,18 @@ export interface PomodoroTimerCanvasElement extends BaseVisualProperties {
   content: { time: number; isRunning: boolean; };
 }
 
+export interface LocatorCanvasElement extends BaseVisualProperties {
+  type: 'locator';
+  hidden?: boolean;
+  content?: { label?: string };
+}
+
+export interface UrlDocCanvasElement extends BaseVisualProperties {
+  type: 'url-doc';
+  hidden?: boolean;
+  content?: { url: string; title?: string };
+}
+
 export type CanvasElement =
   | ImageCanvasElement
   | TextCanvasElement
@@ -418,7 +431,9 @@ export type CanvasElement =
   | PhotoGridAdaptiveCanvasElement
   | PhotoGridFreeCanvasElement
   | ImageFrameCanvasElement
-  | PomodoroTimerCanvasElement;
+  | PomodoroTimerCanvasElement
+  | LocatorCanvasElement
+  | UrlDocCanvasElement;
 
 export type WithId<T> = T & { id: string };
 

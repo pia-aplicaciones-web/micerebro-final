@@ -364,6 +364,25 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           updatedAt: serverTimestamp(),
         };
         break;
+      case 'url-doc': {
+        const urlDocSize = { width: 180, height: 140 };
+        const urlDocPos = getCenteredPosition(urlDocSize.width, urlDocSize.height);
+        const urlDocContent = (props?.content as { url?: string; title?: string }) || {};
+        newElementData = {
+          type: 'url-doc',
+          x: urlDocPos.x,
+          y: urlDocPos.y,
+          width: urlDocSize.width,
+          height: urlDocSize.height,
+          userId,
+          properties: { ...baseProperties, position: urlDocPos, size: urlDocSize },
+          content: { url: urlDocContent.url || '', title: urlDocContent.title || '' },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      }
       case 'comment-small':
         const smallCommentSize = { width: 150, height: 60 };
         const smallCommentPos = getCenteredPosition(smallCommentSize.width, smallCommentSize.height);

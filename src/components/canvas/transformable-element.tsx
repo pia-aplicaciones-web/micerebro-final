@@ -30,6 +30,7 @@ import WeeklyMenuElement from './elements/weekly-menu-element';
 import ContainerElement from './elements/container-element';
 import LocatorElement from './elements/locator-element';
 import ImageFrameElement from './elements/image-frame-element';
+import UrlDocElement from './elements/url-doc-element';
 import PhotoGridElement from './elements/photo-grid-element';
 import CommentSmallElement from './elements/comment-small-element';
 import CommentRElement from './elements/comment-r-element';
@@ -67,6 +68,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'two-columns': ContainerElement,
   locator: LocatorElement,
   'image-frame': ImageFrameElement,
+  'url-doc': UrlDocElement,
   'photo-grid': PhotoGridElement,
   'photo-grid-horizontal': PhotoGridHorizontalElement,
   'photo-grid-adaptive': PhotoGridAdaptiveElement,
@@ -74,6 +76,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'libreta': LibretaElement,
   'comment-small': CommentSmallElement,
   'notes': NotesElement,
+  'mini-notes': NotesElement,
   'mini': MiniElement,
   'countdown': CountdownElement,
   'dictado': DictadoElement,
@@ -257,7 +260,11 @@ export default function TransformableElement({
     }
   }, [isSelected]);
 
+  // Anti-freeze solo para notas: evita estado congelado cuando onDragStop no se dispara.
+  // Desactivado en el resto de elementos para evitar re-renders excesivos.
+  const isNotesElement = (element.type as string) === 'notes' || (element.type as string) === 'mini-notes';
   useEffect(() => {
+    if (!isNotesElement) return;
     const maybeToastAntiFreeze = () => {
       const now = Date.now();
       if (now - antiFreezeToastCooldownRef.current < 3000) return;
@@ -306,7 +313,7 @@ export default function TransformableElement({
       window.removeEventListener('dragend', onDragEnd as EventListener, true);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, [toast]);
+  }, [toast, isNotesElement]);
 
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
     // Validar umbral de movimiento para evitar arrastres accidentales

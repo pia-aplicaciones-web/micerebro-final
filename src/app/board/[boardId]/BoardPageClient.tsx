@@ -29,6 +29,7 @@ import { Button } from '@/components/ui/button';
 
 // Diálogos
 import AddImageFromUrlDialog from '@/components/canvas/elements/add-image-from-url-dialog';
+import AddUrlDocDialog from '@/components/canvas/add-url-doc-dialog';
 import ChangeFormatDialog from '@/components/canvas/change-format-dialog';
 import EditCommentDialog from '@/components/canvas/elements/edit-comment-dialog';
 import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
@@ -184,6 +185,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   // Estados de UI
   const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [isUrlDocDialogOpen, setIsUrlDocDialogOpen] = useState(false);
   const [shouldOpenCropAfterUrl, setShouldOpenCropAfterUrl] = useState(false);
   const [changeFormatDialogOpen, setChangeFormatDialogOpen] = useState(false);
   const [isPanningActive, setIsPanningActive] = useState(false);
@@ -305,6 +307,17 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   }, []);
 
   const { addElement } = useElementManager(boardId, getViewportCenter, getNextZIndex);
+
+  // En Tablero Mini: notepad y block-dibujo siempre van en capa -1
+  const addElementForMiniBoard = useCallback(
+    async (type: ElementType, props?: any) => {
+      if ((type === 'notepad' || type === 'block-dibujo') && (board as any)?.boardType === 'mini') {
+        return addElement(type, { ...props, zIndex: -1, properties: { ...(props?.properties || {}), zIndex: -1 } });
+      }
+      return addElement(type, props);
+    },
+    [addElement, board]
+  );
 
   const COPIED_KEY = 'micerebro-copied-element';
 
@@ -1252,6 +1265,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               onDeleteBoard={handleDeleteBoard}
               onUploadImage={handleUploadImage}
               onAddImageFromUrl={handleAddImageFromUrl}
+              onOpenUrlDocDialog={() => {
+                handleToggleMobileMenu();
+                setIsUrlDocDialogOpen(true);
+              }}
               onCropImage={handleCropImage}
               onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
               onExportBoardToPng={handleExportToPng}
@@ -1273,7 +1290,30 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         />
 
 
-        {!isMobile && (
+        {!isMobile && (board as any)?.boardType === 'mini' && (
+          <MiniToolsSidebar
+            elements={elements || []}
+            boards={boards || []}
+            boardId={boardId}
+            user={user}
+            addElement={addElementForMiniBoard}
+            onLocateElement={handleLocateElement}
+            onAddImageFromUrl={() => {
+              setIsImageUrlDialogOpen(true);
+              setShouldOpenCropAfterUrl(false);
+            }}
+            isListening={isListening}
+            onToggleDictation={toggleListening}
+            onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+            onExportBoardToPng={handleExportToPng}
+            onCreateMiniBoard={user?.uid ? async () => {
+              const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+              return id || null;
+            } : undefined}
+          />
+        )}
+
+        {!isMobile && (board as any)?.boardType !== 'mini' && (
           <ToolsSidebar
             elements={elements || []}
             boards={boards || []}
@@ -1284,6 +1324,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               setIsImageUrlDialogOpen(true);
               setShouldOpenCropAfterUrl(false);
             }}
+            onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
             onCropImage={handleCropImage}
             onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
             onPanToggle={() => canvasRef.current?.activatePanMode()}
@@ -1322,7 +1363,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           ref={canvasRef}
           elements={canvasElements as WithId<CanvasElement>[]}
           board={board as WithId<Board>}
-          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#555556' : undefined}
+          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#a6a6a6' : undefined}
           selectedElementIds={selectedElementIds}
           onSelectElement={handleSelectElement}
           updateElement={updateElement}
@@ -1409,6 +1450,14 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           }}
         />
 
+        <AddUrlDocDialog
+          isOpen={isUrlDocDialogOpen}
+          onOpenChange={setIsUrlDocDialogOpen}
+          onAdd={(url, title) => {
+            addElement('url-doc', { content: { url, title } });
+          }}
+        />
+
         <ImageCropDialog
           isOpen={isImageCropDialogOpen}
           onClose={handleCropCancel}
@@ -1436,7 +1485,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         {/* Display de Uso de Almacenamiento - Deshabilitado hasta que Storage esté configurado (Blaze, CORS) */}
         {/* {user?.uid && <StorageUsageDisplay userId={user.uid} />} */}
 
-        {/* Panel lateral Mi galería */}
+        {/* Panel lateral Mi galería - visible en todos los tableros (incl. Mini) */}
+        <>
         <div
           key={`gallery-panel-${isGalleryOpen ? 'open' : 'closed'}`}
           className="fixed left-0 top-0 h-screen flex items-center"
@@ -1505,6 +1555,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             <path d="m9 18 6-6-6-6"/>
           </svg>
         </button>
+        </>
 
       </div>
 

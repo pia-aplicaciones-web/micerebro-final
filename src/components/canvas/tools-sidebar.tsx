@@ -174,6 +174,7 @@ interface ToolsSidebarProps {
   user: AuthUser | null;
   onUploadImage: () => void;
   onAddImageFromUrl: () => void;
+  onOpenUrlDocDialog?: () => void;
   onCropImage: () => void;
   onAddImageFromUrlWithCrop: () => void;
   onPanToggle: () => void;
@@ -219,6 +220,7 @@ interface ToolsSidebarProps {
    user,
    onUploadImage,
    onAddImageFromUrl,
+   onOpenUrlDocDialog,
    onCropImage,
    onAddImageFromUrlWithCrop,
    onPanToggle,
@@ -1224,6 +1226,12 @@ interface ToolsSidebarProps {
                 <LinkIcon className="mr-2 h-4 w-4" />
                 <span>Desde URL</span>
               </DropdownMenuItem>
+              {onOpenUrlDocDialog && (
+                <DropdownMenuItem onClick={onOpenUrlDocDialog}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>+ URL docs</span>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={onUploadImage}>
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>

@@ -13,7 +13,7 @@ const VALID_ELEMENT_TYPES: ElementType[] = [
   'stopwatch', 'countdown', 'highlight-text',
   'weekly-planner', 'vertical-weekly-planner', 'weekly-menu',
   'container', 'two-columns',
-  'locator', 'image-frame',
+  'locator', 'image-frame', 'url-doc',
   'photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free', 'libreta',
   'block-dibujo'
 ];
@@ -35,6 +35,7 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'two-columns': { width: 378, height: 567 },
   'locator': { width: 120, height: 120 },
   'image-frame': { width: 300, height: 300 },
+  'url-doc': { width: 180, height: 140 },
   'weekly-menu': { width: 756, height: 567 },
   'photo-grid': { width: 420, height: 420 },
   'photo-grid-horizontal': { width: 560, height: 360 },
@@ -263,6 +264,16 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
       }
       return { url: '', zoom: 1, panX: 0, panY: 0, rotation: 0 };
 
+    case 'url-doc':
+      if (typeof content === 'object' && content !== null) {
+        const doc = content as Record<string, unknown>;
+        return {
+          url: typeof doc.url === 'string' ? doc.url : '',
+          title: typeof doc.title === 'string' ? doc.title : '',
+        };
+      }
+      return { url: '', title: '' };
+
     case 'weekly-menu':
       if (typeof content === 'object' && content !== null) {
         const menu = content as Record<string, unknown>;
@@ -342,6 +353,8 @@ function getDefaultContent(type: ElementType): unknown {
       return { title: 'Mi galería', images: [], elementIds: [] };
     case 'image-frame':
       return { url: '', zoom: 1, panX: 0, panY: 0, rotation: 0 };
+    case 'url-doc':
+      return { url: '', title: '' };
     case 'weekly-menu':
       return { days: {} };
     case 'photo-grid':

@@ -82,6 +82,7 @@ interface MobileMenuProps {
   onDeleteBoard: () => void;
   onUploadImage: () => void;
   onAddImageFromUrl: () => void;
+  onOpenUrlDocDialog?: () => void;
   onCropImage: () => void;
   onAddImageFromUrlWithCrop: () => void;
   onExportBoardToPng: () => void;
@@ -132,6 +133,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   onDeleteBoard,
   onUploadImage,
   onAddImageFromUrl,
+  onOpenUrlDocDialog,
   onCropImage,
   onAddImageFromUrlWithCrop,
   onExportBoardToPng,
@@ -364,6 +366,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       icon: ImageIcon,
       subMenu: [
         { label: 'Desde URL', onClick: onAddImageFromUrl },
+        ...(onOpenUrlDocDialog ? [{ label: '+ URL docs', onClick: onOpenUrlDocDialog }] : []),
         { label: 'Marco de foto', onClick: () => handleAddElement('image-frame') },
         { label: 'Subir + Crop', onClick: onCropImage },
         { label: 'Desde URL + Crop', onClick: onAddImageFromUrlWithCrop },
@@ -399,7 +402,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   ].filter(item => {
     const excludedLabels = ["GUIA DE FOTOS", "MI PLAN", "COLUMNA"];
     return !excludedLabels.includes(item.label);
-  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose, isListening, onToggleDictation, savedLinks]);
+  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onOpenUrlDocDialog, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose, isListening, onToggleDictation, savedLinks]);
 
   return (
     <>

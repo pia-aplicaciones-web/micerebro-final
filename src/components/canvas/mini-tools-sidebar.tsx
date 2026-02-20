@@ -137,6 +137,7 @@ export default function MiniToolsSidebar({
   const router = useRouter();
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
   const [openAddLinkDialog, setOpenAddLinkDialog] = useState(false);
+  const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(false);
   const [rndPos, setRndPos] = useState({ x: 8, y: 100 });
 
@@ -258,6 +259,10 @@ export default function MiniToolsSidebar({
               <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 Agregar Cuaderno
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Block de Dibujo
               </DropdownMenuItem>
             </MiniSidebarButton>
 
