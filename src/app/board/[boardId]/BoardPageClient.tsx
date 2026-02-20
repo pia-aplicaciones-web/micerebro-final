@@ -6,7 +6,7 @@ import { Loader2, Menu, X as CloseIcon, Mic, BookCopy } from 'lucide-react';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage, firebaseConfig } from '@/lib/firebase';
+import { getFirebaseStorage, initFirebase, firebaseConfig } from '@/lib/firebase';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
@@ -24,7 +24,7 @@ import Canvas from '@/components/canvas/canvas';
 import ToolsSidebar from '@/components/canvas/tools-sidebar';
 import { DrawingOverlay } from '@/components/canvas/drawing-overlay';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
-import GalleryElement from '@/components/canvas/elements/gallery-element';
+import GaleriaContenedor from '@/components/canvas/elements/galeriacontenedor';
 import { Button } from '@/components/ui/button';
 
 // Diálogos
@@ -318,79 +318,46 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     toast({ title: 'Cuaderno de dictado creado' });
   }, [addElement, getViewportCenter, toast]);
 
-  // Buscar elemento gallery
-  const galleryElement = useMemo(() => {
-    return elements.find(el => el.type === 'gallery');
-  }, [elements]);
-
   // Filtrar elementos para el canvas (SIEMPRE excluir gallery del canvas)
   const canvasElements = useMemo(() => {
     return elements.filter(el => el.type !== 'gallery' && (el.type as any) !== 'photo-ideas-guide');
   }, [elements]);
 
-  // Este código de actualización específica se ha removido para evitar conflictos
-  // con la nueva lógica de gallery único
+  // Mi galería es un elemento de sistema (tipo gallery), independiente de container.
+  const galleryContainer = useMemo(
+    () =>
+      elements.find(
+        (el) => {
+          const anyElement = el as any;
+          return (
+            anyElement.type === 'gallery' &&
+            (
+              anyElement?.properties?.isSystemGallery === true ||
+              (typeof anyElement.content === 'object' &&
+                anyElement.content !== null &&
+                anyElement.content.title === 'Mi galería')
+            )
+          );
+        }
+      ),
+    [elements]
+  );
 
-  // Crear gallery si no existe (solo una vez por tablero)
-  const galleryCreatedRef = useRef(false);
   useEffect(() => {
-    // Solo crear gallery si no existe y estamos en un tablero válido
-    const shouldCreateGallery = !galleryCreatedRef.current &&
-                               !galleryElement &&
-                               user?.uid &&
-                               boardId !== 'new' &&
-                               boardId;
+    if (galleryContainer) return;
 
-    if (shouldCreateGallery) {
-      galleryCreatedRef.current = true;
-      console.log('Creando elemento gallery único...');
-
-      // Limpiar cualquier gallery existente antes de crear uno nuevo
-      const existingGalleries = elements.filter(el => el.type === 'gallery');
-      if (existingGalleries.length > 0) {
-        console.log('Eliminando galleries existentes antes de crear uno nuevo:', existingGalleries.length);
-        existingGalleries.forEach(gallery => {
-          deleteElement(gallery.id);
-        });
-
-        // Esperar un poco antes de crear el nuevo para evitar conflictos
-        setTimeout(() => {
-          addElement('gallery', {
-            content: { title: 'Mi galería', images: [] },
-            properties: { size: { width: 378, height: 800 } },
-            x: -400,
-            y: 100,
-            width: 378,
-            height: 800,
-            hidden: true, // Gallery siempre oculto en canvas
-            zIndex: 0,
-          }).then(() => {
-            console.log('Gallery único creado exitosamente');
-          }).catch((error) => {
-            console.error('Error creando gallery único:', error);
-            galleryCreatedRef.current = false;
-          });
-        }, 100);
-      } else {
-        // No hay galleries existentes, crear directamente
-      addElement('gallery', {
-        content: { title: 'Mi galería', images: [] },
-        properties: { size: { width: 378, height: 800 } },
-        x: -400,
-        y: 100,
-        width: 378,
-        height: 800,
-          hidden: true, // Gallery siempre oculto en canvas
-        zIndex: 0,
-      }).then(() => {
-          console.log('Gallery único creado exitosamente');
-      }).catch((error) => {
-          console.error('Error creando gallery único:', error);
-          galleryCreatedRef.current = false;
-      });
-      }
-    }
-  }, [galleryElement, addElement, user?.uid, boardId, elements, deleteElement]);
+    void addElement('gallery', {
+      content: { title: 'Mi galería', images: [], elementIds: [] },
+      properties: {
+        size: { width: 378, height: 800 },
+        backgroundColor: '#ffffff',
+        zIndex: -1,
+        isSystemGallery: true,
+      },
+      zIndex: -1,
+      hidden: true,
+    });
+  }, [galleryContainer, addElement]);
 
   // Handler para drag and drop desde galería hacia canvas
   useEffect(() => {
@@ -622,10 +589,19 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   const handleUploadImage = useCallback(async () => {
     const userId = user?.uid;
-    if (!userId || !storage) {
+    if (!userId) {
       toast({ title: 'Error', description: 'Debes iniciar sesión' });
       return;
     }
+
+    // Obtener Storage fresco en tiempo real para evitar capturas nulas.
+    await initFirebase().catch(() => null);
+    const currentStorage = getFirebaseStorage();
+    if (!currentStorage) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Firebase Storage no está disponible.' });
+      return;
+    }
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
@@ -634,7 +610,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       if (!file) return;
 
       try {
-        const result = await uploadFile(file, userId, storage);
+        const result = await uploadFile(file, userId, currentStorage);
         if (result.success) {
           await addElement('image', { content: { url: result.url }, properties: { size: { width: 300, height: 200 } } });
           toast({ title: 'Imagen subida' });
@@ -647,7 +623,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       }
     };
     input.click();
-  }, [user, storage, addElement, toast]);
+  }, [user, addElement, toast]);
 
   const handleCropImage = useCallback(() => {
     const input = document.createElement('input');
@@ -678,12 +654,19 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   const handleCropComplete = useCallback(async (croppedImageDataUrl: string) => {
     const userId = user?.uid;
-    if (!userId || !storage || !uploadedFileToProcess) {
+    if (!userId || !uploadedFileToProcess) {
       toast({ title: 'Error', description: 'Sesión expirada o archivo no encontrado' });
       return;
     }
 
     try {
+      await initFirebase().catch(() => null);
+      const currentStorage = getFirebaseStorage();
+      if (!currentStorage) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Firebase Storage no está disponible.' });
+        return;
+      }
+
       // Convertir el data URL a File
       const response = await fetch(croppedImageDataUrl);
       const blob = await response.blob();
@@ -693,7 +676,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       });
 
       // Subir la imagen recortada
-      const result = await uploadFile(croppedFile, userId, storage);
+      const result = await uploadFile(croppedFile, userId, currentStorage);
       if (result.success) {
         await addElement('image', { content: { url: result.url }, properties: { size: { width: 300, height: 200 } } });
         toast({ title: 'Imagen subida y recortada' });
@@ -713,7 +696,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         URL.revokeObjectURL(imageToCrop);
       }
     }
-  }, [user, storage, addElement, toast, uploadedFileToProcess, imageToCrop]);
+  }, [user, addElement, toast, uploadedFileToProcess, imageToCrop]);
 
   const handleCropCancel = useCallback(() => {
     setIsImageCropDialogOpen(false);
@@ -966,8 +949,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       />
 
       <div className="h-screen w-screen relative overflow-hidden">
-        {/* Nombre del tablero en esquina superior izquierda */}
-        <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
+        <BoardTitleDisplay
+          name={board?.name || ''}
+          onUpdateName={handleRenameBoard}
+          onDeleteBoard={handleDeleteBoard}
+        />
 
 
         {!isMobile && (
@@ -1127,11 +1113,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         {/* Display de Uso de Almacenamiento - Deshabilitado hasta que Storage esté configurado (Blaze, CORS) */}
         {/* {user?.uid && <StorageUsageDisplay userId={user.uid} />} */}
 
-        {/* Panel lateral Galería: capa 0 para recibir drop de elementos */}
+        {/* Panel lateral Mi galería */}
         <div
           key={`gallery-panel-${isGalleryOpen ? 'open' : 'closed'}`}
           className="fixed left-0 top-0 h-screen flex items-center"
-          style={{ zIndex: isGalleryOpen ? 0 : -1 }}
+          style={{ zIndex: isGalleryOpen ? 20000 : -1 }}
         >
           {/* Panel completo */}
           <div
@@ -1141,30 +1127,23 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               ${isGalleryOpen ? 'w-96' : 'w-0 overflow-hidden'}
             `}
             style={{
-              zIndex: isGalleryOpen ? 0 : -1,
+              zIndex: isGalleryOpen ? 20000 : -1,
               backgroundColor: 'white',
               border: '1px solid #e5e7eb'
             }}
           >
-                <div className="h-full flex flex-col">
-                  <div className="flex-1 overflow-hidden">
-                    <GalleryElement
-                      {...galleryElement}
-                      scale={1}
-                      offset={{ x: 0, y: 0 }}
-                      isSelected={false}
-                      onSelectElement={() => {}}
-                      onUpdate={updateElement}
-                      deleteElement={deleteElement}
-                      onEditElement={() => {}}
-                      allElements={elements}
-                      addElement={addElement}
-                      onUploadImage={handleUploadImage}
-                      storage={storage}
-                      userId={user?.uid}
-                      onLocateElement={() => {}}
-                      onEditComment={() => {}}
-                    />
+                <div className="h-full flex flex-col min-h-0">
+                  <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                    {galleryContainer && (
+                      <GaleriaContenedor
+                        id={galleryContainer.id}
+                        content={galleryContainer.content}
+                        properties={galleryContainer.properties}
+                        onUpdate={updateElement}
+                        onLocateElement={handleLocateElement}
+                        allElements={elements || []}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -1187,7 +1166,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             setIsGalleryOpen((prev) => !prev);
           }}
           className="fixed left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-12 bg-[#bad324] hover:bg-[#a8c42a] rounded-r-lg shadow-md transition-all duration-200 touch-manipulation"
-          style={{ zIndex: 10001 }}
+          style={{ zIndex: 21000 }}
         >
           <svg
             width="14"

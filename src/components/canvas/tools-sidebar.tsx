@@ -124,33 +124,44 @@ const SidebarButton = forwardRef<
     icon?: React.ElementType;
     isActive?: boolean;
   }
->(({ label, icon: Icon, className, isActive, children, ...props }, ref) => {
+>(({ label, icon: Icon, className, isActive, children, title, ...props }, ref) => {
   const isDictationActive = className?.includes('bg-red-500');
+  const tooltipText = typeof title === 'string' && title.trim().length > 0 ? title : label;
   return (
-    <Button
-      ref={ref}
-      variant="ghost"
-      className={cn(
-        'flex flex-col items-center justify-center h-auto py-[5px] px-[6px] w-[75px] text-[11px] gap-1',
-        'hover:bg-[#ADD8E6] focus-visible:bg-[#ADD8E6] active:bg-white',
-        'text-black border border-border rounded-md',
-        'bg-white',
-        isActive && 'bg-white border-accent-foreground',
-        !isDictationActive && 'text-black',
-        className
-      )}
-      style={{
-        backgroundColor: isDictationActive ? '#ef4444' : (isActive ? '#ffffff' : '#ffffff'),
-        color: '#000000',
-        border: `1px solid ${isDictationActive ? '#ef4444' : (isActive ? 'hsl(var(--border))' : 'hsl(var(--border))')}`,
-      }}
-      {...props}
-    >
-      {children || (Icon && <Icon className={cn('size-[19px] flex-shrink-0', isDictationActive ? 'text-white' : 'text-black')} style={isDictationActive ? undefined : { color: '#000000' }} />)}
-      <span className={cn('text-center leading-tight text-[10px] truncate text-black', isDictationActive ? 'text-white' : 'text-black')} style={{ color: '#000000', fontSize: '10px' }}>
-        {label}
-      </span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          ref={ref}
+          variant="ghost"
+          className={cn(
+            'flex flex-col items-center justify-center h-auto py-[5px] px-[6px] w-[75px] text-[11px] gap-1',
+            'hover:bg-[#ADD8E6] focus-visible:bg-[#ADD8E6] active:bg-white',
+            'text-black border border-border rounded-md',
+            'bg-white',
+            isActive && 'bg-white border-accent-foreground',
+            !isDictationActive && 'text-black',
+            className
+          )}
+          style={{
+            backgroundColor: isDictationActive ? '#ef4444' : (isActive ? '#ffffff' : '#ffffff'),
+            color: '#000000',
+            border: `1px solid ${isDictationActive ? '#ef4444' : (isActive ? 'hsl(var(--border))' : 'hsl(var(--border))')}`,
+          }}
+          {...props}
+        >
+          {children || (Icon && <Icon className={cn('size-[19px] flex-shrink-0', isDictationActive ? 'text-white' : 'text-black')} style={isDictationActive ? undefined : { color: '#000000' }} />)}
+          <span className={cn('text-center leading-tight text-[10px] truncate text-black', isDictationActive ? 'text-white' : 'text-black')} style={{ color: '#000000', fontSize: '10px' }}>
+            {label}
+          </span>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        className="bg-gray-100 text-black border border-gray-300 shadow-md"
+      >
+        {tooltipText}
+      </TooltipContent>
+    </Tooltip>
   );
 });
 
@@ -198,42 +209,42 @@ interface ToolsSidebarProps {
     getColorHex: () => string;
     getStrokeWidth: () => number;
   };
-}
-
-const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
-  elements,
-  boards,
-  boardId,
-  user,
-  onUploadImage,
-  onAddImageFromUrl,
-  onCropImage,
-  onAddImageFromUrlWithCrop,
-  onPanToggle,
+ }
+ 
+ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
+   elements,
+   boards,
+   boardId,
+   user,
+   onUploadImage,
+   onAddImageFromUrl,
+   onCropImage,
+   onAddImageFromUrlWithCrop,
+   onPanToggle,
   onRenameBoard,
   onDeleteBoard,
-  onDeleteAllUserImages,
-  isListening,
-  onToggleDictation,
-  onSaveSelectionBeforeMic,
-  onOpenNotepad,
-  onLocateElement,
-  onAddComment,
-  updateElement,
-  selectedElementIds,
-  addElement,
-  selectElement,
-  clearCanvas,
-  onExportBoardToPng,
-  onFormatToggle,
-  isFormatToolbarOpen,
-  onOpenGlobalSearch,
-  canvasScrollPosition,
-  canvasScale,
-  isGalleryPanelOpen,
-  onToggleGalleryPanel,
+   onDeleteAllUserImages,
+   isListening,
+   onToggleDictation,
+   onSaveSelectionBeforeMic,
+   onOpenNotepad,
+   onLocateElement,
+   onAddComment,
+   updateElement,
+   selectedElementIds,
+   addElement,
+   selectElement,
+   clearCanvas,
+   onExportBoardToPng,
+   onFormatToggle,
+   isFormatToolbarOpen,
+   onOpenGlobalSearch,
+   canvasScrollPosition,
+   canvasScale,
+   isGalleryPanelOpen,
+   onToggleGalleryPanel,
   drawingMode,
-}, ref) => {
+ }, ref) => {
   const { toast } = useToast();
   const router = useRouter();
   const isMobile = useMediaQuery('(max-width: 768px)');

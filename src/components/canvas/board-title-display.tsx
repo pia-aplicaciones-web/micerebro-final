@@ -92,7 +92,7 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
 
   if (isEditing) {
     return (
-      <div className="fixed top-2.5 left-2.5 z-[9999] flex items-center gap-2">
+      <div className="fixed top-2.5 right-3 z-[10005] flex items-center gap-2 pointer-events-auto">
         <input
           ref={inputRef}
           value={editValue}
@@ -106,7 +106,7 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
             textShadow: '0 1px 2px rgba(255,255,255,0.8)',
             letterSpacing: '-0.01em',
             fontSize: '12px',
-            minWidth: '400px',
+            width: 'min(400px, 72vw)',
           }}
         />
         {onDeleteBoard && (
@@ -146,9 +146,9 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
   }
 
   return (
-    <div className="fixed top-2.5 left-2.5 z-[9999] pointer-events-auto flex items-center gap-2">
+    <div className="fixed top-2.5 right-3 z-[10005] pointer-events-auto flex items-center gap-2">
       <h1
-        className="text-xs font-medium tracking-tight opacity-70 cursor-pointer hover:opacity-100 transition-opacity"
+        className="text-xs font-medium tracking-tight opacity-70 cursor-pointer hover:opacity-100 transition-opacity max-w-[72vw] truncate"
         style={{
           fontFamily: "'Space Grotesk', 'Poppins', sans-serif",
           color: '#000000',

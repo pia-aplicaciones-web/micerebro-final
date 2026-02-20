@@ -280,7 +280,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         newElementData = { type, x: miniNotesPos.x, y: miniNotesPos.y, width: miniNotesSize.width, height: miniNotesSize.height, userId, properties: { ...baseProperties, position: miniNotesPos, size: miniNotesSize, backgroundColor: '#f9fb6a' }, content: props?.content || { text: '', searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'weekly-planner':
       case 'vertical-weekly-planner':
-        const plannerSize = { width: 794, height: 1123 }; // Tamaño carta A4 completo
+        const plannerSize = { width: 794, height: 794 }; // 21cm x 21cm
         const plannerPos = getCenteredPosition(plannerSize.width, plannerSize.height);
         const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
         newElementData = {
@@ -572,7 +572,7 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
       case 'gallery':
         const gallerySize = { width: 378, height: 800 };
         const galleryPos = getCenteredPosition(gallerySize.width, gallerySize.height);
-        newElementData = { type, x: galleryPos.x, y: galleryPos.y, width: gallerySize.width, height: gallerySize.height, userId, properties: { ...baseProperties, position: galleryPos, size: gallerySize, backgroundColor: '#ffffff' }, content: (props === null || props === void 0 ? void 0 : props.content) || { title: 'Galería', images: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: galleryPos.x, y: galleryPos.y, width: gallerySize.width, height: gallerySize.height, userId, properties: { ...baseProperties, position: galleryPos, size: gallerySize, backgroundColor: '#ffffff' }, content: (props === null || props === void 0 ? void 0 : props.content) || { title: 'Mi galería', images: [], elementIds: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       default: return Promise.reject(new Error(`Tipo de elemento inválido: ${type}`));
     }
 

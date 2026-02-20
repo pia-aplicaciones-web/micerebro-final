@@ -30,43 +30,8 @@ function updateExistingElements(elements: WithId<CanvasElement>[], userId: strin
 
     // 🔧 ACTUALIZACIONES ESPECÍFICAS POR TIPO DE ELEMENTO
 
-    // 1. Menú semanal: Asegurar dimensiones correctas (794x1123)
-    if (element.type === 'vertical-weekly-planner') {
-      const correctWidth = 794;
-      const correctHeight = 1123;
-
-      if (element.width !== correctWidth || element.height !== correctHeight) {
-        console.log(`🔄 Actualizando menú semanal ${element.id}: ${element.width}x${element.height} → ${correctWidth}x${correctHeight}`);
-        updatedElement.width = correctWidth;
-        updatedElement.height = correctHeight;
-
-        // Actualizar también en properties.size si existe
-        if (updatedElement.properties) {
-          updatedElement.properties = {
-            ...updatedElement.properties,
-            size: { width: correctWidth, height: correctHeight }
-          };
-        }
-
-        needsUpdate = true;
-
-        // Actualizar en Firebase de forma asíncrona (no bloqueante)
-        setTimeout(async () => {
-          try {
-            const db = getDb();
-            const elementRef = doc(db, 'users', userId, 'canvasBoards', boardId, 'canvasElements', element.id);
-            await updateDoc(elementRef, {
-              width: correctWidth,
-              height: correctHeight,
-              properties: updatedElement.properties
-            });
-            console.log(`✅ Menú semanal ${element.id} actualizado en Firebase`);
-          } catch (error) {
-            console.error(`❌ Error actualizando menú semanal ${element.id}:`, error);
-          }
-        }, 100);
-      }
-    }
+    // 1. Menú semanal: NO forzar tamaño automáticamente.
+    // Se permite redimensionado libre y el tamaño se conserva en properties.size.
 
     // 🔄 AGREGAR MÁS ACTUALIZACIONES AQUÍ PARA OTROS ELEMENTOS
 

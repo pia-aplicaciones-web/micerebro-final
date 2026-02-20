@@ -237,6 +237,19 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
       }
       return { title: 'Nuevo Contenedor', elementIds: [], layout: type === 'two-columns' ? 'two-columns' : 'single' };
 
+    case 'gallery':
+      if (typeof content === 'object' && content !== null) {
+        const galleryContent = content as Record<string, unknown>;
+        return {
+          title: typeof galleryContent.title === 'string' ? galleryContent.title : 'Mi galería',
+          images: Array.isArray(galleryContent.images) ? galleryContent.images : [],
+          elementIds: Array.isArray(galleryContent.elementIds)
+            ? (galleryContent.elementIds as unknown[]).filter((id): id is string => typeof id === 'string')
+            : [],
+        };
+      }
+      return { title: 'Mi galería', images: [], elementIds: [] };
+
     case 'image-frame':
       if (typeof content === 'object' && content !== null) {
         const frame = content as Record<string, unknown>;
@@ -325,6 +338,8 @@ function getDefaultContent(type: ElementType): unknown {
       return { url: '' };
     case 'moodboard':
       return { title: '', images: [], annotations: [] };
+    case 'gallery':
+      return { title: 'Mi galería', images: [], elementIds: [] };
     case 'image-frame':
       return { url: '', zoom: 1, panX: 0, panY: 0, rotation: 0 };
     case 'weekly-menu':

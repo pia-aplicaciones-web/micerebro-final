@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useCallback, useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
@@ -191,9 +191,15 @@ export default function TransformableElement({
   // REGLA #2: Estado para diálogo de confirmación de eliminación
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDraggingOrResizing, setIsDraggingOrResizing] = useState(false);
+  const [isOverGalleryDropZone, setIsOverGalleryDropZone] = useState(false);
+  const draggingStateRef = useRef(false);
+  const antiFreezeToastCooldownRef = useRef(0);
   // Estado para rastrear movimiento inicial y evitar arrastres accidentales
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const DRAG_THRESHOLD = 8; // Pixels mínimos para considerar arrastre real
+  // Regla global: reservar la franja superior para el menú principal.
+  // Ningún elemento libre del canvas debe quedar debajo del menú.
+  const TOP_MENU_PROTECTED_AREA = 120;
   
   // Extraer posición y tamaño de properties para uso consistente
   const elementProps = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
@@ -203,7 +209,7 @@ export default function TransformableElement({
   // REGLA GENERAL: Elementos de cuadernos inician con zIndex -1, pasan al frente cuando se seleccionan
   const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini', 'container', 'two-columns', 'libreta'].includes(element.type);
   const baseZIndex = isNotebookElement ? -1 : (elementProps.zIndex ?? element.zIndex ?? 1);
-  const zIndex = isSelected ? 999 : baseZIndex;
+  const zIndex = isDraggingOrResizing ? 30001 : (isSelected ? 999 : baseZIndex);
   
   // Asegurar que size tenga valores numéricos válidos
   // pomodoro mantiene ancho fijo de 180px
@@ -231,24 +237,76 @@ export default function TransformableElement({
   // FIX: Evitar estado "congelado" cuando isDraggingOrResizing queda true (ej. onDragStop no se disparó).
   // Reset al deseleccionar y al perder foco de ventana para que el header vuelva a ser clickeable.
   useEffect(() => {
+    draggingStateRef.current = isDraggingOrResizing;
+  }, [isDraggingOrResizing]);
+
+  useEffect(() => {
+    const onGalleryHoverChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ over: boolean }>;
+      setIsOverGalleryDropZone(Boolean(customEvent.detail?.over));
+    };
+    window.addEventListener('micerebro-gallery-hover-change', onGalleryHoverChange as EventListener);
+    return () => {
+      window.removeEventListener('micerebro-gallery-hover-change', onGalleryHoverChange as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!isSelected) {
       setIsDraggingOrResizing(false);
     }
   }, [isSelected]);
 
   useEffect(() => {
-    const resetDragging = () => setIsDraggingOrResizing(false);
-    const onBlur = () => resetDragging();
+    const maybeToastAntiFreeze = () => {
+      const now = Date.now();
+      if (now - antiFreezeToastCooldownRef.current < 3000) return;
+      antiFreezeToastCooldownRef.current = now;
+      if (toast) {
+        toast({
+          title: 'Recuperacion automatica activa',
+          description: 'Se restablecio la interaccion para evitar estado congelado.',
+        });
+      }
+    };
+
+    const resetDragging = (showToast = false) => {
+      if (!draggingStateRef.current) return;
+      setIsDraggingOrResizing(false);
+      if (showToast) maybeToastAntiFreeze();
+    };
+
+    const delayedResetIfStuck = () => {
+      window.setTimeout(() => {
+        if (draggingStateRef.current) {
+          resetDragging(true);
+        }
+      }, 140);
+    };
+
+    const onBlur = () => resetDragging(true);
+    const onMouseUp = () => delayedResetIfStuck();
+    const onTouchEnd = () => delayedResetIfStuck();
+    const onPointerUp = () => delayedResetIfStuck();
+    const onDragEnd = () => delayedResetIfStuck();
     const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') resetDragging();
+      if (document.visibilityState === 'hidden') resetDragging(true);
     };
     window.addEventListener('blur', onBlur);
+    window.addEventListener('mouseup', onMouseUp, true);
+    window.addEventListener('touchend', onTouchEnd, true);
+    window.addEventListener('pointerup', onPointerUp, true);
+    window.addEventListener('dragend', onDragEnd as EventListener, true);
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => {
       window.removeEventListener('blur', onBlur);
+      window.removeEventListener('mouseup', onMouseUp, true);
+      window.removeEventListener('touchend', onTouchEnd, true);
+      window.removeEventListener('pointerup', onPointerUp, true);
+      window.removeEventListener('dragend', onDragEnd as EventListener, true);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+  }, [toast]);
 
   const onDragStop = useCallback((e: RndDragEvent, d: DraggableData) => {
     // Validar umbral de movimiento para evitar arrastres accidentales
@@ -265,9 +323,10 @@ export default function TransformableElement({
     }
     
     // REGLA CRÍTICA: NUNCA permitir elementos fuera del margen 0,0
-    const newPosition = { 
-      x: Math.max(0, d.x), 
-      y: Math.max(0, d.y) 
+    const minY = element.parentId ? 0 : TOP_MENU_PROTECTED_AREA;
+    const newPosition = {
+      x: Math.max(0, d.x),
+      y: Math.max(minY, d.y),
     };
     const safeProperties = (typeof element.properties === 'object' && element.properties !== null ? element.properties : {}) as CanvasElementProperties;
     
@@ -351,10 +410,12 @@ export default function TransformableElement({
     
     const newSize = { width: parseFloat(ref.style.width), height: parseFloat(ref.style.height) };
     // REGLA CRÍTICA: NUNCA permitir elementos fuera del margen 0,0
-    const finalPosition = element.parentId ? newPosition : { 
-      x: Math.max(0, newPosition.x), 
-      y: Math.max(0, newPosition.y) 
-    };
+    const finalPosition = element.parentId
+      ? newPosition
+      : {
+          x: Math.max(0, newPosition.x),
+          y: Math.max(TOP_MENU_PROTECTED_AREA, newPosition.y),
+        };
     const updates: Partial<CanvasElement> = { 
       properties: { 
         ...safeProperties, 
@@ -495,12 +556,30 @@ export default function TransformableElement({
     if (data) {
       setDragStartPos({ x: data.x, y: data.y });
     }
+    // Drag state robusto para integraciones que no usan HTML5 DnD (react-rnd)
+    if (typeof window !== 'undefined') {
+      (window as any).__micerebroDraggingElementId = element.id;
+      (window as any).__micerebroOverGalleryDropZone = false;
+      window.dispatchEvent(new CustomEvent('micerebro-gallery-hover-change', { detail: { over: false } }));
+    }
     // Configurar dataTransfer para drag and drop hacia otros elementos (como galería)
     if ((e as any).dataTransfer) {
       (e as any).dataTransfer.setData('application/element-id', element.id);
       (e as any).dataTransfer.effectAllowed = 'copy';
     }
   }, [element.id]);
+
+  const getClientPointFromEvent = (event: any): { x: number; y: number } | null => {
+    if (!event) return null;
+    if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+      return { x: event.clientX, y: event.clientY };
+    }
+    const touch = event.changedTouches?.[0] || event.touches?.[0];
+    if (touch && typeof touch.clientX === 'number' && typeof touch.clientY === 'number') {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return null;
+  };
 
   
   const rndProps = useMemo(() => ({
@@ -523,6 +602,37 @@ export default function TransformableElement({
     onDragStop: (e, data) => {
       setIsDraggingOrResizing(false);
       onDragStop(e, data);
+
+      // Fallback robusto: detectar suelta sobre Mi galería por coordenadas de puntero.
+      if (typeof window !== 'undefined') {
+        const rect = (window as any).__micerebroGalleryDropZoneRect as DOMRect | undefined;
+        const point = getClientPointFromEvent(e as any);
+        if (rect && point) {
+          const inside =
+            point.x >= rect.left &&
+            point.x <= rect.right &&
+            point.y >= rect.top &&
+            point.y <= rect.bottom;
+          if (inside) {
+            window.dispatchEvent(
+              new CustomEvent('micerebro-gallery-force-attach', {
+                detail: { elementId: element.id },
+              })
+            );
+          }
+        }
+      }
+
+      // Limpiar después de un tick para permitir consumo en mouseup del destino
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          if ((window as any).__micerebroDraggingElementId === element.id) {
+            (window as any).__micerebroDraggingElementId = null;
+          }
+          (window as any).__micerebroOverGalleryDropZone = false;
+          window.dispatchEvent(new CustomEvent('micerebro-gallery-hover-change', { detail: { over: false } }));
+        }, 50);
+      }
     },
     onResizeStart: () => setIsDraggingOrResizing(true),
     onResizeStop: (e, direction, ref, delta, newPosition) => {

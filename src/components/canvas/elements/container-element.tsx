@@ -77,7 +77,10 @@ interface ElementCard {
 }
 
 export default function ContainerElement(
-  props: CommonElementProps & { unanchorElement?: (id: string) => void }
+  props: CommonElementProps & {
+    unanchorElement?: (id: string) => void;
+    hideWindowControls?: boolean;
+  }
 ) {
   const {
     id,
@@ -90,6 +93,7 @@ export default function ContainerElement(
     deleteElement,
     allElements = [],
     unanchorElement,
+    hideWindowControls = false,
     isPreview,
     minimized,
   } = props;
@@ -109,6 +113,7 @@ export default function ContainerElement(
 
   const backgroundColor = safeProperties.backgroundColor || '#ffffff';
   const layout = containerContent.layout || 'single';
+  const isSystemGallery = (safeProperties as any)?.isSystemGallery === true;
   const [isDragOver, setIsDragOver] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -135,9 +140,29 @@ export default function ContainerElement(
       onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } as ContainerContent });
       
       // Ocultar el elemento original del canvas
-      onUpdate(elementId, { parentId: id, hidden: true });
+      const elementProps =
+        typeof element.properties === 'object' && element.properties !== null
+          ? element.properties
+          : {};
+      const elementPosition =
+        (elementProps as any).position && typeof (elementProps as any).position === 'object'
+          ? (elementProps as any).position
+          : { x: element.x || 0, y: element.y || 0 };
+
+      const nextElementProps = isSystemGallery
+        ? {
+            ...elementProps,
+            galleryOriginalPosition:
+              (elementProps as any).galleryOriginalPosition || {
+                x: typeof elementPosition.x === 'number' ? elementPosition.x : parseFloat(String(elementPosition.x)) || 0,
+                y: typeof elementPosition.y === 'number' ? elementPosition.y : parseFloat(String(elementPosition.y)) || 0,
+              },
+          }
+        : elementProps;
+
+      onUpdate(elementId, { parentId: id, hidden: true, properties: nextElementProps as any });
     }
-  }, [id, containerContent, allElements, onUpdate]);
+  }, [id, containerContent, allElements, onUpdate, isSystemGallery]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -240,7 +265,7 @@ export default function ContainerElement(
       const containerSize = safeProperties.size || { width: 378, height: 567 };
       const releasedElement = allElements.find((el) => el.id === elementId);
       if (releasedElement) {
-        const releasePosition = {
+        const releasePositionDefault = {
           x:
             containerPosition.x +
             (typeof containerSize.width === 'number'
@@ -255,11 +280,29 @@ export default function ContainerElement(
             ? releasedElement.properties
             : {};
 
+        const storedOriginalPos =
+          isSystemGallery &&
+          (releasedProps as any).galleryOriginalPosition &&
+          typeof (releasedProps as any).galleryOriginalPosition === 'object'
+            ? (releasedProps as any).galleryOriginalPosition
+            : null;
+
+        const releasePosition = storedOriginalPos
+          ? {
+              x: typeof storedOriginalPos.x === 'number' ? storedOriginalPos.x : parseFloat(String(storedOriginalPos.x)) || releasePositionDefault.x,
+              y: typeof storedOriginalPos.y === 'number' ? storedOriginalPos.y : parseFloat(String(storedOriginalPos.y)) || releasePositionDefault.y,
+            }
+          : releasePositionDefault;
+
         const props = {
           ...releasedProps,
           position: releasePosition,
           relativePosition: null,
         };
+
+        if (isSystemGallery && 'galleryOriginalPosition' in props) {
+          delete (props as any).galleryOriginalPosition;
+        }
 
         // Limpiar undefined antes de enviar
         Object.keys(props).forEach((k) => {
@@ -277,7 +320,7 @@ export default function ContainerElement(
         });
       }
     },
-    [id, containerContent, allElements, onUpdate, unanchorElement, safeProperties]
+    [id, containerContent, allElements, onUpdate, unanchorElement, safeProperties, isSystemGallery]
   );
 
   const getElementName = (element: WithId<CanvasElement>): string => {
@@ -377,6 +420,13 @@ export default function ContainerElement(
             fontFamily: '"Patrick Hand", "Caveat", "Comic Sans MS", cursive',
           }}
         >
+          <div
+            className="absolute top-0 right-0 w-0 h-0"
+            style={{
+              borderTop: '14px solid rgba(255,255,255,0.7)',
+              borderLeft: '14px solid transparent',
+            }}
+          />
           <div className="p-3 h-full flex items-start">
             <p 
               className="text-sm font-medium break-words line-clamp-4"
@@ -463,9 +513,76 @@ export default function ContainerElement(
           <div className="px-3 py-2 border-b border-gray-200 bg-gray-50 flex-shrink-0">
             <div className="font-semibold text-xs text-gray-800 truncate">{title}</div>
           </div>
-          <div className="flex-1 p-3 overflow-hidden">
+          <div
+            className="flex-1 p-3 overflow-hidden"
+            style={{
+              backgroundImage:
+                element.type === 'yellow-notepad'
+                  ? 'repeating-linear-gradient(to bottom, transparent 0, transparent 10px, rgba(180,140,40,0.22) 10px, rgba(180,140,40,0.22) 11px)'
+                  : 'repeating-linear-gradient(to bottom, transparent 0, transparent 10px, rgba(148,163,184,0.20) 10px, rgba(148,163,184,0.20) 11px)',
+              backgroundColor: element.type === 'yellow-notepad' ? '#fef3c7' : '#ffffff',
+            }}
+          >
             <div className="text-xs text-gray-600 line-clamp-4 leading-relaxed">
               {displayText.substring(0, 120)}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (
+      (element.type as any) === 'notes' ||
+      (element.type as any) === 'libreta' ||
+      (element.type as any) === 'mini' ||
+      (element.type as any) === 'dictado' ||
+      (element.type as any) === 'block-dibujo'
+    ) {
+      const c = (element.content || {}) as any;
+      const typeStr = String((element as any).type);
+      const title =
+        c?.title ||
+        (typeStr === 'notes'
+          ? 'Apuntes'
+          : typeStr === 'libreta'
+            ? 'Libreta'
+            : typeStr === 'mini'
+              ? 'Mini'
+              : typeStr === 'dictado'
+                ? 'iPhone'
+                : 'Block Dibujo');
+
+      let raw =
+        c?.text ||
+        c?.content ||
+        (Array.isArray(c?.pages) ? c.pages[c.currentPage || 0] || c.pages[0] || '' : '');
+      raw = String(raw || '');
+      const previewText = raw.replace(/<[^>]*>/g, '').trim() || 'Sin contenido';
+
+      const bgByType: Record<string, string> = {
+        notes: '#dcefe1',
+        libreta: '#e8f1ff',
+        mini: '#f0f9ff',
+        dictado: '#f3f4f6',
+        'block-dibujo': '#fff7ed',
+      };
+      const bg = bgByType[typeStr] || '#ffffff';
+
+      return (
+        <div className="w-full h-full rounded overflow-hidden border border-gray-200 shadow-sm flex flex-col absolute inset-0">
+          <div className="px-2.5 py-1.5 border-b border-gray-200 bg-white/80 flex-shrink-0">
+            <div className="font-semibold text-[11px] text-gray-800 truncate">{title}</div>
+          </div>
+          <div
+            className="flex-1 p-2.5"
+            style={{
+              backgroundColor: bg,
+              backgroundImage:
+                'repeating-linear-gradient(to bottom, transparent 0, transparent 10px, rgba(148,163,184,0.16) 10px, rgba(148,163,184,0.16) 11px)',
+            }}
+          >
+            <div className="text-[11px] text-gray-700 line-clamp-5 leading-relaxed">
+              {previewText.substring(0, 150)}
             </div>
           </div>
         </div>
@@ -745,39 +862,43 @@ export default function ContainerElement(
             </PopoverContent>
           </Popover>
 
-          {/* Botón minimizar */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title={minimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
-          >
-            {minimized ? <Maximize className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-          </Button>
+          {!hideWindowControls && (
+            <>
+              {/* Botón minimizar */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title={minimized ? "Maximizar" : "Minimizar"}
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
+              >
+                {minimized ? <Maximize className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
+              </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            title="Restaurar Tamaño Original"
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
-          >
-            <Maximize className="h-4 w-4" />
-          </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                title="Restaurar Tamaño Original"
+                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleRestoreOriginalSize(); }}
+              >
+                <Maximize className="h-4 w-4" />
+              </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-gray-400 hover:text-gray-600"
-            title="Cerrar contenedor"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClose();
-            }}
-          >
-            <X className="h-4 w-4" />
-          </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-gray-400 hover:text-gray-600"
+                title="Cerrar contenedor"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleClose();
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </>
+          )}
         </div>
       </CardHeader>
 
