@@ -9,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { Play, Pause, Plus, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getDefaultSpeechVoice } from '@/lib/speech-voice';
-import { useDictationBinding } from '@/hooks/use-dictation-binding';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 // --- Alarma persistente (módulo) ---
@@ -144,18 +143,6 @@ export default function TimerListaElement(props: CommonElementProps) {
   const lastAppliedTimerRef = useRef<{ target: string; minutes: number } | null>(null);
   const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const taskInputRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
-
-  // Mismo enfoque que Time List: un solo escritor (dictado global) + binding al foco
-  const { bindDictationTarget } = useDictationBinding({
-    isListening: isListening || false,
-    finalTranscript: finalTranscript || '',
-    interimTranscript: interimTranscript || liveTranscript || '',
-    isSelected: isSelected || false,
-  });
-  const handleInputFocus = useCallback((element: HTMLElement) => {
-    onSelectElement?.(id, false);
-    bindDictationTarget(element);
-  }, [id, onSelectElement, bindDictationTarget]);
 
   contentRef.current = timerListContent;
   onUpdateRef.current = onUpdate;
@@ -561,12 +548,24 @@ export default function TimerListaElement(props: CommonElementProps) {
                             className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300 blur-0"
                             title="Arrastrar para reordenar"
                           />
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() => handleToggleComplete(index)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="h-4 w-4 shrink-0 mt-1"
-                          />
+                          <div className="flex flex-col items-center shrink-0 gap-0.5">
+                            <Checkbox
+                              checked={item.completed}
+                              onCheckedChange={() => handleToggleComplete(index)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-4 w-4 shrink-0 mt-1"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteTask(index);
+                              }}
+                              className="w-4 h-1 rounded-full bg-slate-300/60 hover:bg-red-400/80 transition-colors flex-shrink-0"
+                              title="Borrar tarea"
+                              aria-label="Borrar tarea"
+                            />
+                          </div>
                           <textarea
                             ref={(el) => {
                               taskInputRefs.current[index] = el;
@@ -575,7 +574,7 @@ export default function TimerListaElement(props: CommonElementProps) {
                                 el.style.height = el.scrollHeight + 'px';
                               }
                             }}
-                            data-dictation-controlled="true"
+                            data-dictation-target="true"
                             value={item.text}
                             onChange={(e) => handleItemTextChange(index, e.target.value)}
                             placeholder="Tarea"
@@ -583,7 +582,6 @@ export default function TimerListaElement(props: CommonElementProps) {
                             className="flex-1 min-w-0 min-h-[1.75rem] py-1 px-2 text-sm border-0 border-b border-slate-200 rounded-none bg-transparent resize-none overflow-hidden focus:ring-0 focus-visible:ring-0"
                             style={{ minHeight: '1.75rem', fontSize: '14px' }}
                             onClick={(e) => e.stopPropagation()}
-                            onFocus={(e) => handleInputFocus(e.currentTarget)}
                             onInput={(e) => {
                               const t = e.currentTarget;
                               t.style.height = 'auto';
@@ -648,10 +646,9 @@ export default function TimerListaElement(props: CommonElementProps) {
             ref={(el) => {
               newTaskInputRef.current = el;
             }}
-            data-dictation-controlled="true"
+            data-dictation-target="true"
             value={newTaskText}
             onChange={(e) => setNewTaskText(e.target.value)}
-            onFocus={(e) => handleInputFocus(e.currentTarget)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 e.preventDefault();

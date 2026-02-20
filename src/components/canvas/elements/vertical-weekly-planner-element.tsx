@@ -195,7 +195,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
     if (isPreview) return;
 
     // Tamaño original del menú semanal: carta A4
-    const originalSize = { width: 794, height: 1123 };
+    const originalSize = { width: 794, height: 794 }; // 21cm x 21cm
 
     // Restaurar tamaño original
     onUpdate(id, {
@@ -222,13 +222,6 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
   };
 
 
-  // Debug: Log container dimensions
-  console.log('📏 CONTENEDOR - Menú semanal:', {
-    id: id,
-    width: 794,
-    height: 1123,
-    elementType: 'vertical-weekly-planner'
-  });
 
   return (
     <div
@@ -238,8 +231,8 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
         )}
       style={{
         backgroundColor: '#FFFFF0', // Blanco marfil
-        width: 794, // Tamaño carta A4 fijo
-        height: 1123, // Tamaño carta A4 fijo
+        width: 794, // Tamaño 21cm x 21cm fijo
+        height: 794, // Tamaño 21cm x 21cm fijo
       }}
     >
       {/* Header */}
@@ -364,7 +357,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               dayNumber={format(weekDays[3], 'd', { locale: es })}
               value={plannerContent.days[format(weekDays[3], 'yyyy-MM-dd')] || ''}
               onChange={(v) => handleDayChange(format(weekDays[3], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
+              // onFocus={() => onSelectElement(id, false)} // REMOVIDO - interfiere con edición
               disabled={isPreview}
               className="h-full"
             />
@@ -375,7 +368,7 @@ export default function VerticalWeeklyPlannerElement(props: CommonElementProps) 
               dayNumber={format(weekDays[4], 'd', { locale: es })}
               value={plannerContent.days[format(weekDays[4], 'yyyy-MM-dd')] || ''}
               onChange={(v) => handleDayChange(format(weekDays[4], 'yyyy-MM-dd'), v)}
-              onFocus={() => onSelectElement(id, false)}
+              // onFocus={() => onSelectElement(id, false)} // REMOVIDO - interfiere con edición
               disabled={isPreview}
               className="h-full"
             />

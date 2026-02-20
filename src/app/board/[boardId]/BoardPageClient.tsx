@@ -3,11 +3,10 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Menu, X as CloseIcon, Mic, BookCopy } from 'lucide-react';
-import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage } from '@/lib/firebase';
+import { getFirebaseStorage, firebaseConfig } from '@/lib/firebase';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
@@ -36,7 +35,6 @@ import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
-import { StorageUsageDisplay } from '@/components/user-settings/StorageUsageDisplay';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
 import MobileMenu from '@/components/canvas/mobile-menu';
 
@@ -190,7 +188,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [imageToCrop, setImageToCrop] = useState<string>("");
   const [uploadedFileToProcess, setUploadedFileToProcess] = useState<File | null>(null);
   
-  // Estados de Selección
+  // Estados de Selección: estado; el efecto que lo sincroniza va después de elementsRef
+  const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
   const [selectedElement, setSelectedElement] = useState<WithId<CanvasElement> | null>(null);
   const [activatedElementId, setActivatedElementId] = useState<string | null>(null);
   const [selectedNotepadForFormat, setSelectedNotepadForFormat] = useState<WithId<CanvasElement> | null>(null);
@@ -200,6 +199,8 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuTouchedRef = useRef(false);
+  const galleryTabTouchedRef = useRef(false);
 
   const handleToggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen((prev) => !prev);
@@ -218,7 +219,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
     // Crear un diálogo con la información copiable
     const userId = user.uid;
-    const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
+    const firebaseUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId || 'micerebroapp'}/storage/${firebaseConfig.storageBucket || 'micerebroapp.firebasestorage.app'}/files`;
 
     // Copiar URL al portapapeles
     navigator.clipboard?.writeText(firebaseUrl).then(() => {
@@ -245,7 +246,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 📝 PASOS DETALLADOS:
 
 1. ✅ URL ya copiada - pégala en tu navegador
-2. En Firebase Console, panel izquierdo → "micerebroapp.firebasestorage.app"
+2. En Firebase Console, panel izquierdo → Storage (tu bucket)
 3. Busca carpeta "users" y ábrela
 4. Busca carpeta "${userId}" y ábrela
 5. Abre carpeta "images"
@@ -280,6 +281,17 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   const elementsRef = useRef(elements);
   useEffect(() => { elementsRef.current = elements; }, [elements]);
+
+  // Sincronizar selectedElement solo cuando cambia el ID (evita bucle #185)
+  useEffect(() => {
+    if (!selectedElementId) {
+      setSelectedElement(null);
+      return;
+    }
+    const els = elementsRef.current;
+    const el = els?.find((e) => e.id === selectedElementId) ?? null;
+    setSelectedElement((prev) => (prev?.id === el?.id ? prev : el));
+  }, [selectedElementId]);
 
   const getNextZIndex = useCallback(() => {
     const els = elementsRef.current;
@@ -351,7 +363,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             width: 378,
             height: 800,
             hidden: true, // Gallery siempre oculto en canvas
-            zIndex: -1,
+            zIndex: 0,
           }).then(() => {
             console.log('Gallery único creado exitosamente');
           }).catch((error) => {
@@ -369,7 +381,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         width: 378,
         height: 800,
           hidden: true, // Gallery siempre oculto en canvas
-        zIndex: -1,
+        zIndex: 0,
       }).then(() => {
           console.log('Gallery único creado exitosamente');
       }).catch((error) => {
@@ -496,19 +508,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     document.addEventListener('paste', handlePaste, true);
     return () => document.removeEventListener('paste', handlePaste, true);
   }, []);
-
-  // Sincronizar selección
-  const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
-  const foundElement = useMemo(() => {
-    if (!selectedElementId || !elements?.length) return null;
-    return elements.find(el => el.id === selectedElementId) || null;
-  }, [selectedElementId, elements]);
-  
-  useEffect(() => {
-    if (foundElement?.id !== selectedElement?.id) {
-      setSelectedElement(foundElement);
-    }
-  }, [foundElement, selectedElement?.id]);
 
   // Refs para prevenir múltiples cargas
   const hasLoadedRef = useRef(false);
@@ -901,23 +900,31 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       {isPasswordVerified && (
         <>
           {isMobile && (
-            <Rnd
-              default={{
-                x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
-                y: 16,
-                width: 48,
-                height: 48,
-              }}
-              bounds="window"
-              enableResizing={false}
-              dragHandleClassName="mobile-menu-drag-handle"
-              style={{ position: 'fixed', zIndex: 11000 }}
+            <div
+              className="fixed top-4 right-4 z-[11000] touch-manipulation"
+              style={{ WebkitTapHighlightColor: 'transparent' }}
             >
               <Button
                 variant="ghost"
                 size="icon"
-                className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-100 flex items-center justify-center"
-                onClick={handleToggleMobileMenu}
+                className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (mobileMenuTouchedRef.current) {
+                    mobileMenuTouchedRef.current = false;
+                    return;
+                  }
+                  handleToggleMobileMenu();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  mobileMenuTouchedRef.current = true;
+                  handleToggleMobileMenu();
+                }}
+                type="button"
+                aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
               >
                 {isMobileMenuOpen ? (
                   <CloseIcon className="h-6 w-6 text-black" />
@@ -925,7 +932,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                   <Menu className="h-6 w-6 text-black" />
                 )}
               </Button>
-            </Rnd>
+            </div>
           )}
           {isMobile && (
             <MobileMenu
@@ -939,6 +946,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               onLocateElement={handleLocateElement}
               isListening={isListening}
               onToggleDictation={toggleListening}
+              onSaveSelectionBeforeMic={saveSelectionBeforeMic}
               addElement={addElement}
               onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
               onDeleteBoard={handleDeleteBoard}
@@ -1116,14 +1124,14 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onLocateElement={handleLocateElement}
         />
 
-        {/* Display de Uso de Almacenamiento (para pruebas) */}
-        {user?.uid && <StorageUsageDisplay userId={user.uid} />}
+        {/* Display de Uso de Almacenamiento - Deshabilitado hasta que Storage esté configurado (Blaze, CORS) */}
+        {/* {user?.uid && <StorageUsageDisplay userId={user.uid} />} */}
 
-        {/* Panel lateral Galería: z-index alto para que reciba el drop por encima del sidebar/canvas */}
+        {/* Panel lateral Galería: capa 0 para recibir drop de elementos */}
         <div
           key={`gallery-panel-${isGalleryOpen ? 'open' : 'closed'}`}
           className="fixed left-0 top-0 h-screen flex items-center"
-          style={{ zIndex: isGalleryOpen ? 10002 : -1 }}
+          style={{ zIndex: isGalleryOpen ? 0 : -1 }}
         >
           {/* Panel completo */}
           <div
@@ -1133,7 +1141,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               ${isGalleryOpen ? 'w-96' : 'w-0 overflow-hidden'}
             `}
             style={{
-              zIndex: isGalleryOpen ? 10002 : -1,
+              zIndex: isGalleryOpen ? 0 : -1,
               backgroundColor: 'white',
               border: '1px solid #e5e7eb'
             }}
@@ -1156,18 +1164,30 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                       userId={user?.uid}
                       onLocateElement={() => {}}
                       onEditComment={() => {}}
-                      getViewportCenter={getViewportCenter}
                     />
                   </div>
                 </div>
               </div>
         </div>
 
-        {/* Pestaña con flecha - siempre visible */}
+        {/* Pestaña abrir/cerrar Mi galería - z-index alto para que no quede tapada; soporte táctil en móvil */}
         <button
-          onClick={() => setIsGalleryOpen(!isGalleryOpen)}
-          className="fixed left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-12 bg-[#bad324] hover:bg-[#a8c42a] rounded-r-lg shadow-md transition-all duration-200"
-          style={{ zIndex: 1000 }}
+          type="button"
+          aria-label={isGalleryOpen ? 'Cerrar Mi galería' : 'Abrir Mi galería'}
+          onClick={() => {
+            if (galleryTabTouchedRef.current) {
+              galleryTabTouchedRef.current = false;
+              return;
+            }
+            setIsGalleryOpen((prev) => !prev);
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            galleryTabTouchedRef.current = true;
+            setIsGalleryOpen((prev) => !prev);
+          }}
+          className="fixed left-0 top-1/2 -translate-y-1/2 flex items-center justify-center w-8 h-12 bg-[#bad324] hover:bg-[#a8c42a] rounded-r-lg shadow-md transition-all duration-200 touch-manipulation"
+          style={{ zIndex: 10001 }}
         >
           <svg
             width="14"

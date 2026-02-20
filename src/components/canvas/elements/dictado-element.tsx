@@ -100,7 +100,7 @@ export default function DictadoElement(props: CommonElementProps) {
         await onUpdate(id, { content: { ...typedContent, content: newHtml } });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     disabled: isPreview,
   });
 
@@ -334,6 +334,7 @@ export default function DictadoElement(props: CommonElementProps) {
           <div
             ref={titleRef}
             contentEditable={!isPreview}
+            data-dictation-target="true"
             spellCheck="true"
             suppressContentEditableWarning
             onFocus={handleTitleFocus}

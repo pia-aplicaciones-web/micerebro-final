@@ -145,7 +145,7 @@ export default function NotesElement(props: CommonElementProps) {
         }
       });
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       const normalizedCurrent = (text || '').trim();
       const normalizedNew = (newContent || '').trim();
@@ -516,6 +516,7 @@ export default function NotesElement(props: CommonElementProps) {
               className="text-sm font-bold leading-tight cursor-text select-none"
               style={{ color: '#000000' }}
               contentEditable={!isPreview}
+              data-dictation-target="true"
               suppressContentEditableWarning
               onInput={(e) => {
                 const newTitle = e.currentTarget.textContent || 'Apuntes';

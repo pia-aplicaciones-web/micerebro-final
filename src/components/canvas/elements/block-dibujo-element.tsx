@@ -145,7 +145,7 @@ export default function BlockDibujoElement(props: CommonElementProps) {
         }
       });
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       const normalizedCurrent = (text || '').trim();
       const normalizedNew = (newContent || '').trim();

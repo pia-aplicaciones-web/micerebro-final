@@ -53,7 +53,7 @@ export default function ImageElement(props: CommonElementProps) {
         onUpdate(id, { properties: { ...safeProperties, label: newLabel } });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => oldContent === newContent,
   });
 

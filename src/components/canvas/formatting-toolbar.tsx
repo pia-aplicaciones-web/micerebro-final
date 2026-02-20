@@ -371,74 +371,126 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   const handleList = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Insertar lista desordenada
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
+    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
-      const container = range.commonAncestorContainer;
-      if (container.nodeType === Node.ELEMENT_NODE) {
-        const element = container as HTMLElement;
-        // Si ya está en una lista, salir de la lista
-        if (element.tagName === 'UL' || element.tagName === 'OL' || element.closest('ul, ol')) {
-          document.execCommand('insertUnorderedList', false);
-        } else {
-          // Insertar nueva lista
-          document.execCommand('insertUnorderedList', false);
-        }
-      } else {
-        // Insertar nueva lista
-        document.execCommand('insertUnorderedList', false);
+      const commonAncestor = range.commonAncestorContainer as HTMLElement;
+      const editableRoot =
+        (commonAncestor.nodeType === Node.ELEMENT_NODE
+          ? (commonAncestor as HTMLElement)
+          : commonAncestor.parentElement
+        )?.closest('[contenteditable="true"]') as HTMLElement | null;
+
+      // Si la selección está dentro de un contentEditable (por ejemplo, Notepad o Mini),
+      // transformamos cada línea en una línea con bullet textual: "• texto"
+      if (editableRoot) {
+        const selectedText = selection.toString();
+        const rawLines = selectedText.split(/\r?\n/);
+        const transformedLines = rawLines.map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          // Si ya empieza con un bullet común, no duplicar
+          if (/^([•\-*]|\u2022)\s/.test(trimmed)) {
+            return trimmed;
+          }
+          return `• ${trimmed}`;
+        });
+
+        const newText = transformedLines.join('\n');
+
+        range.deleteContents();
+        const textNode = document.createTextNode(newText);
+        range.insertNode(textNode);
+
+        // Mover cursor al final del texto insertado
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        editableRoot.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
       }
-      // Disparar evento input para guardar
+    }
+
+    // Fallback: usar execCommand para otros casos (por ejemplo, inputs simples)
+    if (selection && selection.rangeCount > 0) {
+      document.execCommand('insertUnorderedList', false);
       const activeElement = document.activeElement as HTMLElement;
       if (activeElement) {
         activeElement.dispatchEvent(new Event('input', { bubbles: true }));
       }
-    } else {
-      // Si no hay selección, insertar lista en el cursor
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && activeElement.isContentEditable) {
-        activeElement.focus();
-        document.execCommand('insertUnorderedList', false);
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      return;
+    }
+
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && activeElement.isContentEditable) {
+      activeElement.focus();
+      document.execCommand('insertUnorderedList', false);
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 
   const handleOrderedList = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Insertar lista ordenada (numerada)
     const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
+    if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
-      const container = range.commonAncestorContainer;
-      if (container.nodeType === Node.ELEMENT_NODE) {
-        const element = container as HTMLElement;
-        // Si ya está en una lista, salir de la lista
-        if (element.tagName === 'UL' || element.tagName === 'OL' || element.closest('ul, ol')) {
-          document.execCommand('insertOrderedList', false);
-        } else {
-          // Insertar nueva lista
-          document.execCommand('insertOrderedList', false);
-        }
-      } else {
-        // Insertar nueva lista
-        document.execCommand('insertOrderedList', false);
+      const commonAncestor = range.commonAncestorContainer as HTMLElement;
+      const editableRoot =
+        (commonAncestor.nodeType === Node.ELEMENT_NODE
+          ? (commonAncestor as HTMLElement)
+          : commonAncestor.parentElement
+        )?.closest('[contenteditable="true"]') as HTMLElement | null;
+
+      // Transformar en lista numerada textual: "1.- texto"
+      if (editableRoot) {
+        const selectedText = selection.toString();
+        const rawLines = selectedText.split(/\r?\n/);
+        const transformedLines = rawLines.map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          // Si ya empieza con número + punto o guion, no duplicar
+          if (/^\d+\s*[\.\-]/.test(trimmed)) {
+            return trimmed;
+          }
+          const num = idx + 1;
+          return `${num}.- ${trimmed}`;
+        });
+
+        const newText = transformedLines.join('\n');
+
+        range.deleteContents();
+        const textNode = document.createTextNode(newText);
+        range.insertNode(textNode);
+
+        const newRange = document.createRange();
+        newRange.setStartAfter(textNode);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+
+        editableRoot.dispatchEvent(new Event('input', { bubbles: true }));
+        return;
       }
-      // Disparar evento input para guardar
+    }
+
+    if (selection && selection.rangeCount > 0) {
+      document.execCommand('insertOrderedList', false);
       const activeElement = document.activeElement as HTMLElement;
       if (activeElement) {
         activeElement.dispatchEvent(new Event('input', { bubbles: true }));
       }
-    } else {
-      // Si no hay selección, insertar lista en el cursor
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement && activeElement.isContentEditable) {
-        activeElement.focus();
-        document.execCommand('insertOrderedList', false);
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
-      }
+      return;
+    }
+
+    const activeElement = document.activeElement as HTMLElement;
+    if (activeElement && activeElement.isContentEditable) {
+      activeElement.focus();
+      document.execCommand('insertOrderedList', false);
+      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 
@@ -795,7 +847,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         </PopoverContent>
       </Popover>
 
-      {/* PINCEL - Color de texto */}
+      {/* PINCEL - Color de texto (sin amarillo ni ámbar) */}
       <Popover open={popoverOpen === 'textColor'} onOpenChange={(open) => setPopoverOpen(open ? 'textColor' : null)}>
         <PopoverTrigger asChild>
           <button className={whiteButtonClassName} onMouseDown={(e) => e.preventDefault()} title="Color de texto">
@@ -803,9 +855,30 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
-          <div className="grid grid-cols-4 gap-1.5">
-            {['#14b8a6', '#f97316', '#84cc16', '#eab308', '#f59e0b', '#3b82f6', '#1f2937', '#475569'].map((color, idx) => (
-              <button key={idx} className="w-7 h-7 rounded border hover:scale-110" style={{ backgroundColor: color }} onMouseDown={(e) => applyTextColor(e, color)} />
+          <div className="grid grid-cols-5 gap-1.5">
+            {[
+              { hex: '#14b8a6', label: 'Teal' },
+              { hex: '#f97316', label: 'Naranja' },
+              { hex: '#84cc16', label: 'Verde lima' },
+              { hex: '#3b82f6', label: 'Azul' },
+              { hex: '#1f2937', label: 'Gris oscuro' },
+              { hex: '#475569', label: 'Slate' },
+              { hex: '#ef4444', label: 'Rojo' },
+              { hex: '#ffffff', label: 'Blanco' },
+              { hex: '#28c4d8', label: 'Calipso' },
+              { hex: '#e91e8c', label: 'Fucsia' },
+              { hex: '#a855f7', label: 'Morado' },
+            ].map(({ hex, label }) => (
+              <Tooltip key={label}>
+                <TooltipTrigger asChild>
+                  <button
+                    className="w-7 h-7 rounded border border-gray-300 hover:scale-110"
+                    style={{ backgroundColor: hex }}
+                    onMouseDown={(e) => applyTextColor(e, hex)}
+                  />
+                </TooltipTrigger>
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
             ))}
           </div>
         </PopoverContent>

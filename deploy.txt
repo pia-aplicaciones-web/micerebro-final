@@ -1,0 +1,23 @@
+# Comandos de deploy MicerebroAPP_CLEAN
+
+# 1. Instalar dependencias
+npm install
+
+# 2. Desarrollo local
+npm run dev
+
+# 3. Build producción local
+npm run build
+
+# 4. Deploy con Vercel (preview)
+vercel           # o: vercel deploy
+
+# 5. Deploy producción con Vercel
+vercel deploy --prod
+
+# 6. Flujo con git + Vercel
+
+git add -A
+git commit -m "Descripción de los cambios"
+git push origin main   # Vercel hará deploy automático si el proyecto está vinculado
+

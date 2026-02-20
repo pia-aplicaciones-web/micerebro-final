@@ -1,8 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
-import { collection, query, getDocs, doc, getDoc } from 'firebase/firestore';
-import { getStorage, ref, getMetadata } from 'firebase/storage';
+import { collection, getDocs } from 'firebase/firestore';
+import { ref, getMetadata } from 'firebase/storage';
 import { getFirebaseFirestore, getFirebaseStorage } from '@/lib/firebase';
-import { CanvasElement, WithId, Board } from '@/lib/types';
+import { CanvasElement, WithId } from '@/lib/types';
+
+/** Solo procesar URLs de Firebase Storage; ignorar URLs externas */
+function isFirebaseStorageUrl(url: string): boolean {
+  return typeof url === 'string' && url.includes('firebasestorage.googleapis.com');
+}
+
+/** Extraer path desde URL de descarga para ref() */
+function getStoragePathFromUrl(url: string): string | null {
+  try {
+    const match = url.match(/\/o\/(.+?)(\?|$)/);
+    if (match) return decodeURIComponent(match[1]);
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
 
 interface StorageUsage { 
   totalBoards: number;
@@ -20,14 +36,6 @@ const initialState: StorageUsage = {
   error: null,
 };
 
-function bytesToReadableSize(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
 export function useStorageUsage(userId: string | undefined): StorageUsage {
   const [usage, setUsage] = useState<StorageUsage>(initialState);
 
@@ -43,8 +51,9 @@ export function useStorageUsage(userId: string | undefined): StorageUsage {
       const db = getFirebaseFirestore();
       const storage = getFirebaseStorage();
 
-      if (!db || !storage) {
-        throw new Error('Firebase Firestore or Storage not initialized.');
+      if (!db) {
+        setUsage((prev) => ({ ...prev, isLoading: false, error: 'Firestore no está inicializado.' }));
+        return;
       }
 
       let totalBoards = 0;
@@ -56,40 +65,49 @@ export function useStorageUsage(userId: string | undefined): StorageUsage {
       const boardsSnapshot = await getDocs(boardsCollectionRef);
       totalBoards = boardsSnapshot.size;
 
-      // 2. Get total elements and image sizes per board
+      // 2. Solo intentar getMetadata si Storage está disponible
+      const canFetchMetadata = !!storage;
+
       for (const boardDoc of boardsSnapshot.docs) {
         const boardId = boardDoc.id;
         const elementsCollectionRef = collection(db, 'users', userId, 'canvasBoards', boardId, 'canvasElements');
         const elementsSnapshot = await getDocs(elementsCollectionRef);
         totalElements += elementsSnapshot.size;
 
+        if (!canFetchMetadata) continue;
+
         for (const elementDoc of elementsSnapshot.docs) {
           const element = elementDoc.data() as WithId<CanvasElement>;
-          
-          // Check for image elements
           const elType = element.type as string;
+
           if (elType === 'image' || elType === 'image-frame') {
             const imageUrl = (element.content as any)?.url;
-            if (imageUrl) {
+            if (imageUrl && isFirebaseStorageUrl(imageUrl)) {
               try {
-                const imageRef = ref(storage, imageUrl);
-                const metadata = await getMetadata(imageRef);
-                totalImageSize += metadata.size;
+                const path = getStoragePathFromUrl(imageUrl);
+                if (path) {
+                  const imageRef = ref(storage!, path);
+                  const metadata = await getMetadata(imageRef);
+                  totalImageSize += metadata.size;
+                }
               } catch (imgError) {
-                console.warn(`Could not get metadata for image ${imageUrl}:`, imgError);
+                console.warn('Could not get metadata for image:', imgError);
               }
             }
           } else if (elType === 'block-dibujo') {
             const blockImages = (element.content as any)?.images as { url: string }[] | undefined;
             if (blockImages && Array.isArray(blockImages)) {
               for (const img of blockImages) {
-                if (img.url) {
+                if (img.url && isFirebaseStorageUrl(img.url)) {
                   try {
-                    const imageRef = ref(storage, img.url);
-                    const metadata = await getMetadata(imageRef);
-                    totalImageSize += metadata.size;
+                    const path = getStoragePathFromUrl(img.url);
+                    if (path) {
+                      const imageRef = ref(storage!, path);
+                      const metadata = await getMetadata(imageRef);
+                      totalImageSize += metadata.size;
+                    }
                   } catch (imgError) {
-                    console.warn(`Could not get metadata for block-dibujo image ${img.url}:`, imgError);
+                    console.warn('Could not get metadata for block-dibujo image:', imgError);
                   }
                 }
               }
@@ -105,9 +123,10 @@ export function useStorageUsage(userId: string | undefined): StorageUsage {
         isLoading: false,
         error: null,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Error al calcular uso de almacenamiento';
       console.error('Error calculating storage usage:', error);
-      setUsage((prev) => ({ ...prev, isLoading: false, error: error.message }));
+      setUsage((prev) => ({ ...prev, isLoading: false, error: message }));
     }
   }, [userId]);
 

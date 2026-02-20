@@ -6,7 +6,6 @@ import type { CanvasElement, WithId, ElementType, CanvasElementProperties, Conta
 import { cn } from '@/lib/utils';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
 import { Button } from '@/components/ui/button';
-import { Link as LinkIcon } from 'lucide-react';
 import DeleteElementDialog from './elements/delete-element-dialog';
 
 // IMPORTACIONES DIRECTAS: Cambiar de lazy a imports directos para evitar problemas con chunks de webpack
@@ -207,14 +206,13 @@ export default function TransformableElement({
   const zIndex = isSelected ? 999 : baseZIndex;
   
   // Asegurar que size tenga valores numéricos válidos
-  // Para pomodoro-timer usar ancho fijo de 180px
-  // Para vertical-weekly-planner usar tamaño carta A4 fijo
+  // pomodoro mantiene ancho fijo de 180px
+  // planners semanales: 794x794 por defecto, pero permiten redimensionar
+  const isWeeklyPlanner = (element.type as any) === 'vertical-weekly-planner' || (element.type as any) === 'weekly-planner';
   const safeSize = {
     width: (element.type as any) === 'pomodoro-timer' ? 180 :
-           (element.type as any) === 'vertical-weekly-planner' ? 794 :
-           (typeof size.width === 'number' && size.width > 0 ? size.width : 200),
-    height: (element.type as any) === 'vertical-weekly-planner' ? 1123 :
-            (typeof size.height === 'number' && size.height > 0 ? size.height : 150)
+           (typeof size.width === 'number' && size.width > 0 ? size.width : (isWeeklyPlanner ? 794 : 200)),
+    height: (typeof size.height === 'number' && size.height > 0 ? size.height : (isWeeklyPlanner ? 794 : 150))
   };
   
   // Centrar elemento en vista: scroll del canvas (no mover el elemento) para edición cómoda
@@ -625,22 +623,6 @@ export default function TransformableElement({
           className="w-full h-full relative group"
           style={{ pointerEvents: 'auto' }}
         >
-          {/* Mango para arrastrar a Mi galería (drag nativo HTML5) */}
-          <div
-            draggable
-            onMouseDown={(e) => e.stopPropagation()}
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/element-id', element.id);
-              e.dataTransfer.effectAllowed = 'copy';
-            }}
-            className={cn(
-              'absolute top-1 right-1 z-10 rounded p-1 bg-white/90 border border-gray-200 shadow-sm cursor-grab active:cursor-grabbing hover:bg-gray-50',
-              (isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100')
-            )}
-            title="Arrastra a Mi galería"
-          >
-            <LinkIcon className="h-3.5 w-3.5 text-gray-600" />
-          </div>
           <div
             className="w-full h-full"
             onTouchStart={(e) => {

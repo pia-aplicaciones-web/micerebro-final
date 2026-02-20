@@ -58,6 +58,19 @@ export default function NotepadElement(props: CommonElementProps) {
   const currentPageIndex = typedContent.currentPage || 0;
   const currentPageContent = typedContent.pages?.[currentPageIndex] || '';
 
+  // Refs para mantener valores actualizados en callbacks (evitar stale closures)
+  const typedContentRef = useRef(typedContent);
+  const currentPageIndexRef = useRef(currentPageIndex);
+  const onUpdateRef = useRef(onUpdate);
+  const idRef = useRef(id);
+
+  // Actualizar refs cuando cambian las props
+  useEffect(() => {
+    typedContentRef.current = typedContent;
+    currentPageIndexRef.current = typedContent.currentPage || 0;
+    onUpdateRef.current = onUpdate;
+    idRef.current = id;
+  }, [typedContent, onUpdate, id]);
 
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
@@ -88,31 +101,31 @@ export default function NotepadElement(props: CommonElementProps) {
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
     getContent: () => {
       if (isPreview || !contentRef.current) return '';
-      const html = contentRef.current.innerHTML;
-      // Normalizar HTML para comparación consistente
-      return html.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
+      // Devolver el HTML tal cual para que useAutoSave gestione la comparación
+      return contentRef.current.innerHTML;
     },
     onSave: async (newHtml) => {
       if (isPreview || !contentRef.current) return;
-      const currentContent = currentPageContent || '';
-      // Comparar contenido normalizado
-      const normalizedNew = newHtml.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
-      const normalizedCurrent = currentContent.replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
-      if (normalizedNew !== normalizedCurrent) {
-        // Actualizar la página actual en el array de páginas
-        const updatedPages = [...(typedContent.pages || [])];
-        updatedPages[currentPageIndex] = newHtml;
-        await onUpdate(id, { content: { ...typedContent, pages: updatedPages } });
-      }
+      
+      // Usar refs para obtener los valores más recientes (evitar stale closures)
+      const latestTypedContent = typedContentRef.current;
+      const latestPageIndex = currentPageIndexRef.current;
+      const latestOnUpdate = onUpdateRef.current;
+      const latestId = idRef.current;
+      
+      // Actualizar siempre la página actual con el contenido más reciente
+      const updatedPages = [...(latestTypedContent.pages || [])];
+      updatedPages[latestPageIndex] = newHtml;
+      
+      await latestOnUpdate(latestId, { 
+        content: { 
+          ...latestTypedContent, 
+          pages: updatedPages 
+        } 
+      });
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     disabled: isPreview,
-    compareContent: (oldContent, newContent) => {
-      // Normalizar ambos para comparación
-      const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
-      const normalizedNew = (newContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
-      return normalizedOld === normalizedNew && normalizedOld === currentPageContent;
-    },
   });
 
   // Función de guardado manual (para compatibilidad con código existente)
@@ -1146,6 +1159,7 @@ export default function NotepadElement(props: CommonElementProps) {
             <div
                 ref={titleRef}
                 contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
+                data-dictation-target="true"
                 spellCheck="true"
                 suppressContentEditableWarning
                 onFocus={handleTitleFocus}
@@ -1355,6 +1369,7 @@ export default function NotepadElement(props: CommonElementProps) {
                         <div
                             ref={contentRef}
                             contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
+                            data-dictation-target="true"
                             spellCheck="true"
                             suppressContentEditableWarning
                             onPaste={handlePaste}

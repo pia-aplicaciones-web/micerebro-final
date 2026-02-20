@@ -1,0 +1,42 @@
+COMANDOS DE DICTADO POR VOZ
+===========================
+Funcionan con el dictado activo y el cursor dentro del cuaderno o del elemento correspondiente.
+
+
+PUNTUACIÓN Y SÍMBOLOS
+---------------------
+• new — Salto de línea
+• punto — Inserta .
+• coma — Inserta ,
+• agrega coma — Inserta ,
+• enter — Salto de línea sencillo
+• parrafo / párrafo — Doble salto de línea (nuevo párrafo)
+• lineas / líneas / linea / línea — Inserta //
+• resaltar — Inserta -*-
+• marca — Inserta #
+• fecha — Inserta la fecha actual en formato largo
+
+
+FORMATO (el siguiente texto dictado usa el estilo)
+-------------------------------------------------
+• subrayar — Activa subrayado en color teal
+• fin subrayar / fin sub-rayar — Desactiva subrayado
+• titulo / título — Siguiente texto como título (22px, centrado, negrita)
+• mayuscula / mayúscula / mayusculas / mayúsculas — Siguiente bloque en MAYÚSCULAS
+• subtitulo / subtítulo / sub título — Siguiente texto como subtítulo (gris, mayúsculas, línea debajo)
+• lista — Comienza lista con viñetas
+• fin lista / fin de lista — Termina lista con viñetas
+• numeros / números / lista numerica — Comienza lista numerada (1.-, 2.-, …)
+• normal / normales — Vuelve a la tipografía de base (desactiva todos los modos de formato)
+
+
+TIMER-LISTA (elemento Timer-lista seleccionado o con foco en una tarea)
+------------------------------------------------------------------------
+• timer X minutos — Asigna X minutos (1-120) al timer de la tarea (ej: "timer 5 minutos")
+• listo — Cuando suena la alarma: marca tarea completada, pasa a la siguiente y apaga el micrófono
+
+
+TIME LIST (lista de tareas con timer, elemento seleccionado)
+-----------------------------------------------------------
+• timer X minutos — Configura el timer de la tarea en foco a X minutos (1-120)
+• listo — Cuando un timer termina: marca completada y arranca el siguiente

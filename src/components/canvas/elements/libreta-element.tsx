@@ -47,11 +47,33 @@ export default function LibretaElement(props: CommonElementProps) {
   const textContent = typedContent.text || '';
   const titleContent = typedContent.title || 'Libreta';
 
+  // Refs para mantener valores actualizados en callbacks (evitar stale closures)
+  const typedContentRef = useRef(typedContent);
+  const onUpdateRef = useRef(onUpdate);
+  const idRef = useRef(id);
+
+  // Actualizar refs cuando cambian las props
+  useEffect(() => {
+    typedContentRef.current = typedContent;
+    onUpdateRef.current = onUpdate;
+    idRef.current = id;
+  }, [typedContent, onUpdate, id]);
+
   // Auto-guardado para el contenido
   const { saveStatus, handleBlur: handleContentBlur, forceSave } = useAutoSave({
     getContent: () => contentRef.current?.innerHTML || textContent,
     onSave: async (newContent) => {
-      await onUpdate(id, { content: { ...typedContent, text: newContent } });
+      // Usar refs para obtener los valores más recientes (evitar stale closures)
+      const latestTypedContent = typedContentRef.current;
+      const latestOnUpdate = onUpdateRef.current;
+      const latestId = idRef.current;
+      
+      await latestOnUpdate(latestId, { 
+        content: { 
+          ...latestTypedContent, 
+          text: newContent 
+        } 
+      });
     },
     debounceMs: 500,
   });
@@ -60,7 +82,17 @@ export default function LibretaElement(props: CommonElementProps) {
   const { handleBlur: handleTitleAutoSave } = useAutoSave({
     getContent: () => titleRef.current?.innerText || titleContent,
     onSave: async (newTitle) => {
-      await onUpdate(id, { content: { ...typedContent, title: newTitle } });
+      // Usar refs para obtener los valores más recientes (evitar stale closures)
+      const latestTypedContent = typedContentRef.current;
+      const latestOnUpdate = onUpdateRef.current;
+      const latestId = idRef.current;
+      
+      await latestOnUpdate(latestId, { 
+        content: { 
+          ...latestTypedContent, 
+          title: newTitle 
+        } 
+      });
     },
     debounceMs: 300,
   });

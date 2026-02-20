@@ -37,7 +37,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
-import { useDictationBinding } from '@/hooks/use-dictation-binding';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
 const EXTENDED_PALETTES = {
@@ -102,29 +101,19 @@ export default function TodoListElement(props: CommonElementProps) {
     onEditComment,
     width,
     height,
+    isListening = false,
+    finalTranscript = '',
+    interimTranscript = '',
+    liveTranscript = '',
   } = props;
 
   const { toast } = useToast();
   const cardRef = useRef<HTMLDivElement>(null);
   const newTaskInputRef = useRef<HTMLInputElement>(null);
 
-  // Dictation binding
-  const { bindDictationTarget } = useDictationBinding({
-    isListening: false,
-    finalTranscript: '',
-    interimTranscript: '',
-    isSelected: isSelected || false,
-  });
-
   // Hook para pegar texto plano
   const { handlePaste } = usePastePlainText();
 
-  // Conectar dictation a los inputs cuando están enfocados
-  const handleInputFocus = useCallback((element: HTMLElement) => {
-    if (isSelected) {
-      bindDictationTarget(element);
-    }
-  }, [isSelected, bindDictationTarget]);
   const [newItemText, setNewItemText] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const [isLabelPopoverOpen, setIsLabelPopoverOpen] = useState(false);
@@ -152,7 +141,7 @@ export default function TodoListElement(props: CommonElementProps) {
         onUpdate(id, { content: newContent });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       return JSON.stringify(oldContent) === JSON.stringify(newContent);
     },
@@ -557,7 +546,6 @@ export default function TodoListElement(props: CommonElementProps) {
               ref={(el) => {
                 if (el) {
                   titleRef.current = el;
-                  handleInputFocus(el);
                 }
               }}
               type="text"
@@ -752,6 +740,7 @@ export default function TodoListElement(props: CommonElementProps) {
                                 el.style.height = el.scrollHeight + 'px';
                               }
                             }}
+                            data-dictation-target="true"
                             value={item.text}
                             onChange={(e) => {
                               handleItemTextChange(index, e.target.value);
@@ -786,7 +775,6 @@ export default function TodoListElement(props: CommonElementProps) {
                             onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
                             onFocus={(e) => {
                               onEditElement(id);
-                              handleInputFocus(e.target as HTMLElement);
                             }}
                           />
 
@@ -821,10 +809,10 @@ export default function TodoListElement(props: CommonElementProps) {
       <CardFooter className="p-3 pt-1.5 border-t border-gray-200/50">
         <div className="flex items-start gap-1 w-full min-h-[36px]">
           <textarea
+            data-dictation-target="true"
             ref={(el) => {
               if (el) {
                 newItemRef.current = el;
-                handleInputFocus(el);
                 // Auto-expandir textarea
                 el.style.height = 'auto';
                 el.style.height = el.scrollHeight + 'px';

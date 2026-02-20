@@ -146,7 +146,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
         await onUpdate(id, { content: newContent });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       // Normalizar ambos para comparación
       const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
@@ -735,6 +735,7 @@ export default function StickyNoteElement(props: CommonElementProps) {
         <div
           ref={editorRef}
           contentEditable={!isPreview}
+          data-dictation-target="true"
           suppressContentEditableWarning
           onInput={handleContentChange}
           onBlur={handleBlurWithSave}

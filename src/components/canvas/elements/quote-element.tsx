@@ -74,7 +74,7 @@ export default function QuoteElement(props: CommonElementProps) {
         await onUpdate(id, { content: newContent });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
   });
 
 
@@ -127,6 +127,7 @@ export default function QuoteElement(props: CommonElementProps) {
         <div
           ref={editorRef}
           contentEditable={!isPreview}
+          data-dictation-target="true"
           className="flex-1 text-lg font-medium outline-none min-h-[60px]"
           onBlur={handleBlur}
           onInput={handleChange}

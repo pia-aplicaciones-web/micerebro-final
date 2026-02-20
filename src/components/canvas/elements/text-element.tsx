@@ -57,7 +57,7 @@ export default function TextElement(props: CommonElementProps) {
         await onUpdate(id, { content: normalizedNew });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       // Normalizar ambos para comparación
       const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();

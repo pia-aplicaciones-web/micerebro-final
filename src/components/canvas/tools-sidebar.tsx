@@ -78,6 +78,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { ElementType, CanvasElement, Board, WithId, NotepadContent, PhotoGridContent, PhotoGridFreeContent, LibretaContent, TodoContent } from '@/lib/types';
 
@@ -88,6 +89,9 @@ type AuthUser = {
 import { useToast } from '@/hooks/use-toast';
 import CreateBoardDialog from './create-board-dialog';
 import { useMediaQuery } from '@/hooks/use-media-query';
+import { getSavedLinks } from '@/lib/saved-links';
+import type { SavedLink } from '@/lib/saved-links';
+import { AddLinkDialog } from './add-link-dialog';
 
 // Paleta de colores para notas adhesivas (ordenada como paleta visual)
 const PASTEL_COLORS = {
@@ -186,10 +190,10 @@ interface ToolsSidebarProps {
   onToggleGalleryPanel: () => void;
   drawingMode?: {
     isDrawingMode: boolean;
-    drawingColor: 'black' | 'teal' | 'red' | 'lime' | 'purple';
+    drawingColor: 'red' | 'white' | 'calipso' | 'fucsia' | 'purple';
     strokeWidth: 2 | 4 | 6;
     toggleDrawingMode: () => void;
-    setColor: (color: 'black' | 'teal' | 'red' | 'lime' | 'purple') => void;
+    setColor: (color: 'red' | 'white' | 'calipso' | 'fucsia' | 'purple') => void;
     setStrokeWidth: (width: 2 | 4 | 6) => void;
     getColorHex: () => string;
     getStrokeWidth: () => number;
@@ -236,6 +240,8 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
   const [savedGuides, setSavedGuides] = useState<any[]>([]);
+  const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
+  const [openAddLinkDialog, setOpenAddLinkDialog] = useState(false);
   const [rndPosition, setRndPosition] = useState(() => {
     // Posición inicial fija: 5px del tablero arriba en el centro visual del usuario
     if (typeof window !== 'undefined') {
@@ -418,6 +424,14 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
       updateElement(id, { hidden: true });
     }
   }, [updateElement]);
+
+  // Enlaces guardados (Link)
+  useEffect(() => {
+    setSavedLinks(getSavedLinks());
+  }, []);
+  const refreshSavedLinks = useCallback(() => {
+    setSavedLinks(getSavedLinks());
+  }, []);
 
   // Cargar guías de fotos guardadas
   const loadSavedGuides = async () => {
@@ -1105,6 +1119,38 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {/* Link */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarButton icon={LinkIcon} label="Link" title="Páginas guardadas" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={5} className="w-56">
+              <DropdownMenuItem onClick={() => setOpenAddLinkDialog(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>Agregar página</span>
+              </DropdownMenuItem>
+              {savedLinks.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  {savedLinks.map((link) => (
+                    <DropdownMenuItem
+                      key={link.id}
+                      onClick={() => window.open(link.url, '_blank')}
+                    >
+                      <LinkIcon className="mr-2 h-4 w-4 text-slate-600" />
+                      <span className="truncate">{link.name}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <AddLinkDialog
+            open={openAddLinkDialog}
+            onOpenChange={setOpenAddLinkDialog}
+            onSaved={refreshSavedLinks}
+          />
+
           {/* Contenedor */}
           <SidebarButton
             icon={Columns2}
@@ -1193,31 +1239,56 @@ const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Colores:</div>
-              <DropdownMenuItem onClick={() => drawingMode?.setColor('black')}>
-                <div className="w-4 h-4 rounded-full bg-black mr-2 border border-gray-300" />
-                <span>Negro</span>
-                {drawingMode?.drawingColor === 'black' && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setColor('teal')}>
-                <div className="w-4 h-4 rounded-full bg-teal-500 mr-2 border border-gray-300" />
-                <span>Teal</span>
-                {drawingMode?.drawingColor === 'teal' && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setColor('red')}>
-                <div className="w-4 h-4 rounded-full bg-red-500 mr-2 border border-gray-300" />
-                <span>Rojo</span>
-                {drawingMode?.drawingColor === 'red' && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setColor('lime')}>
-                <div className="w-4 h-4 rounded-full bg-lime-500 mr-2 border border-gray-300" />
-                <span>Verde Lima</span>
-                {drawingMode?.drawingColor === 'lime' && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setColor('purple')}>
-                <div className="w-4 h-4 rounded-full bg-purple-500 mr-2 border border-gray-300" />
-                <span>Morado</span>
-                {drawingMode?.drawingColor === 'purple' && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem onClick={() => drawingMode?.setColor('red')}>
+                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#ef4444' }} />
+                    <span>Rojo</span>
+                    {drawingMode?.drawingColor === 'red' && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent>Rojo</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem onClick={() => drawingMode?.setColor('white')}>
+                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300 bg-white" />
+                    <span>Blanco</span>
+                    {drawingMode?.drawingColor === 'white' && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent>Blanco</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem onClick={() => drawingMode?.setColor('calipso')}>
+                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#28c4d8' }} />
+                    <span>Calipso</span>
+                    {drawingMode?.drawingColor === 'calipso' && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent>Calipso</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem onClick={() => drawingMode?.setColor('fucsia')}>
+                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#e91e8c' }} />
+                    <span>Fucsia</span>
+                    {drawingMode?.drawingColor === 'fucsia' && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent>Fucsia</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <DropdownMenuItem onClick={() => drawingMode?.setColor('purple')}>
+                    <div className="w-4 h-4 rounded-full bg-purple-500 mr-2 border border-gray-300" />
+                    <span>Morado</span>
+                    {drawingMode?.drawingColor === 'purple' && <span className="ml-auto text-xs">✓</span>}
+                  </DropdownMenuItem>
+                </TooltipTrigger>
+                <TooltipContent>Morado</TooltipContent>
+              </Tooltip>
               <DropdownMenuSeparator />
               <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Grosor:</div>
               <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(2)}>

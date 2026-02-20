@@ -265,7 +265,7 @@ export default function TimeListElement(props: CommonElementProps) {
         onUpdate(id, { content: newContent });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       return JSON.stringify(oldContent) === JSON.stringify(newContent);
     },

@@ -10,7 +10,7 @@ import {
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { GripVertical, X, Paintbrush, Columns2, Link as LinkIcon, Move, Minus, Maximize, Trash2 } from 'lucide-react';
+import { GripVertical, X, Paintbrush, Columns2, Move, Minus, Maximize, Trash2, Anchor } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAutoSave } from '@/hooks/use-auto-save';
@@ -812,20 +812,6 @@ export default function ContainerElement(
 
                 {(() => {
                   const footerStyle = getThumbFooterStyle(element);
-                  const anclaButton = (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 flex-shrink-0 opacity-0 group-hover/card:opacity-100 transition-opacity"
-                      title="Soltar elemento del contenedor"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleReleaseElement(elementId);
-                      }}
-                    >
-                      <LinkIcon className="h-3 w-3" />
-                    </Button>
-                  );
                   if (footerStyle.simple) {
                     return (
                       <div
@@ -833,13 +819,40 @@ export default function ContainerElement(
                         style={{ backgroundColor: footerStyle.bg }}
                       >
                         <span className="text-xs font-medium text-gray-800 truncate">{footerStyle.label}</span>
-                        {anclaButton}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Sacar del contenedor"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReleaseElement(elementId);
+                          }}
+                        >
+                          <Anchor className="h-3 w-3" />
+                        </Button>
                       </div>
                     );
                   }
                   return (
                     <div className="px-3 py-2 border-t border-gray-100 flex flex-col gap-1">
-                      <div className="text-xs font-medium text-gray-700 truncate">{getElementName(element)}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-medium text-gray-700 truncate">
+                          {getElementName(element)}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Sacar del contenedor"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReleaseElement(elementId);
+                          }}
+                        >
+                          <Anchor className="h-3 w-3" />
+                        </Button>
+                      </div>
                       <div className="text-[10px] text-gray-500">
                         {(() => {
                           const props = element.properties as any;
@@ -852,7 +865,6 @@ export default function ContainerElement(
                           return `${element.width || 'Auto'} × ${element.height || 'Auto'}`;
                         })()}
                       </div>
-                      {anclaButton}
                     </div>
                   );
                 })()}

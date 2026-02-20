@@ -72,7 +72,7 @@ export default function MiniElement(props: CommonElementProps) {
         });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       const normalizedOld = (oldContent || '').trim();
       const normalizedNew = (newContent || '').trim();
@@ -171,6 +171,59 @@ export default function MiniElement(props: CommonElementProps) {
   const handleContentBlur = useCallback(async () => {
     await handleAutoSaveBlur();
   }, [handleAutoSaveBlur]);
+
+  const handlePasteMini = useCallback((e: React.ClipboardEvent<HTMLDivElement>) => {
+    e.preventDefault();
+
+    const clipboardData = e.clipboardData;
+    let pastedText = clipboardData.getData('text/plain');
+
+    if (!pastedText) {
+      const htmlContent = clipboardData.getData('text/html');
+      if (htmlContent) {
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        pastedText = tempDiv.textContent || tempDiv.innerText || '';
+      }
+    }
+
+    if (!pastedText) return;
+
+    // Normalizar saltos de línea y limpiar caracteres de control
+    pastedText = pastedText
+      .replace(/\r\n/g, '\n')
+      .replace(/\r/g, '\n')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+
+    if (!pastedText.trim()) return;
+
+    // Insertar como texto plano en la posición actual del cursor
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+      if (contentRef.current) {
+        contentRef.current.focus();
+      }
+    }
+
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const textNode = document.createTextNode(pastedText);
+    range.insertNode(textNode);
+
+    // Mover cursor al final del texto insertado
+    range.setStartAfter(textNode);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+
+    // Disparar evento input para que el autosave detecte cambios
+    if (contentRef.current) {
+      contentRef.current.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }, []);
 
   const toggleMinimize = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -347,6 +400,7 @@ export default function MiniElement(props: CommonElementProps) {
           <div className="flex flex-col">
             <div
               contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
+              data-dictation-target="true"
               suppressContentEditableWarning
               onInput={(e) => {
                 const newTitle = e.currentTarget.textContent || 'Mini';
@@ -482,6 +536,7 @@ export default function MiniElement(props: CommonElementProps) {
       <div
           ref={contentRef}
           contentEditable={!isPreview && (!typedContent.password || isUnlockedForEditing)}
+          onPaste={handlePasteMini}
           onInput={handleContentInput}
           onBlur={handleContentBlur}
           onFocus={() => {

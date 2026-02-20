@@ -4,10 +4,10 @@ import React, { createContext, useContext, useState, useCallback, ReactNode } fr
 import type { DrawingColor } from '@/hooks/use-drawing-mode';
 
 const COLOR_MAP: Record<DrawingColor, string> = {
-  black: '#000000',
-  teal: '#14b8a6',
   red: '#ef4444',
-  lime: '#84cc16',
+  white: '#ffffff',
+  calipso: '#28c4d8',
+  fucsia: '#e91e8c',
   purple: '#a855f7',
 };
 
@@ -23,7 +23,7 @@ const DrawingModeContext = createContext<DrawingModeContextType | undefined>(und
 
 export function DrawingModeProvider({ children }: { children: ReactNode }) {
   const [isDrawingMode, setIsDrawingMode] = useState(false);
-  const [drawingColor, setDrawingColor] = useState<DrawingColor>('black');
+  const [drawingColor, setDrawingColor] = useState<DrawingColor>('red');
 
   const toggleDrawingMode = useCallback(() => {
     setIsDrawingMode(prev => !prev);

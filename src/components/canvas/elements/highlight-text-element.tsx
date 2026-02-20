@@ -166,6 +166,7 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
           onChange={handleTextChange}
           // onFocus={() => !isSelected && onSelectElement(id, false)} // REMOVIDO - interfiere con edición
           contentEditable={!isPreview}
+          data-dictation-target="true"
           onFocus={() => {
             // Asegurar que el cursor esté visible
             if (contentRef.current) {

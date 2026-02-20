@@ -19,7 +19,7 @@ interface UseAutoSaveOptions {
   
   /**
    * Delay en milisegundos para el debounce del auto-save
-   * Por defecto: 2000ms (2 segundos)
+   * Por defecto: 4000ms (4 segundos) - optimizado para reducir writes y cuota Firestore
    */
   debounceMs?: number;
   
@@ -65,7 +65,7 @@ interface UseAutoSaveReturn {
 
 /**
  * Hook para autoguardado robusto con:
- * - Auto-save con debounce (2 segundos por defecto)
+ * - Auto-save con debounce (4 segundos por defecto, optimizado para Firestore)
  * - Guardado inmediato en onBlur
  * - Feedback visual del estado de guardado
  * - Prevención de stale closures
@@ -74,35 +74,18 @@ interface UseAutoSaveReturn {
  * const { saveStatus, handleBlur, handleChange } = useAutoSave({
  *   getContent: () => editorRef.current?.innerHTML || '',
  *   onSave: (content) => onUpdate(id, { content }),
- *   debounceMs: 2000,
+ *   debounceMs: 4000,
  * });
  */
 export function useAutoSave({
   getContent,
   onSave,
-  debounceMs = 2000,
+  debounceMs = 4000,
   disabled = false,
   compareContent,
 }: UseAutoSaveOptions): UseAutoSaveReturn {
-  // REGLA DE SEGURIDAD: Si el modo seguro está activado,
-  // el auto-guardado se deshabilita automáticamente
-  const isSafeModeEnabled = (() => {
-    try {
-      if (typeof window !== 'undefined') {
-        const safetyConfig = localStorage.getItem('micerebro-safety-config');
-        if (safetyConfig) {
-          const config = JSON.parse(safetyConfig);
-          return config.safeMode || config.readOnlyMode;
-        }
-      }
-    } catch {
-      // En caso de error, asumir modo inseguro
-    }
-    return false;
-  })();
-
-  // Aplicar regla de seguridad: forzar disabled si el modo seguro está activado
-  const effectiveDisabled = disabled || isSafeModeEnabled;
+  // CRÍTICO: El tablero debe tener autoguardado SIEMPRE.
+  // No deshabilitar por modo seguro/lectura - solo por disabled explícito (ej. isPreview).
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedContentRef = useRef<any>(null);
@@ -189,8 +172,13 @@ export function useAutoSave({
 
       setSaveStatus('saving');
 
-      // Ejecutar el guardado con la función más reciente
-      await currentOnSave(currentContent);
+      // Ejecutar el guardado con timeout (15s) para evitar "guardando eternamente"
+      const SAVE_TIMEOUT_MS = 15000;
+      const savePromise = currentOnSave(currentContent);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout: el guardado tardó demasiado')), SAVE_TIMEOUT_MS)
+      );
+      await Promise.race([savePromise, timeoutPromise]);
 
       // Actualizar referencia del último contenido guardado (guardar el original, no el normalizado)
       lastSavedContentRef.current = currentContent;

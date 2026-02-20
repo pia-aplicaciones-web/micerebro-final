@@ -85,7 +85,7 @@ export default function EditCommentDialog({
         });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => oldContent === newContent,
     disabled: !isOpen,
   });
@@ -104,7 +104,7 @@ export default function EditCommentDialog({
         });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => oldContent === newContent,
     disabled: !isOpen,
   });
@@ -123,7 +123,7 @@ export default function EditCommentDialog({
         });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => oldContent === newContent,
     disabled: !isOpen,
   });

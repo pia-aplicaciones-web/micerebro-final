@@ -12,7 +12,7 @@ import type { WithId, CanvasElement, Point, CommonElementProps } from '@/lib/typ
 
 import { useBoardStore } from '@/lib/store/boardStore';
 import TextElement from '@/components/canvas/elements/text-element';
-import StickyNoteType1 from '@/components/canvas/elements/sticky-note-type1';
+import StickyNoteType2 from '@/components/canvas/elements/sticky-note-type2';
 import ImageElement from '@/components/canvas/elements/image-element';
 import NotepadElement from '@/components/canvas/elements/notepad-element';
 // import CuadernoElement from '@/components/canvas/elements/cuaderno'; // DESACTIVADO - causando problemas
@@ -48,7 +48,7 @@ interface BoardContentProps {
 
 const ELEMENT_COMPONENTS = {
   text: TextElement,
-  sticky: StickyNoteType1,
+  sticky: StickyNoteType2,
   image: ImageElement,
   notepad: NotepadElement,
   // cuaderno: CuadernoElement, // DESACTIVADO - causando problemas

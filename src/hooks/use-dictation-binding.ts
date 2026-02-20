@@ -20,29 +20,31 @@ export function useDictationBinding({
   const lastTranscriptRef = useRef('');
   const boundElementRef = useRef<HTMLElement | null>(null);
 
-  // Función para insertar texto en el elemento enfocado
+  // Función para insertar texto en el elemento enfocado (compatible con inputs controlados por React)
   const insertTextAtCursor = useCallback((text: string, isInterim: boolean = false) => {
     const element = boundElementRef.current;
     if (!element) return;
 
-    // Para inputs y textareas
     if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) {
-      if (isInterim) return; // No mostrar interim en inputs
+      if (isInterim) return;
 
       const start = element.selectionStart || 0;
       const end = element.selectionEnd || 0;
       const value = element.value;
-
-      // Insertar texto en la posición del cursor
       const newValue = value.slice(0, start) + text + value.slice(end);
-      element.value = newValue;
-
-      // Actualizar posición del cursor
       const newCursorPos = start + text.length;
-      element.setSelectionRange(newCursorPos, newCursorPos);
 
-      // Disparar evento change
-      element.dispatchEvent(new Event('input', { bubbles: true }));
+      // Usar setter nativo para que React detecte el cambio en inputs controlados (timer-lista, listas de tareas)
+      const proto = element instanceof HTMLInputElement ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+      const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+      if (descriptor?.set) {
+        descriptor.set.call(element, newValue);
+      } else {
+        element.value = newValue;
+      }
+      element.setSelectionRange(newCursorPos, newCursorPos);
+      // InputEvent hace que React actualice el estado en componentes controlados
+      element.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
     }
   }, []);
 
@@ -51,11 +53,11 @@ export function useDictationBinding({
     boundElementRef.current = element;
   }, []);
 
-  // Escuchar cambios en transcript e insertar en el elemento enlazado (input, textarea o contentEditable).
-  // Para input/textarea el componente debe marcar con data-dictation-controlled para que el global no duplique.
+  // Escuchar cambios en transcript e insertar en el elemento enlazado (timer-lista, listas de tareas).
+  // Insertar si hay elemento enlazado (foco); no exigir isSelected para evitar retrasos de un render.
   useEffect(() => {
-    if (!isSelected || !boundElementRef.current) return;
     const el = boundElementRef.current;
+    if (!el || !document.contains(el)) return;
 
     if (finalTranscript && finalTranscript !== lastTranscriptRef.current) {
       const newText = finalTranscript.slice(lastTranscriptRef.current.length);
@@ -64,7 +66,7 @@ export function useDictationBinding({
       }
       lastTranscriptRef.current = finalTranscript;
     }
-  }, [finalTranscript, isSelected, insertTextAtCursor]);
+  }, [finalTranscript, insertTextAtCursor]);
 
   // Limpiar referencias cuando deja de escuchar
   useEffect(() => {

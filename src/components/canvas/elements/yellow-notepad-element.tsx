@@ -135,7 +135,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
         });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
     compareContent: (oldContent, newContent) => {
       const normalizedOld = (oldContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
       const normalizedNew = (newContent || '').replace(/\s+/g, ' ').replace(/>\s+</g, '><').trim();
@@ -541,6 +541,7 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           <div
             ref={titleRef}
             contentEditable={!isPreview}
+            data-dictation-target="true"
             spellCheck="true"
             suppressContentEditableWarning
             onFocus={handleTitleFocus}

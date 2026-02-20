@@ -3,17 +3,17 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Menu, X as CloseIcon } from 'lucide-react';
-import { Rnd } from 'react-rnd';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage, getFirebaseFirestore } from '@/lib/firebase';
+import { getFirebaseStorage, getFirebaseFirestore, firebaseConfig } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
 import { useToast } from '@/hooks/use-toast';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
+import { useDictation } from '@/hooks/use-dictation';
 
 // Utilidades y Tipos
 import { uploadFile } from '@/lib/upload-helper';
@@ -56,6 +56,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   const { toast } = useToast();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuTouchedRef = useRef(false);
   const handleToggleMobileMenu = useCallback(() => {
     setIsMobileMenuOpen((prev) => !prev);
   }, []);
@@ -161,6 +162,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     startListening,
     stopListening,
   } = useSpeechToText();
+
+  const { saveSelectionBeforeMic } = useDictation(isListening, transcript, interimTranscript);
 
   // Funciones auxiliares para el Canvas
   const getViewportCenter = useCallback(() => {
@@ -542,7 +545,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
             width: 378,
             height: 800,
             hidden: true, // Gallery siempre oculto en canvas
-            zIndex: -1,
+            zIndex: 0,
           }).then(() => {
             console.log('Gallery único creado exitosamente');
           }).catch((error) => {
@@ -560,7 +563,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
         width: 378,
         height: 800,
           hidden: true, // Gallery siempre oculto en canvas
-        zIndex: -1,
+        zIndex: 0,
       }).then(() => {
           console.log('Gallery único creado exitosamente');
       }).catch((error) => {
@@ -615,23 +618,31 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
       />
 
           {/* Botón de menú móvil: flotante y arrastrable, fuera del overflow para que siempre sea visible */}
-          <Rnd
-            default={{
-              x: typeof window !== 'undefined' ? window.innerWidth - 72 : 16,
-              y: 16,
-              width: 48,
-              height: 48,
-            }}
-            bounds="window"
-            enableResizing={false}
-            dragHandleClassName="mobile-menu-drag-handle"
-            style={{ position: 'fixed', zIndex: 11000, pointerEvents: 'auto' }}
+          <div
+            className="fixed top-4 right-4 z-[11000] touch-manipulation"
+            style={{ WebkitTapHighlightColor: 'transparent' }}
           >
             <Button
               variant="ghost"
               size="icon"
-              className="mobile-menu-drag-handle w-12 h-12 rounded-full bg-white border-2 border-gray-200 shadow-xl hover:bg-gray-100 flex items-center justify-center"
-              onClick={handleToggleMobileMenu}
+              className="w-12 h-12 min-w-12 min-h-12 rounded-full bg-white border-2 border-gray-200 shadow-xl hover:bg-gray-100 active:bg-gray-200 flex items-center justify-center"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (mobileMenuTouchedRef.current) {
+                  mobileMenuTouchedRef.current = false;
+                  return;
+                }
+                handleToggleMobileMenu();
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                mobileMenuTouchedRef.current = true;
+                handleToggleMobileMenu();
+              }}
+              type="button"
+              aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
             >
               {isMobileMenuOpen ? (
                 <CloseIcon className="h-6 w-6 text-black" />
@@ -639,7 +650,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
                 <Menu className="h-6 w-6 text-black" />
               )}
             </Button>
-          </Rnd>
+          </div>
 
           {/* MobileMenu (flotante, fuera del overflow) */}
           <MobileMenu
@@ -651,6 +662,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
             user={user}
             isListening={isListening}
             onToggleDictation={toggleListening}
+            onSaveSelectionBeforeMic={saveSelectionBeforeMic}
             onOpenNotepad={handleOpenNotepad}
             onLocateElement={handleLocateElement}
             addElement={addElement}
@@ -670,7 +682,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
                 });
                 return;
               }
-              const firebaseUrl = 'https://console.firebase.google.com/project/micerebroapp/storage/micerebroapp.firebasestorage.app/files';
+              const firebaseUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId || 'micerebroapp'}/storage/${firebaseConfig.storageBucket || 'micerebroapp.firebasestorage.app'}/files`;
               navigator.clipboard?.writeText(firebaseUrl).then(() => {
                 toast({
                   title: 'URL copiada al portapapeles',

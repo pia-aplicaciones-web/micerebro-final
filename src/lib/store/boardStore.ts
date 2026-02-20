@@ -14,7 +14,8 @@ import {
   where,
   getDoc,
   onSnapshot,
-  orderBy
+  orderBy,
+  serverTimestamp
 } from 'firebase/firestore';
 import { type Firestore } from 'firebase/firestore';
 import { firebaseConfig, getFirebaseFirestore } from '@/lib/firebase';
@@ -140,6 +141,35 @@ const getDb = (): Firestore => {
 
   return db;
 };
+
+/**
+ * Limpia valores undefined de un objeto para Firestore.
+ * Firestore NO acepta undefined - lanza error y los cambios no se guardan.
+ */
+function cleanUpdatesForFirestore(obj: Record<string, any>): Record<string, any> {
+  const cleaned: Record<string, any> = {};
+  for (const key of Object.keys(obj)) {
+    const value = obj[key];
+    if (value === undefined) continue;
+    // No procesar recursivamente: Date, Timestamp, FieldValue (serverTimestamp), etc.
+    const isPlainObject = value !== null && typeof value === 'object' &&
+      Object.prototype.toString.call(value) === '[object Object]' &&
+      !('_method' in value) && !('toDate' in value);
+    if (isPlainObject) {
+      cleaned[key] = cleanUpdatesForFirestore(value);
+    } else if (Array.isArray(value)) {
+      cleaned[key] = value.map((item: any) =>
+        item !== null && typeof item === 'object' && !(item instanceof Date) &&
+        Object.prototype.toString.call(item) === '[object Object]'
+          ? cleanUpdatesForFirestore(item)
+          : item === undefined ? null : item
+      );
+    } else {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
 
 // Función para validar integridad de elementos
 const validateElementIntegrity = (element: WithId<CanvasElement>): boolean => {
@@ -362,16 +392,6 @@ export const useBoardStore = create<BoardState>((set, get) => ({
               });
 
               if (contentChanged) {
-                console.log('🔄 [boardStore] Actualizando elementos por cambios de contenido:', {
-                  elementsCount: newElements.length,
-                  changedElements: currentElements.filter((el, index) => {
-                    const newEl = newElements[index];
-                    return newEl && (!safeContentCompare(el.content, newEl.content) ||
-                           !safeContentCompare(el.properties, newEl.properties) ||
-                           el.zIndex !== newEl.zIndex);
-                  }).map(el => ({ id: el.id, type: el.type })),
-                  timestamp: new Date().toISOString()
-                });
                 set({ elements: newElements, isLoading: false });
               }
             }
@@ -601,12 +621,11 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const { board, elements, isLoading } = get();
     if (isLoading) {
       console.warn("Board está cargando, esperando para actualizar elemento:", elementId);
-      // Podríamos agregar un timeout o retry aquí si es necesario
-      return;
+      throw new Error('Tablero cargando. Intenta de nuevo en unos segundos.');
     }
     if (!board || !board.id) {
       console.warn("Board no disponible para actualizar elemento:", elementId);
-      return;
+      throw new Error('Tablero no disponible');
     }
 
     // MODO DESARROLLO: usar localStorage
@@ -622,7 +641,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     const userId = board.userId || (board as { ownerId?: string }).ownerId;
     if (!userId) {
       console.error("No se pudo obtener userId para actualizar elemento");
-      return;
+      throw new Error('Usuario no identificado');
     }
 
     // OPTIMIZACIÓN: Actualizar estado local INMEDIATAMENTE para mejor UX
@@ -635,36 +654,27 @@ export const useBoardStore = create<BoardState>((set, get) => ({
 
     try {
       const db = getDb();
-      // Usar la nueva estructura: users/{userId}/canvasBoards/{boardId}/canvasElements/{elementId}
       const elementRef = doc(db, 'users', userId, 'canvasBoards', board.id, 'canvasElements', elementId);
 
-      // Verificar si el documento existe antes de intentar actualizarlo
-      const elementDoc = await getDoc(elementRef);
-      if (!elementDoc.exists()) {
-        console.warn(`🗑️ Elemento ${elementId} no existe en Firestore, eliminándolo del estado local`);
-        // Eliminar el elemento huérfano del estado local
-        const filteredElements = currentElements.filter(el => el.id !== elementId);
-        set({ elements: filteredElements });
-        return;
-      }
-
-      await updateDoc(elementRef, updates);
+      // OPTIMIZACIÓN: No hacer getDoc antes de updateDoc - ahorra 1 lectura por write (cuota Firestore).
+      // Si el doc no existe, updateDoc lanzará y lo manejamos en catch.
+      const cleanUpdates = cleanUpdatesForFirestore({ ...updates, updatedAt: serverTimestamp() });
+      await updateDoc(elementRef, cleanUpdates);
       // El listener onSnapshot corregirá automáticamente si hay discrepancias
-      // Pero la actualización optimista ya dio feedback visual inmediato
     } catch (error: any) {
-      console.error("Error al actualizar el elemento:", error);
+      console.error("❌ [boardStore] Error al actualizar elemento:", elementId, error?.code || error?.message, error);
 
       // Manejar específicamente errores de documento no encontrado
       if (error?.code === 'not-found' || error?.message?.includes('No document to update')) {
         console.warn(`Documento ${elementId} no encontrado en Firestore, eliminando del estado local`);
-        // Eliminar el elemento del estado local si no existe en Firestore
         const filteredElements = currentElements.filter(el => el.id !== elementId);
         set({ elements: filteredElements });
-        return;
+      } else {
+        // Revertir la actualización optimista en caso de otros errores
+        set({ elements: currentElements });
       }
-
-      // Revertir la actualización optimista en caso de otros errores
-      set({ elements: currentElements });
+      // CRÍTICO: Re-lanzar para que useAutoSave muestre "Error" y no quede en "Guardando"
+      throw error;
     }
   },
 

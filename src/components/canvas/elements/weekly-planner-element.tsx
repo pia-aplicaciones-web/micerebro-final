@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import type { CommonElementProps, CanvasElementProperties } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -188,8 +188,8 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
       )}
       style={{
         backgroundColor: '#f5f1d6',
-        minWidth: 756, // ~20cm
-        minHeight: 567, // ~15cm
+        minWidth: 794, // 21cm
+        minHeight: 794, // 21cm
       }}
     >
       <div className="drag-handle flex items-center justify-between px-3 py-2 cursor-grab active:cursor-grabbing">
@@ -316,28 +316,6 @@ export default function WeeklyPlannerElement(props: CommonElementProps) {
           disabled={isPreview}
         />
 
-        {/* Notas - ocupa 4 columnas */}
-        <div className="col-span-4">
-          <div
-            className="flex flex-col bg-white rounded-xl shadow-sm overflow-hidden h-full"
-            style={{ minHeight: 120 }}
-          >
-            <div
-              className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white"
-              style={{ backgroundColor: '#f2c108' }}
-            >
-              NOTAS
-            </div>
-            <textarea
-              className="flex-1 w-full p-3 text-sm resize-none outline-none border-none"
-              value={noteContent}
-              onChange={(e) => handleDayChange(notesKey, e.target.value)}
-              placeholder="Notas..."
-              // onFocus={() => !isSelected && onSelectElement(id, false)} // REMOVIDO - interfiere con edición
-              disabled={isPreview}
-            />
-          </div>
-        </div>
       </div>
 
       {/* Botón eliminar fuera del header */}
@@ -392,7 +370,7 @@ function DayCard({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Escribe aquí..."
-        onFocus={() => onFocus(el)}
+        // onFocus={() => onFocus(el)} // REMOVIDO - revisar si se necesita para algo
         disabled={disabled}
       />
     </div>

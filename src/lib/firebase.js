@@ -1,18 +1,24 @@
 // Firebase configuration - Solo configuración, sin inicialización
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// Configuración de Firebase - Proyecto micerebroapp
-export const firebaseConfig = {
-  apiKey: "AIzaSyCbnZ8uKlOc8PBvTql2N2PkIDxc2BXWFCg",
-  authDomain: "micerebroapp.firebaseapp.com",
-  projectId: "micerebroapp",
-  storageBucket: "micerebroapp.firebasestorage.app",
-  messagingSenderId: "967156176052",
-  appId: "1:967156176052:web:2a7da145935daecdd6f3e1"
+// Configuración de Firebase
+// Prioridad: variables de entorno (.env.local) > config por defecto
+// Para nuevo proyecto: crear .env.local con NEXT_PUBLIC_FIREBASE_* desde Firebase Console
+const getFirebaseConfig = () => {
+  const env = typeof process !== 'undefined' ? process.env : {};
+  return {
+    apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCbnZ8uKlOc8PBvTql2N2PkIDxc2BXWFCg',
+    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'micerebroapp.firebaseapp.com',
+    projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'micerebroapp',
+    storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'micerebroapp.firebasestorage.app',
+    messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '967156176052',
+    appId: env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:967156176052:web:2a7da145935daecdd6f3e1',
+  };
 };
+export const firebaseConfig = getFirebaseConfig();
 
 // Inicializar Firebase solo en el cliente
 let app = null;
@@ -39,9 +45,14 @@ export const initFirebase = async () => {
   // Crear nueva promesa de inicialización
   initPromise = (async () => {
     try {
+      const config = getFirebaseConfig();
+      if (!config.apiKey || !config.projectId) {
+        console.error('❌ Firebase: Configura NEXT_PUBLIC_FIREBASE_* en .env.local - Ver MIGRACION_GOOGLE_CLOUD.md');
+        throw new Error('Firebase no configurado. Añade las variables de entorno.');
+      }
       // Inicializar app
       if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
+        app = initializeApp(config);
         console.log('✅ Firebase App inicializado');
       } else {
         app = getApp();
@@ -54,7 +65,18 @@ export const initFirebase = async () => {
       console.log('✅ Firebase Auth inicializado con persistencia de sesión');
 
       // Inicializar Firestore (base de datos datacerebro)
-      firestore = getFirestore(app, 'datacerebro');
+      // CRÍTICO: ignoreUndefinedProperties=true evita errores cuando los objetos tienen undefined
+      // (Firestore rechaza undefined por defecto, causando que los guardados fallen silenciosamente)
+      try {
+        firestore = initializeFirestore(app, { ignoreUndefinedProperties: true }, 'datacerebro');
+      } catch (e) {
+        if (e?.code === 'failed-precondition' || /already been called|different options/i.test(e?.message || '')) {
+          const { getFirestore } = await import('firebase/firestore');
+          firestore = getFirestore(app, 'datacerebro');
+        } else {
+          throw e;
+        }
+      }
       storage = getStorage(app);
       console.log('✅ Firebase Firestore y Storage inicializados');
 

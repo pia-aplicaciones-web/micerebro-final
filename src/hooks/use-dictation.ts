@@ -200,6 +200,8 @@ export const useDictation = (
       if (isInterim) return;
       // No insertar en inputs que gestionan el dictado por su cuenta (evita duplicar texto)
       if (inputTarget.getAttribute('data-dictation-controlled') === 'true') return;
+      // Solo dictar en inputs marcados explícitamente como objetivo de dictado
+      if (inputTarget.getAttribute('data-dictation-target') !== 'true') return;
       const start = inputTarget === activeElement
         ? (inputTarget.selectionStart ?? 0)
         : savedInputRef.current!.start;
@@ -264,6 +266,8 @@ export const useDictation = (
       : (container as HTMLElement).closest?.('[contenteditable="true"]');
     
     if (!editableParent) return;
+    // Solo dictar en contentEditables marcados explícitamente como objetivo de dictado
+    if ((editableParent as HTMLElement).getAttribute('data-dictation-target') !== 'true') return;
 
     // Remover interim anterior
     removeInterimNode();
@@ -346,6 +350,9 @@ export const useDictation = (
       selection.removeAllRanges();
       selection.addRange(range);
 
+      // CRÍTICO: Disparar evento 'input' para que useAutoSave detecte el cambio
+      editableParent.dispatchEvent(new Event('input', { bubbles: true }));
+
       // Actualizar la posición guardada para el próximo insert (pero siempre priorizar posición actual)
       savedRangeRef.current = range.cloneRange();
     }
@@ -359,6 +366,14 @@ export const useDictation = (
     const range = selection.getRangeAt(0);
     const selectedText = range.toString();
     if (!selectedText.trim()) return;
+
+    // Verificar que estamos en un contentEditable
+    const container = range.commonAncestorContainer;
+    const editableParent = container.nodeType === Node.TEXT_NODE 
+      ? container.parentElement?.closest('[contenteditable="true"]')
+      : (container as HTMLElement).closest?.('[contenteditable="true"]');
+    
+    if (!editableParent) return;
 
     const lines = selectedText
       .split(/\r?\n/)
@@ -382,6 +397,9 @@ export const useDictation = (
     newRange.collapse(true);
     selection.removeAllRanges();
     selection.addRange(newRange);
+
+    // CRÍTICO: Disparar evento 'input' para que useAutoSave detecte el cambio
+    editableParent.dispatchEvent(new Event('input', { bubbles: true }));
 
     // Actualizar posición guardada para futuros dictados
     savedRangeRef.current = newRange.cloneRange();

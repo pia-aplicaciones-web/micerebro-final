@@ -79,7 +79,7 @@ export default function StickyNoteType2(props: CommonElementProps) {
         await onUpdate(id, { content: newContent });
       }
     },
-    debounceMs: 2000,
+    debounceMs: 4000,
   });
 
   useEffect(() => {
@@ -184,8 +184,14 @@ export default function StickyNoteType2(props: CommonElementProps) {
       data-element-id={id}
       className="relative w-full h-full flex flex-col rounded-lg overflow-hidden border border-gray-200/50"
       onMouseDown={(e) => {
-        if ((e.target as HTMLElement).closest('.drag-handle, .close-btn, .tag-input')) return;
-        e.stopPropagation();
+        // Permitir drag desde el drag-handle (NO hacer stopPropagation aquí)
+        if ((e.target as HTMLElement).closest('.drag-handle')) return;
+        // Bloquear eventos de botones/interactivos para evitar drag accidental
+        if ((e.target as HTMLElement).closest('button, input, .close-btn, .tag-input')) {
+          e.stopPropagation();
+          return;
+        }
+        // Para el resto del elemento, seleccionar pero permitir drag si se arrastra
         onSelectElement(id, e.shiftKey || e.ctrlKey || e.metaKey);
       }}
       onDoubleClick={() => onEditElement(id)}
@@ -200,7 +206,9 @@ export default function StickyNoteType2(props: CommonElementProps) {
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/40 border-b border-gray-300/30">
         <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
           {/* Drag Handle de 9 puntos */}
-          <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0">
+          <div 
+            className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0"
+          >
             <div className="grid grid-cols-3 gap-[1px]">
               <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
               <span className="w-0.5 h-0.5 rounded-full bg-gray-500" />
@@ -250,8 +258,12 @@ export default function StickyNoteType2(props: CommonElementProps) {
           variant="ghost"
           size="icon"
           className="close-btn h-5 w-5 p-0 hover:bg-red-100 flex-shrink-0"
-          onClick={handleClose}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClose(e);
+          }}
           onMouseDown={(e) => e.stopPropagation()}
+          title="Eliminar nota"
         >
           <X className="h-3 w-3 text-gray-600" />
         </Button>
@@ -328,6 +340,7 @@ export default function StickyNoteType2(props: CommonElementProps) {
           <div
             ref={editorRef}
             contentEditable={!isPreview}
+            data-dictation-target="true"
             suppressContentEditableWarning
             onInput={handleContentChange}
             onBlur={handleBlurWithSave}

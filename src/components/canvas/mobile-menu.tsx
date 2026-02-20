@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, forwardRef, useCallback, useMemo } from 'react';
+import React, { useState, forwardRef, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   BookCopy,
@@ -59,6 +59,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { cn } from '@/lib/utils';
 import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { getSavedLinks } from '@/lib/saved-links';
+import type { SavedLink } from '@/lib/saved-links';
+import { AddLinkDialog } from './add-link-dialog';
 
 type AuthUser = {
   uid?: string;
@@ -85,6 +88,7 @@ interface MobileMenuProps {
   onDeleteAllUserImages: () => void;
   isListening?: boolean;
   onToggleDictation?: () => void;
+  onSaveSelectionBeforeMic?: () => void;
 }
 
 // Paleta de colores para notas adhesivas (ordenada como paleta visual)
@@ -120,6 +124,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   user,
   isListening = false,
   onToggleDictation,
+  onSaveSelectionBeforeMic,
   onOpenNotepad,
   onLocateElement,
   addElement,
@@ -135,6 +140,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   const { toast } = useToast();
   const router = useRouter();
   const [openSubMenus, setOpenSubMenus] = useState<Record<string, boolean>>({});
+  const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
+  const [openAddLinkDialog, setOpenAddLinkDialog] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setSavedLinks(getSavedLinks());
+  }, [isOpen]);
+  const refreshSavedLinks = useCallback(() => {
+    setSavedLinks(getSavedLinks());
+  }, []);
 
   const toggleSubMenu = (label: string) => {
     setOpenSubMenus((prev) => ({
@@ -182,6 +196,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       label: isListening ? 'Detener' : 'Dictar',
       icon: isListening ? MicOff : Mic,
       onClick: () => {
+        onSaveSelectionBeforeMic?.();
         if (onToggleDictation) {
           onToggleDictation();
         }
@@ -317,6 +332,20 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       onClick: () => handleAddElement('container'),
     },
     {
+      label: 'Link',
+      icon: LinkIcon,
+      subMenu: [
+        { label: 'Agregar página', onClick: () => setOpenAddLinkDialog(true) },
+        ...savedLinks.map((link) => ({
+          label: link.name,
+          onClick: () => {
+            window.open(link.url, '_blank');
+            onClose();
+          },
+        })),
+      ],
+    },
+    {
       label: 'Localizar',
       icon: MapPin,
       subMenu: [
@@ -370,9 +399,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   ].filter(item => {
     const excludedLabels = ["GUIA DE FOTOS", "MI PLAN", "COLUMNA"];
     return !excludedLabels.includes(item.label);
-  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose, isListening, onToggleDictation]);
+  }), [boards, elements, handleAddElement, onLocateElement, onOpenNotepad, onOpenRenameBoardDialog, onDeleteBoard, onUploadImage, onAddImageFromUrl, onCropImage, onAddImageFromUrlWithCrop, onExportBoardToPng, onDeleteAllUserImages, handleSignOut, router, onClose, isListening, onToggleDictation, savedLinks]);
 
   return (
+    <>
+    <AddLinkDialog
+      open={openAddLinkDialog}
+      onOpenChange={setOpenAddLinkDialog}
+      onSaved={refreshSavedLinks}
+    />
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent
         side="left"
@@ -466,6 +501,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         </nav>
       </SheetContent>
     </Sheet>
+    </>
   );
 };
 
