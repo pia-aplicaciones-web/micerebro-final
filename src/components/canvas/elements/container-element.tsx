@@ -258,9 +258,6 @@ export default function ContainerElement(
 
   const handleReleaseElement = useCallback(
     (elementId: string) => {
-      const newElementIds = (containerContent as ContainerContent).elementIds.filter((eid) => eid !== elementId);
-      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } as ContainerContent });
-
       const containerPosition = safeProperties.position || { x: 0, y: 0 };
       const containerSize = safeProperties.size || { width: 378, height: 567 };
       const releasedElement = allElements.find((el) => el.id === elementId);
@@ -311,6 +308,8 @@ export default function ContainerElement(
           }
         });
 
+        // IMPORTANTE: Actualizar primero el elemento liberado (parentId: null) para evitar que
+        // el efecto "rescate" de GaleriaContenedor lo vuelva a meter en elementIds.
         onUpdate(elementId, {
           parentId: null,
           hidden: false,
@@ -319,6 +318,9 @@ export default function ContainerElement(
           properties: props,
         });
       }
+
+      const newElementIds = (containerContent as ContainerContent).elementIds.filter((eid) => eid !== elementId);
+      onUpdate(id, { content: { ...containerContent, elementIds: newElementIds } as ContainerContent });
     },
     [id, containerContent, allElements, onUpdate, unanchorElement, safeProperties, isSystemGallery]
   );

@@ -3,24 +3,9 @@
 ## 📋 Problemas Encontrados y Soluciones
 
 ### ❌ **Problema #1: Nombre de Proyecto Incorrecto**
-**Error:** `Project names can be up to 100 characters long and must be lowercase. They can include letters, digits, and the following characters: '.', '_', '-'. However, they cannot contain the sequence '---'.`
+**Error:** `Project names can be up to 100 characters long...` o `No projects found`
 
-**Causa:** En `vercel.json` estaba configurado `"name": "canvasmind-app"` pero el proyecto real en Vercel se llamaba `micerebroapp`.
-
-**Solución:**
-```json
-// vercel.json - ANTES
-{
-  "name": "canvasmind-app",
-  // ...
-}
-
-// vercel.json - DESPUÉS
-{
-  "name": "micerebroapp",
-  // ...
-}
-```
+**Nota:** La propiedad `"name"` en vercel.json está **deprecada** (Vercel CLI 48+). El nombre del proyecto se define en el Dashboard de Vercel o con `vercel link`. No incluir `name` en vercel.json.
 
 ### ❌ **Problema #2: Scope/Equipo Incorrecto**
 **Error:** `No projects found under [usuario-personal]`
@@ -67,7 +52,7 @@ pwd
 
 # Verificar configuración de Vercel
 cat vercel.json
-# Debe tener: "name": "micerebroapp"
+# (No incluir "name" - está deprecado en Vercel CLI 48+)
 ```
 
 ### 2. **Verificar Autenticación y Scope**
@@ -126,7 +111,6 @@ curl -s -o /dev/null -w "%{http_code}" https://micerebroapp.vercel.app/
 ```json
 {
   "version": 2,
-  "name": "micerebroapp",
   "buildCommand": "npm run build",
   "installCommand": "npm install --legacy-peer-deps",
   "outputDirectory": ".next",
@@ -197,7 +181,7 @@ vercel redeploy [deployment-url]
 ## 📝 **Lecciones Aprendidas**
 
 1. **Siempre verificar el scope/equipo** antes de hacer deploy
-2. **El nombre en vercel.json debe coincidir EXACTAMENTE** con el nombre del proyecto en Vercel
+2. **El nombre del proyecto** se configura en Vercel Dashboard o con `vercel link` (no en vercel.json, propiedad deprecada)
 3. **Limpiar .vercel** si hay problemas de configuración local
 4. **Usar --yes** para evitar prompts interactivos
 5. **Verificar dominio custom** después de cada deploy

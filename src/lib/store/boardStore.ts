@@ -219,7 +219,7 @@ interface BoardState {
   unsubscribeElements: (() => void) | null;
 
   loadBoard: (boardId: string, userId: string) => Promise<string | null>;
-  createBoard: (userId: string, boardName?: string, password?: string) => Promise<string>;
+  createBoard: (userId: string, boardName?: string, password?: string, boardType?: 'standard' | 'mini') => Promise<string>;
   addElement: (element: Omit<CanvasElement, 'id'>) => Promise<void>;
   updateElement: (elementId: string, updates: Partial<CanvasElement>) => Promise<void>;
   deleteElement: (elementId: string) => Promise<void>;
@@ -490,7 +490,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
-  createBoard: async (userId: string, boardName: string = "Mi Primer Tablero", password?: string) => {
+  createBoard: async (userId: string, boardName: string = "Mi Primer Tablero", password?: string, boardType?: 'standard' | 'mini') => {
     // Guard: Verificar si ya está cargando
     const currentState = get();
     if (currentState.isLoading) {
@@ -501,7 +501,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
           if (!get().isLoading) {
             clearInterval(checkInterval);
             // Intentar de nuevo después de que termine
-            resolve(get().createBoard(userId, boardName));
+            resolve(get().createBoard(userId, boardName, password, boardType));
           }
         }, 100);
       });
@@ -518,6 +518,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
             userId: userId,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
+            boardType: boardType || 'standard',
         };
 
         // Agregar contraseña si se proporciona

@@ -25,6 +25,7 @@ import { FirestorePermissionError } from "@/firebase/errors";
 type CreateBoardDialogProps = {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
+  onCreated?: (boardId: string) => void;
 };
 
 export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardDialogProps) {
@@ -81,8 +82,7 @@ export default function CreateBoardDialog({ isOpen, onOpenChange }: CreateBoardD
         setBoardName("");
         setIsPasswordProtected(false);
         setPassword("");
-        // The redirection is now handled by the main home page logic
-        // router.push(`/board/${newBoardRef.id}`);
+        onCreated?.(newBoardRef.id);
     } catch (error) {
         console.error("Error creating new board:", error);
         if (user) {

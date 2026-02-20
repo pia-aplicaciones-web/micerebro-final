@@ -430,6 +430,7 @@ export interface Board {
   updatedAt?: Timestamp | Date | FieldValue | null;
   description?: string;
   password?: string; // Contraseña opcional para proteger el tablero
+  boardType?: 'standard' | 'mini';
 }
 
 // Alias para compatibilidad

@@ -1,4 +1,5 @@
 # Comandos de deploy MicerebroAPP_CLEAN
+# Producción: https://micerebroapp.vercel.app/
 
 # 1. Instalar dependencias
 npm install
@@ -12,12 +13,16 @@ npm run build
 # 4. Deploy con Vercel (preview)
 vercel           # o: vercel deploy
 
-# 5. Deploy producción con Vercel
-vercel deploy --prod
+# 5. Deploy producción con Vercel (usar --yes para evitar prompts)
+vercel deploy --prod --yes
 
-# 6. Flujo con git + Vercel
+# 6. Flujo con git + Vercel (producción → https://micerebroapp.vercel.app/)
+
+vercel --prod --yes
 
 git add -A
 git commit -m "Descripción de los cambios"
 git push origin main   # Vercel hará deploy automático si el proyecto está vinculado
 
+# Si "ECANCELED: operation canceled" → ejecutar en Terminal del sistema (fuera de Cursor)
+# y asegurarse de usar: vercel --prod --yes

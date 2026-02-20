@@ -209,7 +209,8 @@ interface ToolsSidebarProps {
     getColorHex: () => string;
     getStrokeWidth: () => number;
   };
- }
+  onCreateMiniBoard?: () => Promise<string | null>;
+}
  
  const ToolsSidebar = forwardRef<HTMLDivElement, ToolsSidebarProps>(({
    elements,
@@ -244,6 +245,7 @@ interface ToolsSidebarProps {
    isGalleryPanelOpen,
    onToggleGalleryPanel,
   drawingMode,
+  onCreateMiniBoard,
  }, ref) => {
   const { toast } = useToast();
   const router = useRouter();
@@ -846,6 +848,15 @@ interface ToolsSidebarProps {
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Tablero</span>
               </DropdownMenuItem>
+              {onCreateMiniBoard && (
+                <DropdownMenuItem onClick={async () => {
+                  const id = await onCreateMiniBoard();
+                  if (id) router.push(`/board/${id}/`);
+                }}>
+                  <LayoutGrid className="mr-2 h-4 w-4" />
+                  <span>+ Tablero Mini</span>
+                </DropdownMenuItem>
+              )}
               {boards.length > 0 && (
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>

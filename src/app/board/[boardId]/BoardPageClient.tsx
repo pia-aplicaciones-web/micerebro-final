@@ -6,7 +6,7 @@ import { Loader2, Menu, X as CloseIcon, Mic, BookCopy } from 'lucide-react';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage, initFirebase, firebaseConfig } from '@/lib/firebase';
+import { getFirebaseStorage, getFirebaseFirestore, initFirebase, firebaseConfig } from '@/lib/firebase';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
 import { useElementManager } from '@/hooks/use-element-manager';
@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 
 // Utilidades y Tipos
 import { uploadFile } from '@/lib/upload-helper';
-import { WithId, CanvasElement, Board } from '@/lib/types';
+import { WithId, CanvasElement, Board, ElementType } from '@/lib/types';
 import html2canvas from 'html2canvas';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,7 @@ import ChangeFormatDialog from '@/components/canvas/change-format-dialog';
 import EditCommentDialog from '@/components/canvas/elements/edit-comment-dialog';
 import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
+import MiniToolsSidebar from '@/components/canvas/mini-tools-sidebar';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
@@ -47,6 +48,7 @@ import MobileMenu from '@/components/canvas/mobile-menu';
 import { useSpeechToText } from '@/hooks/use-speech-to-text';
 import { useDictation } from '@/hooks/use-dictation';
 import { useDrawingMode } from '@/hooks/use-drawing-mode';
+import { useHotkeys } from 'react-hotkeys-hook';
 
 interface BoardPageClientProps {
   boardId: string;
@@ -56,6 +58,8 @@ type AuthUser = {
   uid?: string;
   displayName?: string | null;
 };
+
+const AUTO_MIGRATION_VERSION = 'gallery-migration-v1';
 
 export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const router = useRouter();
@@ -302,6 +306,106 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   const { addElement } = useElementManager(boardId, getViewportCenter, getNextZIndex);
 
+  const COPIED_KEY = 'micerebro-copied-element';
+
+  const handleCopyElement = useCallback((element: WithId<CanvasElement>) => {
+    try {
+      const props = typeof element.properties === 'object' && element.properties !== null ? element.properties : {};
+      const size = (props as any).size || { width: element.width ?? 300, height: element.height ?? 200 };
+      const payload = {
+        type: element.type,
+        content: element.content != null ? JSON.parse(JSON.stringify(element.content)) : undefined,
+        width: typeof size.width === 'number' ? size.width : (parseFloat(String(size.width)) || element.width) ?? 300,
+        height: typeof size.height === 'number' ? size.height : (parseFloat(String(size.height)) || element.height) ?? 200,
+        properties: element.properties != null ? JSON.parse(JSON.stringify(element.properties)) : undefined,
+      };
+      localStorage.setItem(COPIED_KEY, JSON.stringify(payload));
+      toast({ title: 'Copiado', description: 'Elemento copiado. Puedes pegarlo en este u otro tablero.' });
+    } catch (err) {
+      console.error('Error al copiar elemento:', err);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo copiar el elemento.' });
+    }
+  }, [toast]);
+
+  const handlePasteElement = useCallback(async () => {
+    try {
+      const raw = localStorage.getItem(COPIED_KEY);
+      if (!raw) {
+        toast({
+          variant: 'destructive',
+          title: 'Nada para pegar',
+          description: 'Copia primero un cuaderno, lista de tareas u otro elemento compatible.',
+        });
+        return;
+      }
+      const copied = JSON.parse(raw) as { type: ElementType; content?: any; width?: number; height?: number; properties?: any };
+      const size = copied.properties?.size || (copied.width != null && copied.height != null ? { width: copied.width, height: copied.height } : undefined);
+      await addElement(copied.type, {
+        content: copied.content,
+        properties: {
+          ...(copied.properties || {}),
+          ...(size && { size }),
+        },
+      });
+      toast({ title: 'Pegado', description: 'Elemento pegado en el tablero.' });
+    } catch (err: any) {
+      console.error('Error al pegar elemento:', err);
+      toast({ variant: 'destructive', title: 'Error', description: err?.message || 'No se pudo pegar el elemento.' });
+    }
+  }, [addElement, toast]);
+
+  const handleCutElement = useCallback((element: WithId<CanvasElement>) => {
+    handleCopyElement(element);
+    deleteElement(element.id);
+    setSelectedElementIds([]);
+    toast({ title: 'Cortado', description: 'Elemento cortado.' });
+  }, [handleCopyElement, deleteElement, setSelectedElementIds, toast]);
+
+  const shouldIgnoreKeyboard = useCallback(() => {
+    const el = document.activeElement;
+    return el?.closest('textarea') || el?.closest('input:not([readonly])') || (el as HTMLElement)?.isContentEditable;
+  }, []);
+
+  useHotkeys('mod+c', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (selectedElementIds.length === 1) {
+      const el = elements.find((elem) => elem.id === selectedElementIds[0]);
+      if (el) { ev.preventDefault(); handleCopyElement(el); }
+    }
+  }, { enableOnFormTags: false }, [selectedElementIds, elements, handleCopyElement, shouldIgnoreKeyboard]);
+
+  useHotkeys('mod+x', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (selectedElementIds.length === 1) {
+      const el = elements.find((elem) => elem.id === selectedElementIds[0]);
+      if (el) { ev.preventDefault(); handleCutElement(el); }
+    }
+  }, { enableOnFormTags: false }, [selectedElementIds, elements, handleCutElement, shouldIgnoreKeyboard]);
+
+  useHotkeys('mod+v', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (localStorage.getItem(COPIED_KEY)) {
+      ev.preventDefault();
+      handlePasteElement();
+    }
+  }, { enableOnFormTags: false }, [handlePasteElement]);
+
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  }, []);
+
+  const handleCloseContextMenu = useCallback(() => setContextMenu(null), []);
+
+  useEffect(() => {
+    if (!contextMenu) return;
+    const close = () => handleCloseContextMenu();
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [contextMenu, handleCloseContextMenu]);
+
   const handleSaveDictatedText = useCallback(async (text: string, title: string) => {
     if (!text.trim()) {
       toast({ variant: 'destructive', title: 'No hay texto para guardar' });
@@ -343,9 +447,11 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     [elements]
   );
 
+  const lastBoardIdForGalleryRef = useRef<string | null>(null);
   useEffect(() => {
     if (galleryContainer) return;
-
+    if (lastBoardIdForGalleryRef.current === boardId) return;
+    lastBoardIdForGalleryRef.current = boardId;
     void addElement('gallery', {
       content: { title: 'Mi galería', images: [], elementIds: [] },
       properties: {
@@ -357,7 +463,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       zIndex: -1,
       hidden: true,
     });
-  }, [galleryContainer, addElement]);
+  }, [galleryContainer, addElement, boardId]);
 
   // Handler para drag and drop desde galería hacia canvas
   useEffect(() => {
@@ -481,6 +587,209 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const isLoadingRef = useRef(false);
   const currentBoardIdRef = useRef<string | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
+  const hasRunAutoMigrationRef = useRef(false);
+
+  const runAutomaticGalleryMigration = useCallback(async () => {
+    const userId = user?.uid;
+    if (!userId) return;
+    if (typeof window === 'undefined') return;
+
+    const migrationKey = `micerebro:auto-migration:${AUTO_MIGRATION_VERSION}:${userId}`;
+    if (window.localStorage.getItem(migrationKey)) return;
+
+    try {
+      await initFirebase();
+      const db = getFirebaseFirestore();
+      if (!db) return;
+
+      const firestore = await import('firebase/firestore');
+      const {
+        collection,
+        getDocs,
+        writeBatch,
+        doc,
+        serverTimestamp,
+      } = firestore;
+
+      type PendingWrite =
+        | { kind: 'set'; ref: any; data: Record<string, unknown>; merge?: boolean }
+        | { kind: 'update'; ref: any; data: Record<string, unknown> };
+
+      const commitWrites = async (writes: PendingWrite[]) => {
+        if (!writes.length) return;
+        const CHUNK = 400;
+        for (let i = 0; i < writes.length; i += CHUNK) {
+          const batch = writeBatch(db);
+          const chunk = writes.slice(i, i + CHUNK);
+          for (const w of chunk) {
+            if (w.kind === 'set') {
+              batch.set(w.ref, w.data, w.merge ? { merge: true } : undefined);
+            } else {
+              batch.update(w.ref, w.data);
+            }
+          }
+          await batch.commit();
+        }
+      };
+
+      const boardsSnap = await getDocs(collection(db, 'users', userId, 'canvasBoards'));
+
+      let boardsScanned = 0;
+      let boardsChanged = 0;
+      let docsChanged = 0;
+
+      for (const boardDoc of boardsSnap.docs) {
+        boardsScanned += 1;
+        const boardIdToMigrate = boardDoc.id;
+        const elementsColRef = collection(db, 'users', userId, 'canvasBoards', boardIdToMigrate, 'canvasElements');
+        const elementsSnap = await getDocs(elementsColRef);
+
+        const elements = elementsSnap.docs.map((d) => ({
+          id: d.id,
+          ref: d.ref,
+          data: d.data() as Record<string, any>,
+        }));
+        const byId = new Map(elements.map((e) => [e.id, e]));
+        const nowTs = serverTimestamp();
+        const pendingWrites: PendingWrite[] = [];
+
+        const galleries = elements.filter((e) => e.data?.type === 'gallery');
+
+        if (galleries.length === 0) {
+          const newGalleryId = `system-gallery-${boardIdToMigrate}`;
+          const newGalleryRef = doc(db, 'users', userId, 'canvasBoards', boardIdToMigrate, 'canvasElements', newGalleryId);
+          pendingWrites.push({
+            kind: 'set',
+            ref: newGalleryRef,
+            data: {
+              id: newGalleryId,
+              type: 'gallery',
+              x: 0,
+              y: 120,
+              width: 378,
+              height: 800,
+              zIndex: -1,
+              hidden: true,
+              content: { title: 'Mi galería', images: [], elementIds: [] },
+              properties: {
+                size: { width: 378, height: 800 },
+                backgroundColor: '#ffffff',
+                zIndex: -1,
+                isSystemGallery: true,
+              },
+              createdAt: nowTs,
+              updatedAt: nowTs,
+            },
+          });
+        }
+
+        for (const gallery of galleries) {
+          const galleryData = gallery.data || {};
+          const galleryContent =
+            galleryData.content && typeof galleryData.content === 'object'
+              ? galleryData.content
+              : {};
+          const galleryProps =
+            galleryData.properties && typeof galleryData.properties === 'object'
+              ? galleryData.properties
+              : {};
+
+          const currentIds = Array.isArray((galleryContent as any).elementIds)
+            ? ((galleryContent as any).elementIds as unknown[]).filter((id): id is string => typeof id === 'string')
+            : [];
+
+          const hiddenChildren = elements
+            .filter((e) => e.data?.parentId === gallery.id)
+            .map((e) => e.id);
+
+          for (const childId of hiddenChildren) {
+            const child = byId.get(childId);
+            if (child && child.data?.hidden !== true) {
+              pendingWrites.push({
+                kind: 'update',
+                ref: child.ref,
+                data: { hidden: true, updatedAt: nowTs },
+              });
+            }
+          }
+
+          const eligibleCurrentIds = currentIds.filter((id) => {
+            const el = byId.get(id);
+            if (!el || id === gallery.id) return false;
+            return el.data?.parentId === gallery.id || el.data?.hidden === true;
+          });
+          const missingChildren = hiddenChildren.filter((id) => !eligibleCurrentIds.includes(id));
+          const finalIds = [...eligibleCurrentIds, ...missingChildren];
+
+          const nextTitle =
+            typeof (galleryContent as any).title === 'string' && (galleryContent as any).title.trim().length > 0
+              ? (galleryContent as any).title
+              : 'Mi galería';
+          const nextImages = Array.isArray((galleryContent as any).images) ? (galleryContent as any).images : [];
+          const hasSystemFlag = (galleryProps as any).isSystemGallery === true;
+          const idsChanged =
+            finalIds.length !== currentIds.length || finalIds.some((id, idx) => id !== currentIds[idx]);
+
+          if (!hasSystemFlag || idsChanged || nextTitle !== (galleryContent as any).title || !Array.isArray((galleryContent as any).images)) {
+            pendingWrites.push({
+              kind: 'set',
+              ref: gallery.ref,
+              merge: true,
+              data: {
+                content: {
+                  ...(galleryContent as any),
+                  title: nextTitle,
+                  images: nextImages,
+                  elementIds: finalIds,
+                },
+                properties: {
+                  ...(galleryProps as any),
+                  isSystemGallery: true,
+                },
+                updatedAt: nowTs,
+              },
+            });
+          }
+        }
+
+        if (pendingWrites.length > 0) {
+          boardsChanged += 1;
+          docsChanged += pendingWrites.length;
+          await commitWrites(pendingWrites);
+        }
+      }
+
+      window.localStorage.setItem(
+        migrationKey,
+        JSON.stringify({
+          version: AUTO_MIGRATION_VERSION,
+          at: Date.now(),
+          boardsScanned,
+          boardsChanged,
+          docsChanged,
+        })
+      );
+
+      if (boardsChanged > 0) {
+        toast({
+          title: 'Migración automática aplicada',
+          description: `Tableros reparados: ${boardsChanged}/${boardsScanned}. Cambios: ${docsChanged} docs.`,
+        });
+      } else {
+        toast({
+          title: 'Migración automática verificada',
+          description: `Sin cambios pendientes en ${boardsScanned} tableros.`,
+        });
+      }
+    } catch (error) {
+      console.error('❌ Error en migración automática de galerías:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de migración automática',
+        description: 'No se pudieron reparar todos los tableros. Reintenta recargando.',
+      });
+    }
+  }, [user?.uid, toast]);
 
   // Cargar tablero
   useEffect(() => {
@@ -569,6 +878,14 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       // No resetear los refs aquí porque pueden causar problemas
     };
   }, [boardId, user?.uid, authLoading, router]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user?.uid) return;
+    if (hasRunAutoMigrationRef.current) return;
+    hasRunAutoMigrationRef.current = true;
+    void runAutomaticGalleryMigration();
+  }, [authLoading, user?.uid, runAutomaticGalleryMigration]);
   
   // Cleanup al desmontar
   useEffect(() => {
@@ -993,6 +1310,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             onToggleDictation={toggleListening}
             onSaveSelectionBeforeMic={saveSelectionBeforeMic}
             drawingMode={drawingMode}
+            onCreateMiniBoard={user?.uid ? async () => {
+              const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+              return id || null;
+            } : undefined}
           />
         )}
 
@@ -1001,6 +1322,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           ref={canvasRef}
           elements={canvasElements as WithId<CanvasElement>[]}
           board={board as WithId<Board>}
+          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#555556' : undefined}
           selectedElementIds={selectedElementIds}
           onSelectElement={handleSelectElement}
           updateElement={updateElement}
@@ -1046,21 +1368,22 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           />
         )}
 
-        <FormattingToolbar
-          isOpen={isFormatToolbarOpen}
-          onClose={() => setIsFormatToolbarOpen(false)}
-          elements={selectedElement ? [selectedElement] : []}
-          onAddComment={handleAddMarker}
-          onEditComment={handleEditComment}
-          isMobileSheet={isMobile}
-          onLocateElement={handleLocateElement}
-          onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
-          addElement={addElement}
-          isPanningActive={isPanningActive}
-          selectedElement={selectedElement}
-          onUpdateElement={updateElement}
-        />
-
+        {(board as any)?.boardType !== 'mini' && (
+          <FormattingToolbar
+            isOpen={isFormatToolbarOpen}
+            onClose={() => setIsFormatToolbarOpen(false)}
+            elements={selectedElement ? [selectedElement] : []}
+            onAddComment={handleAddMarker}
+            onEditComment={handleEditComment}
+            isMobileSheet={isMobile}
+            onLocateElement={handleLocateElement}
+            onPanToggle={() => { setIsPanningActive(p => !p); canvasRef.current?.activatePanMode(); }}
+            addElement={addElement}
+            isPanningActive={isPanningActive}
+            selectedElement={selectedElement}
+            onUpdateElement={updateElement}
+          />
+        )}
 
         <ChangeFormatDialog
           isOpen={changeFormatDialogOpen}

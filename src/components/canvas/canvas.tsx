@@ -49,6 +49,7 @@ type CanvasProps = {
   interimTranscript?: string;
   onRequestStartDictation?: () => void;
   onStopDictation?: () => void;
+  canvasBackgroundColor?: string;
 };
 
 type CanvasHandle = {
@@ -112,6 +113,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   interimTranscript,
   onRequestStartDictation,
   onStopDictation,
+  canvasBackgroundColor,
 }, ref) => {
   const [scale, setScale] = useState(1);
   const [dragState, setDragState] = useState<DragState | null>(null);
@@ -524,7 +526,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
           dragState?.isPanning && "cursor-grabbing"
         )}
         style={{
-          backgroundColor: '#96e4e6',
+          backgroundColor: canvasBackgroundColor ?? '#96e4e6',
           backgroundImage: `radial-gradient(#ffffff 1px, transparent 0)`,
           backgroundSize: `${20 * scale}px ${20 * scale}px`,
         }}

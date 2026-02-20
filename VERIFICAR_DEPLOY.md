@@ -1,5 +1,7 @@
 # Cómo verificar que los cambios están en producción
 
+**Producción oficial:** https://micerebroapp.vercel.app/
+
 ## ⚠️ Los cambios están en una URL pero NO en micerebroapp.vercel.app
 
 Si ves la app actualizada (Minimizar, Copiar/Pegar, etc.) en:

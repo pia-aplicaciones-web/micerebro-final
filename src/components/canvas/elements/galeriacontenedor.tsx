@@ -50,8 +50,6 @@ export default function GaleriaContenedor({
     const c = content && typeof content === 'object' ? (content as any) : {};
     return {
       ...c,
-      // Regla solicitada: sin título fijo "Mi galeria" en header.
-      title: '',
       elementIds: Array.isArray(c.elementIds) ? c.elementIds : [],
       layout: c.layout === 'two-columns' ? 'two-columns' : 'single',
     };
