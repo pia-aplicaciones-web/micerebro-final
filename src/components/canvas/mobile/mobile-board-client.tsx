@@ -134,7 +134,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   const [isPasswordVerified, setIsPasswordVerified] = useState(true); // Default a true si no hay contraseña
   const [isVerifyingPassword, setIsVerifyingPassword] = useState(false);
 
-  const { boards, handleRenameBoard, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
+  const { boards, handleRenameBoard, handleUpdateBoardBackgroundColor, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
   const canvasRef = useRef<any>(null); // Ref para el Canvas
 
   // Estados de UI
@@ -746,13 +746,20 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
 
           <div className="h-screen w-screen relative overflow-hidden">
             {/* Nombre del tablero en esquina superior izquierda */}
-            <BoardTitleDisplay name={board?.name || ""} onUpdateName={handleRenameBoard} onDeleteBoard={handleDeleteBoard} />
+            <BoardTitleDisplay
+              name={board?.name || ""}
+              backgroundColor={(board as any)?.backgroundColor}
+              onUpdateName={handleRenameBoard}
+              onUpdateBackgroundColor={handleUpdateBoardBackgroundColor}
+              onDeleteBoard={handleDeleteBoard}
+            />
 
             {/* Canvas Principal */}
             <Canvas
               ref={canvasRef}
               elements={canvasElements as WithId<CanvasElement>[]}
               board={board as WithId<Board>}
+              canvasBackgroundColor={(board as any)?.backgroundColor || '#96e4e6'}
               selectedElementIds={[]} // Dejar vacío por ahora, o gestionar selección para móvil
               onSelectElement={handleSelectElement} // Usar el handler migrado
               updateElement={updateElement}

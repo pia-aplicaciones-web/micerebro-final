@@ -152,6 +152,25 @@ export function useBoardState(boardId: string) {
       });
     }
   }, [firestore, user, board, boardId, toast, firestoreFunctions]);
+
+  const handleUpdateBoardBackgroundColor = useCallback(async (newColor: string) => {
+    if (!firestore || !user || !boardId || !firestoreFunctions || !newColor) return;
+    try {
+      const { doc, updateDoc, serverTimestamp } = firestoreFunctions;
+      const boardDocRef = doc(firestore, 'users', user.uid, 'canvasBoards', boardId);
+      await updateDoc(boardDocRef, {
+        backgroundColor: newColor,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (error: any) {
+      console.error('Error actualizando color de fondo del tablero:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.message || 'No se pudo actualizar el color de fondo del tablero.',
+      });
+    }
+  }, [firestore, user, boardId, toast, firestoreFunctions]);
   
   const handleDeleteBoard = useCallback(async () => {
     if (!firestore || !user || !boardId || !firestoreFunctions) return;
@@ -213,5 +232,5 @@ export function useBoardState(boardId: string) {
   }, [firestore, user, boardId, toast]);
 
 
-  return { board, boards, elements, isLoading, handleRenameBoard, handleDeleteBoard, clearCanvas };
+  return { board, boards, elements, isLoading, handleRenameBoard, handleUpdateBoardBackgroundColor, handleDeleteBoard, clearCanvas };
 }

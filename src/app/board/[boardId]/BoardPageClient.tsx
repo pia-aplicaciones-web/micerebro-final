@@ -182,7 +182,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   }, [board, toast]);
 
   // Estado local
-  const { boards, handleRenameBoard, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
+  const { boards, handleRenameBoard, handleUpdateBoardBackgroundColor, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
   const canvasRef = useRef<any>(null);
   
   // Estados de UI
@@ -811,24 +811,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         })
       );
 
-      if (boardsChanged > 0) {
-        toast({
-          title: 'Migración automática aplicada',
-          description: `Tableros reparados: ${boardsChanged}/${boardsScanned}. Cambios: ${docsChanged} docs.`,
-        });
-      } else {
-        toast({
-          title: 'Migración automática verificada',
-          description: `Sin cambios pendientes en ${boardsScanned} tableros.`,
-        });
-      }
+      // Silencioso: no mostrar toasts de migración automática al usuario.
     } catch (error) {
       console.error('❌ Error en migración automática de galerías:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de migración automática',
-        description: 'No se pudieron reparar todos los tableros. Reintenta recargando.',
-      });
+      // Silencioso: evitar cartel repetitivo en UI.
     }
   }, [user?.uid, toast]);
 
@@ -1374,7 +1360,9 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       <div className={isMobile ? 'h-screen w-screen relative overflow-hidden' : 'relative w-full min-h-screen'}>
         <BoardTitleDisplay
           name={board?.name || ''}
+          backgroundColor={(board as any)?.backgroundColor}
           onUpdateName={handleRenameBoard}
+          onUpdateBackgroundColor={handleUpdateBoardBackgroundColor}
           onDeleteBoard={handleDeleteBoard}
         />
 
@@ -1483,7 +1471,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           ref={canvasRef}
           elements={canvasElements as WithId<CanvasElement>[]}
           board={board as WithId<Board>}
-          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#a9e5d3' : undefined}
+          canvasBackgroundColor={(board as any)?.backgroundColor || ((board as any)?.boardType === 'mini' ? '#a9e5d3' : '#96e4e6')}
           selectedElementIds={selectedElementIds}
           onSelectElement={handleSelectElement}
           updateElement={updateElement}

@@ -512,6 +512,7 @@ export interface Board {
   id: string;
   name: string;
   userId?: string;
+  backgroundColor?: string;
   createdAt?: Timestamp | Date | FieldValue | null;
   updatedAt?: Timestamp | Date | FieldValue | null;
   description?: string;

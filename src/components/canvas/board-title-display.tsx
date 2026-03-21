@@ -14,10 +14,13 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import TextToolsMenu from './text-tools-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface BoardTitleDisplayProps {
   name: string;
+  backgroundColor?: string;
   onUpdateName?: (newName: string) => void;
+  onUpdateBackgroundColor?: (newColor: string) => void;
   onDeleteBoard?: () => void;
 }
 
@@ -51,7 +54,18 @@ const handleTextFormat = (command: string, value?: string) => {
   }
 };
 
-export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }: BoardTitleDisplayProps) {
+const BOARD_BG_COLORS = [
+  '#96e4e6',
+  '#a9e5d3',
+  '#d9f99d',
+  '#fef3c7',
+  '#ffd5c2',
+  '#fbcfe8',
+  '#c7d2fe',
+  '#e5e7eb',
+];
+
+export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName, onUpdateBackgroundColor, onDeleteBoard }: BoardTitleDisplayProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(name || '');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -93,6 +107,33 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
   if (isEditing) {
     return (
       <div className="fixed top-2.5 right-3 z-[10005] flex items-center gap-2 pointer-events-auto">
+        {onUpdateBackgroundColor && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Color de fondo del tablero"
+                className="w-4 h-4 rounded-full border border-black/20 shadow-sm hover:scale-105 transition-transform"
+                style={{ backgroundColor: backgroundColor || '#96e4e6' }}
+                title="Color de fondo del tablero"
+              />
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto p-2">
+              <div className="grid grid-cols-4 gap-2">
+                {BOARD_BG_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    className="w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                    style={{ backgroundColor: color }}
+                    onClick={() => onUpdateBackgroundColor(color)}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
         <input
           ref={inputRef}
           value={editValue}
@@ -147,6 +188,33 @@ export default function BoardTitleDisplay({ name, onUpdateName, onDeleteBoard }:
 
   return (
     <div className="fixed top-2.5 right-3 z-[10005] pointer-events-auto flex items-center gap-2">
+      {onUpdateBackgroundColor && (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-label="Color de fondo del tablero"
+              className="w-4 h-4 rounded-full border border-black/20 shadow-sm hover:scale-105 transition-transform"
+              style={{ backgroundColor: backgroundColor || '#96e4e6' }}
+              title="Color de fondo del tablero"
+            />
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-2">
+            <div className="grid grid-cols-4 gap-2">
+              {BOARD_BG_COLORS.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                  style={{ backgroundColor: color }}
+                  onClick={() => onUpdateBackgroundColor(color)}
+                  title={color}
+                />
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
       <h1
         className="text-xs font-medium tracking-tight opacity-70 cursor-pointer hover:opacity-100 transition-opacity max-w-[72vw] truncate"
         style={{
