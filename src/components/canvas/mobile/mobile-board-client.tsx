@@ -71,7 +71,9 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     updateElement,
     deleteElement,
     undo,
+    redo,
     undoStack,
+    redoStack,
     selectedElementIds,
     setSelectedElementIds,
     isLoading: isBoardLoading,
@@ -343,6 +345,64 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   const handleEditElement = useCallback((id: string) => {
     setActivatedElementId(id);
   }, []);
+
+  const getElementZ = useCallback((el: WithId<CanvasElement>) => {
+    const props = typeof el.properties === 'object' && el.properties !== null ? el.properties : {};
+    const propZ = (props as any).zIndex;
+    if (typeof propZ === 'number') return propZ;
+    if (typeof el.zIndex === 'number') return el.zIndex;
+    return 0;
+  }, []);
+
+  const handleBringToFront = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const maxZ = elements.reduce((acc, el) => Math.max(acc, getElementZ(el)), 0);
+    const nextZ = maxZ + 1;
+    const props = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    updateElement(id, {
+      zIndex: nextZ,
+      properties: { ...(props as any), zIndex: nextZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
+
+  const handleSendToBack = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const minZ = elements.reduce((acc, el) => Math.min(acc, getElementZ(el)), getElementZ(target));
+    const nextZ = minZ - 1;
+    const props = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    updateElement(id, {
+      zIndex: nextZ,
+      properties: { ...(props as any), zIndex: nextZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
+
+  const handleMoveBackward = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const targetZ = getElementZ(target);
+    const lowerCandidates = elements
+      .filter((el) => el.id !== id)
+      .map((el) => ({ el, z: getElementZ(el) }))
+      .filter(({ z }) => z < targetZ)
+      .sort((a, b) => b.z - a.z);
+
+    if (lowerCandidates.length === 0) return;
+    const adjacent = lowerCandidates[0];
+
+    const targetProps = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    const adjacentProps = typeof adjacent.el.properties === 'object' && adjacent.el.properties !== null ? adjacent.el.properties : {};
+
+    updateElement(id, {
+      zIndex: adjacent.z,
+      properties: { ...(targetProps as any), zIndex: adjacent.z } as any,
+    });
+    updateElement(adjacent.el.id, {
+      zIndex: targetZ,
+      properties: { ...(adjacentProps as any), zIndex: targetZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
 
   const handleExportToPng = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -707,9 +767,9 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               activatedElementId={activatedElementId}
               isMobile={true}
               setIsDirty={setIsDirty}
-              onBringToFront={() => {}}
-              onSendToBack={() => {}}
-              onMoveBackward={() => {}}
+              onBringToFront={handleBringToFront}
+              onSendToBack={handleSendToBack}
+              onMoveBackward={handleMoveBackward}
               onGoToHome={() => canvasRef.current?.goToHome()}
               onCenterView={() => {}}
               onCenterElementInView={(el) => canvasRef.current?.centerOnElement(el)}
@@ -721,6 +781,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onUngroup={() => {}} // Lógica para desagrupar
               onUndo={undo}
               canUndo={undoStack.length > 0}
+              onRedo={redo}
+              canRedo={redoStack.length > 0}
               user={user}
               storage={storage}
               toast={toast}

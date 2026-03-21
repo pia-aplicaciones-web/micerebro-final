@@ -596,6 +596,11 @@ export default function TransformableElement({
     const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable || target.closest('[contenteditable="true"]');
     const isButton = target.tagName === 'BUTTON' || target.closest('button');
     if (isEditable || isButton) {
+      // REGLA GLOBAL: al pinchar para editar, el elemento debe quedar seleccionado
+      // para subir temporalmente a z=999 durante la edición.
+      if (!isSelected) {
+        onSelectElement(element.id, false);
+      }
       return; // Permitir foco/click nativo sin interferir (ej. botón X para borrar tarea)
     }
     // Solo seleccionar si no estamos en proceso de arrastre
@@ -811,6 +816,9 @@ export default function TransformableElement({
             if (!isEditable && !isEditableParent) {
               // Solo manejar touch si NO es un elemento editable
               handleTouchStart(e);
+            } else if (!isSelected) {
+              // En móvil/touch, seleccionar también al tocar el área editable.
+              onSelectElement(element.id, false);
             }
             // Si es editable, dejar que el evento se propague normalmente
           }}

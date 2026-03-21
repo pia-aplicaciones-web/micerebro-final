@@ -1319,8 +1319,8 @@ interface ToolsSidebarProps {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Tools */}
-          <SidebarButton icon={Wrench} label="Tools" title="Herramientas de formato" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
+          {/* ToolsSidebar */}
+          <SidebarButton icon={Wrench} label="ToolsSidebar" title="ToolsSidebar" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
 
 
           {/* Más */}
