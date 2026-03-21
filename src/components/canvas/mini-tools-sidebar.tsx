@@ -113,19 +113,12 @@ function MiniSidebarButton({
   );
 
   const content = children ? (
-    <Tooltip>
-      <DropdownMenu>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>{btn}</DropdownMenuTrigger>
-        </TooltipTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={6} className="min-w-[160px]">
-          {children}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <TooltipContent side="right" className="bg-white/95 text-slate-700 border border-slate-200 shadow-sm text-[11px] px-2 py-1">
-        {title}
-      </TooltipContent>
-    </Tooltip>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{btn}</DropdownMenuTrigger>
+      <DropdownMenuContent side="right" align="start" sideOffset={6} className="min-w-[160px]">
+        {children}
+      </DropdownMenuContent>
+    </DropdownMenu>
   ) : (
     <Tooltip>
       <TooltipTrigger asChild>{btn}</TooltipTrigger>
