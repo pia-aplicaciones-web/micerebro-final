@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es-419" suppressHydrationWarning>
       <head>
           {/* Favicon principal de la web app */}
           <link rel="icon" href="/favicon.ico" />
@@ -24,7 +24,7 @@ export default function RootLayout({
           <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
           <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&family=Raleway:wght@400;500;600;700&display=swap" rel="stylesheet" />
        </head>
-      <body className='font-body antialiased' style={{ margin: 0, padding: 0 }}>
+      <body className='font-body antialiased' style={{ margin: 0, padding: 0 }} spellCheck={true}>
           <ErrorBoundary>
             <Providers>
               {children}

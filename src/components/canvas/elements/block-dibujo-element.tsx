@@ -5,13 +5,15 @@ import type { CommonElementProps, BlockDibujoContent } from '@/lib/types';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { GripVertical, Trash2, FileImage, MoreVertical, Minus, X, Copy, Camera, Pencil, Plus, ChevronLeft, ChevronRight, Clipboard } from 'lucide-react';
+import { GripVertical, Trash2, FileImage, MoreVertical, Minus, X, Copy, Camera, Pencil, Plus, ChevronLeft, ChevronRight, Clipboard, HelpCircle, Printer } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import {
   DropdownMenu,
@@ -20,6 +22,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+const HELP_ITEMS = [
+  { title: 'Escribir', detail: 'Usa el área principal para escribir o pegar contenido.' },
+  { title: 'Páginas', detail: 'Usa + para crear nuevas páginas y las flechas para navegar.' },
+  { title: 'Copiar', detail: 'Copia texto, imágenes o todo desde el menú ⋮.' },
+  { title: 'Pegar', detail: 'Pega desde otro block con el botón correspondiente en el menú.' },
+  { title: 'Exportar', detail: 'Exporta como PNG o captura desde el menú ⋮.' },
+  { title: 'Minimizar', detail: 'Usa el botón de minimizar para cerrar temporalmente.' },
+];
 
 const COPIED_KEY = 'micerebro-block-dibujo-clipboard';
 const COPIED_IMAGES_KEY = 'micerebro-block-dibujo-images';
@@ -196,6 +208,14 @@ export default function BlockDibujoElement(props: CommonElementProps) {
     if (contentRef.current) {
       contentRef.current.innerHTML = '';
     }
+    await onUpdate(id, {
+      content: {
+        ...typedContent,
+        pages: newPages,
+        currentPage: newPages.length - 1,
+        text: '',
+      },
+    });
   }, [pages, saveCurrentPage]);
 
   // Eliminar página actual
@@ -646,6 +666,52 @@ export default function BlockDibujoElement(props: CommonElementProps) {
     }
   }, [id, typedContent.title]);
 
+  const handleOpenPdfInNewWindow = useCallback(async () => {
+    try {
+      const blockElement = document.querySelector(`[data-element-id="${id}"]`) as HTMLElement;
+      if (!blockElement) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo encontrar el block.' });
+        return;
+      }
+
+      const exportWidth = blockElement.scrollWidth;
+      const exportHeight = blockElement.scrollHeight;
+      const imgData = await toPng(blockElement, {
+        cacheBust: true,
+        pixelRatio: 2,
+        quality: 0.98,
+        backgroundColor: '#FFFFFF',
+        width: exportWidth,
+        height: exportHeight,
+      });
+
+      const pdf = new jsPDF({
+        orientation: exportWidth >= exportHeight ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [exportWidth, exportHeight],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, exportWidth, exportHeight);
+
+      const blob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(blob);
+      const opened = window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        toast({
+          variant: 'destructive',
+          title: 'Ventana bloqueada',
+          description: 'Permite pop-ups para abrir el PDF.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error al crear PDF de block dibujo:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error?.message || 'No se pudo crear el PDF.',
+      });
+    }
+  }, [id, toast]);
+
   // Copiar una página como imagen al portapapeles (pegar en tablero o dentro de un elemento)
   const copyPageAsImage = useCallback(async (pageIndex: number) => {
     if (pageIndex < 0 || pageIndex >= pages.length) return;
@@ -661,9 +727,9 @@ export default function BlockDibujoElement(props: CommonElementProps) {
         width: '500px',
         minHeight: '667px',
         padding: '16px 16px 16px 16px',
-        fontFamily: "'Patrick Hand', 'Kalam', cursive",
-        fontSize: '16px',
-        lineHeight: '24px',
+        fontFamily: "'Kalam', cursive",
+        fontSize: '22px',
+        lineHeight: '30px',
         color: '#000',
         backgroundColor: '#FFFFFF',
         boxSizing: 'border-box',
@@ -798,7 +864,7 @@ export default function BlockDibujoElement(props: CommonElementProps) {
               className="text-xs font-bold leading-tight cursor-text select-none"
               style={{
                 color: '#FFFFFF',
-                fontFamily: "'Patrick Hand', 'Kalam', cursive",
+                fontFamily: "'Kalam', cursive",
               }}
               onInput={(e) => {
                 const newTitle = e.currentTarget.textContent || 'BLOCK DIBUJO';
@@ -812,6 +878,33 @@ export default function BlockDibujoElement(props: CommonElementProps) {
 
         {/* Right: Action icons */}
         <div className="flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-5 w-5 hover:bg-white/10 p-0 min-w-0"
+                title="Ayuda"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                style={{ color: '#FFFFFF' }}
+              >
+                <HelpCircle className="h-3 w-3" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3">
+              <div className="text-sm font-semibold mb-2">Funciones</div>
+              <ul className="space-y-1 text-xs text-muted-foreground">
+                {HELP_ITEMS.map((item) => (
+                  <li key={item.title}>
+                    <span className="font-semibold text-foreground">{item.title}:</span> {item.detail}
+                  </li>
+                ))}
+              </ul>
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="icon"
@@ -829,6 +922,21 @@ export default function BlockDibujoElement(props: CommonElementProps) {
             style={{ color: '#FFFFFF' }}
           >
             <Copy className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 hover:bg-white/10 p-0 min-w-0"
+            title="Crear PDF y abrir"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenPdfInNewWindow();
+            }}
+            style={{ color: '#FFFFFF' }}
+          >
+            <Printer className="h-3 w-3" />
           </Button>
 
           <DropdownMenu>
@@ -889,22 +997,24 @@ export default function BlockDibujoElement(props: CommonElementProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-5 w-5 hover:bg-white/10 p-0 min-w-0"
-            title={isMinimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); toggleMinimize();}}
-            style={{ color: '#FFFFFF' }}
-          >
-            {isMinimized ? <X className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
             className="h-5 w-5 p-0 text-red-400 hover:bg-red-900/20 min-w-0"
             title="Eliminar BLOCK DIBUJO"
             onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDelete();}}
           >
             <Trash2 className="h-3 w-3" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-5 w-5 p-0 text-white/80 hover:bg-white/10 min-w-0"
+            title="Cerrar"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onUpdate(id, { hidden: true });
+            }}
+          >
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -969,7 +1079,7 @@ export default function BlockDibujoElement(props: CommonElementProps) {
                     <div
                       className="w-full h-full p-1 text-[6px] overflow-hidden"
                       style={{
-                        fontFamily: "'Patrick Hand', 'Kalam', cursive",
+                        fontFamily: "'Kalam', cursive",
                         lineHeight: '1.2',
                       }}
                       dangerouslySetInnerHTML={{
@@ -1051,9 +1161,11 @@ export default function BlockDibujoElement(props: CommonElementProps) {
               // Dejamos que el navegador coloque el cursor donde el usuario toca o hace clic
             }}
             onTouchStart={(e) => {
-              e.stopPropagation();
-              if (contentRef.current && !isPreview) {
-                contentRef.current.focus();
+              const target = contentRef.current || (e.currentTarget as HTMLElement);
+              if (!shouldAllowTouchEdit(target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
               }
             }}
             onMouseDown={(e) => {
@@ -1069,9 +1181,9 @@ export default function BlockDibujoElement(props: CommonElementProps) {
               'select-text'
             )}
             style={{
-              fontFamily: "'Patrick Hand', 'Kalam', cursive",
-              fontSize: '16px',
-              lineHeight: '24px',
+              fontFamily: "'Kalam', cursive",
+              fontSize: '22px',
+              lineHeight: '30px',
               color: '#000000',
               overflowY: 'auto', // Scroll vertical
               userSelect: 'text',

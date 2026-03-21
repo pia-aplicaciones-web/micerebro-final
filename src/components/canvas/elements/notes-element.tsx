@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { format } from 'date-fns';
@@ -543,10 +544,10 @@ export default function NotesElement(props: CommonElementProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 hover:bg-black/10 p-0"
+                className="h-5 w-5 hover:bg-black/10 p-0"
                 style={{ color: '#000000' }}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -583,34 +584,23 @@ export default function NotesElement(props: CommonElementProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0"
-            title={isMinimized ? "Maximizar" : "Minimizar"}
-            onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); toggleMinimize();}}
-            style={{ color: '#000000' }}
-          >
-            {isMinimized ? <Grid3x3 className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0 text-red-600 hover:bg-red-50"
+            className="h-5 w-5 hover:bg-black/10 p-0 text-red-600 hover:bg-red-50"
             title="Eliminar apuntes"
             onMouseDown={(e) => {e.preventDefault(); e.stopPropagation(); handleDelete();}}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0 text-gray-600 hover:bg-gray-200"
+            className="h-5 w-5 hover:bg-black/10 p-0 text-gray-600 hover:bg-gray-200"
             title="Cerrar apuntes"
             onClick={(e) => {
               e.stopPropagation();
               onUpdate(id, { hidden: true });
             }}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -626,10 +616,11 @@ export default function NotesElement(props: CommonElementProps) {
             // Dejamos que el navegador coloque el cursor donde el usuario toca o hace clic
           }}
           onTouchStart={(e) => {
-            // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
-            e.stopPropagation(); // Evitar que el evento suba al contenedor
-            if (contentRef.current && !isPreview) {
-              contentRef.current.focus();
+            const target = contentRef.current || (e.currentTarget as HTMLElement);
+            if (!shouldAllowTouchEdit(target)) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
             }
           }}
           onMouseDown={(e) => {

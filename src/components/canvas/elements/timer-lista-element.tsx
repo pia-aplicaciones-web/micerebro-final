@@ -62,7 +62,9 @@ function speakTimeRemaining(minutes: number) {
   const utterance = new SpeechSynthesisUtterance(`${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`);
   // Español de Latinoamérica, acento Chile
   utterance.lang = 'es-CL';
-  const voice = getDefaultSpeechVoice();
+  const voices = window.speechSynthesis.getVoices();
+  const paulinaVoice = voices.find((v) => v.name.toLowerCase().includes('paulina'));
+  const voice = paulinaVoice || getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
@@ -76,11 +78,31 @@ function speakFinishedMessage() {
   const utterance = new SpeechSynthesisUtterance('Bien! Terminaste la lista.');
   // Español de Latinoamérica, acento Chile
   utterance.lang = 'es-CL';
-  const voice = getDefaultSpeechVoice();
+  const voices = window.speechSynthesis.getVoices();
+  const paulinaVoice = voices.find((v) => v.name.toLowerCase().includes('paulina'));
+  const voice = paulinaVoice || getDefaultSpeechVoice();
   if (voice) utterance.voice = voice;
   utterance.rate = 1.0;
   utterance.pitch = 1.0;
   utterance.volume = 0.8;
+  window.speechSynthesis.speak(utterance);
+}
+
+function speakTaskText(taskText: string) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  const clean = (taskText || '').trim();
+  if (!clean) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(`Tarea: ${clean}`);
+  // Español de Latinoamérica, acento Chile
+  utterance.lang = 'es-CL';
+  const voices = window.speechSynthesis.getVoices();
+  const paulinaVoice = voices.find((v) => v.name.toLowerCase().includes('paulina'));
+  const voice = paulinaVoice || getDefaultSpeechVoice();
+  if (voice) utterance.voice = voice;
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 0.9;
   window.speechSynthesis.speak(utterance);
 }
 
@@ -143,6 +165,7 @@ export default function TimerListaElement(props: CommonElementProps) {
   const lastAppliedTimerRef = useRef<{ target: string; minutes: number } | null>(null);
   const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const taskInputRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const lastAnnouncedTaskIdRef = useRef<string | null>(null);
 
   contentRef.current = timerListContent;
   onUpdateRef.current = onUpdate;
@@ -208,6 +231,16 @@ export default function TimerListaElement(props: CommonElementProps) {
     };
     // Solo dependencia de runningTaskIndex; toast no se usa en el interval (evita re-ejecuciones si toast cambia)
   }, [runningTaskIndex]);
+
+  // Voz automática: cuando inicia una tarea (play o siguiente), leer su texto.
+  useEffect(() => {
+    if (runningTaskIndex === null || runningTaskIndex < 0) return;
+    const current = items[runningTaskIndex];
+    if (!current) return;
+    if (lastAnnouncedTaskIdRef.current === current.id) return;
+    lastAnnouncedTaskIdRef.current = current.id;
+    speakTaskText(current.text || '');
+  }, [runningTaskIndex, items]);
 
   // Activar micrófono automáticamente cuando está esperando "listo"
   useEffect(() => {
@@ -299,6 +332,7 @@ export default function TimerListaElement(props: CommonElementProps) {
     }
     setRunningTaskIndex(null);
     setWaitingForListoIndex(null);
+    lastAnnouncedTaskIdRef.current = null;
   }, []);
 
   const handleToggleComplete = useCallback(
@@ -434,7 +468,7 @@ export default function TimerListaElement(props: CommonElementProps) {
         'relative flex flex-col rounded-xl overflow-visible shadow-lg border touch-manipulation',
         isSelected ? 'ring-2 ring-emerald-500 border-emerald-500' : 'border-slate-200'
       )}
-      style={{ width: width ?? 320, minHeight: height ?? 280 }}
+      style={{ width: width ?? 320, height: '100%', minHeight: 0 }}
       onClick={(e) => {
         e.stopPropagation();
         onSelectElement?.(id, false);

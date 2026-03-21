@@ -343,6 +343,9 @@ export default function ContainerElement(
     if (element.type === 'image') {
       return 'Imagen';
     }
+    if (element.type === 'mis-imagenes') {
+      return 'Mis imágenes';
+    }
     return element.type.charAt(0).toUpperCase() + element.type.slice(1);
   };
 
@@ -358,6 +361,9 @@ export default function ContainerElement(
     }
     if (typeStr === 'block-dibujo') {
       return { simple: true, label: 'Block dibujo', bg: '#fed7aa' };
+    }
+    if (typeStr === 'block-dibujo-2') {
+      return { simple: true, label: 'Block dibujo 2', bg: '#e2e8f0' };
     }
     return { simple: false };
   };
@@ -399,6 +405,30 @@ export default function ContainerElement(
         );
       }
       return null;
+    }
+
+    if (element.type === 'mis-imagenes') {
+      const carouselContent = element.content as any;
+      const first = Array.isArray(carouselContent?.images) ? carouselContent.images[0] : null;
+      if (first?.url) {
+        return (
+          <div className="absolute inset-0 w-full h-full rounded overflow-hidden">
+            <img
+              src={first.url}
+              alt="Preview"
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+          </div>
+        );
+      }
+      return (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center text-xs text-slate-400">
+          Mis imágenes
+        </div>
+      );
     }
 
     if (element.type === 'sticky') {
@@ -538,7 +568,8 @@ export default function ContainerElement(
       (element.type as any) === 'libreta' ||
       (element.type as any) === 'mini' ||
       (element.type as any) === 'dictado' ||
-      (element.type as any) === 'block-dibujo'
+      (element.type as any) === 'block-dibujo' ||
+      (element.type as any) === 'block-dibujo-2'
     ) {
       const c = (element.content || {}) as any;
       const typeStr = String((element as any).type);
@@ -550,9 +581,11 @@ export default function ContainerElement(
             ? 'Libreta'
             : typeStr === 'mini'
               ? 'Mini'
-              : typeStr === 'dictado'
-                ? 'iPhone'
-                : 'Block Dibujo');
+                : typeStr === 'dictado'
+                  ? 'iPhone'
+                : typeStr === 'block-dibujo-2'
+                  ? 'Dibujar'
+                  : 'Block Dibujo');
 
       let raw =
         c?.text ||
@@ -567,6 +600,7 @@ export default function ContainerElement(
         mini: '#f0f9ff',
         dictado: '#f3f4f6',
         'block-dibujo': '#fff7ed',
+        'block-dibujo-2': '#f8fafc',
       };
       const bg = bgByType[typeStr] || '#ffffff';
 

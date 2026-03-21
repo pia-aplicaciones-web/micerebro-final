@@ -101,16 +101,6 @@ export default function ImageElement(props: CommonElementProps) {
             `cursor-grab active:cursor-grabbing`
             )}
             style={{ transform: `rotate(${rotation || 0}deg)` }}
-            draggable
-            onDragStart={(e) => {
-              e.dataTransfer.setData('application/element-id', id);
-              e.dataTransfer.setData('application/canvas-image', JSON.stringify({
-                id,
-                url: imageUrl,
-                filename: label || 'imagen'
-              }));
-              e.dataTransfer.effectAllowed = 'copy';
-            }}
         >
           <div className="relative w-full h-full bg-card">
             <Image
@@ -132,6 +122,7 @@ export default function ImageElement(props: CommonElementProps) {
             <div
               ref={labelRef}
               contentEditable={isEditingLabel}
+              data-dictation-target="true"
               suppressContentEditableWarning
               onBlur={handleLabelBlur}
               onInput={handleLabelChange}

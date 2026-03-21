@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import html2canvas from 'html2canvas';
 import {
   DropdownMenu,
@@ -422,8 +423,12 @@ export default function MiniElement(props: CommonElementProps) {
                 }
               }}
               onTouchStart={(e) => {
-                // En móvil, establecer foco y cursor al tocar el título
-                e.stopPropagation(); // Evitar que el evento suba al contenedor
+                const target = e.currentTarget as HTMLElement;
+                if (!shouldAllowTouchEdit(target)) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
+                }
                 if (!isPreview && (!typedContent.password || isUnlockedForEditing)) {
                   e.currentTarget.focus();
                   requestAnimationFrame(() => {
@@ -478,16 +483,6 @@ export default function MiniElement(props: CommonElementProps) {
             variant="ghost"
             size="icon"
             className="h-5 w-5 hover:bg-black/10 p-0"
-            title={minimized ? 'Maximizar' : 'Minimizar'}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
-            style={{ color: '#000000' }}
-          >
-            {minimized ? <Maximize className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-5 w-5 hover:bg-black/10 p-0"
             title="Insertar fecha"
             onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleInsertDate(); }}
             style={{ color: '#000000' }}
@@ -519,7 +514,7 @@ export default function MiniElement(props: CommonElementProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0 ml-1"
+            className="h-5 w-5 hover:bg-black/10 p-0 ml-1"
             title="Cerrar mini"
             onClick={(e) => {
               e.stopPropagation();
@@ -527,7 +522,7 @@ export default function MiniElement(props: CommonElementProps) {
             }}
             style={{ color: '#000000' }}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -543,10 +538,11 @@ export default function MiniElement(props: CommonElementProps) {
             // Dejamos que el navegador coloque el cursor donde el usuario toca o hace clic
           }}
           onTouchStart={(e) => {
-            // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
-            e.stopPropagation(); // Evitar que el evento suba al contenedor
-            if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
-              contentRef.current.focus();
+            const target = contentRef.current || (e.currentTarget as HTMLElement);
+            if (!shouldAllowTouchEdit(target)) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
             }
           }}
           onMouseDown={(e) => {

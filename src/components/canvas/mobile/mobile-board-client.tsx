@@ -6,7 +6,7 @@ import { Loader2, Menu, X as CloseIcon } from 'lucide-react';
 
 // Hooks y Contextos
 import { useAuthContext } from '@/context/AuthContext';
-import { getFirebaseStorage, getFirebaseFirestore, firebaseConfig } from '@/lib/firebase';
+import { getFirebaseStorage, getFirebaseFirestore } from '@/lib/firebase';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { useBoardStore } from '@/lib/store/boardStore';
 import { useBoardState } from '@/hooks/use-board-state';
@@ -22,7 +22,7 @@ import html2canvas from 'html2canvas';
 
 // Componentes del Canvas
 import Canvas from '@/components/canvas/canvas';
-import MobileMenu from '@/components/canvas/mobile-menu';
+import MiniToolsSidebar from '@/components/canvas/mini-tools-sidebar';
 import { Button } from '@/components/ui/button';
 import BoardTitleDisplay from '@/components/canvas/board-title-display';
 import FormattingToolbar from '@/components/canvas/formatting-toolbar';
@@ -35,6 +35,7 @@ import EditCommentDialog from '@/components/canvas/elements/edit-comment-dialog'
 import RenameBoardDialog from '@/components/canvas/rename-board-dialog';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
+import AddUrlDocDialog from '@/components/canvas/add-url-doc-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
 
 interface MobileBoardClientProps {
@@ -69,6 +70,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     createBoard,
     updateElement,
     deleteElement,
+    undo,
+    undoStack,
     selectedElementIds,
     setSelectedElementIds,
     isLoading: isBoardLoading,
@@ -135,6 +138,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
   // Estados de UI
   const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
+  const [isUrlDocDialogOpen, setIsUrlDocDialogOpen] = useState(false);
   const [shouldOpenCropAfterUrl, setShouldOpenCropAfterUrl] = useState(false);
   const [changeFormatDialogOpen, setChangeFormatDialogOpen] = useState(false);
   const [isPanningActive, setIsPanningActive] = useState(false);
@@ -328,13 +332,17 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
     setIsEditCommentDialogOpen(true);
   }, []);
 
+  const handleOpenElement = useCallback((id: string) => {
+    const el = elements.find((e) => e.id === id);
+    if (!el) return;
+    updateElement(id, { hidden: false, minimized: false } as any);
+    handleSelectElement(id);
+    canvasRef.current?.centerOnElement(el);
+  }, [elements, updateElement, handleSelectElement]);
+
   const handleEditElement = useCallback((id: string) => {
-    const el = elements.find(e => e.id === id);
-    if (el) {
-      setActivatedElementId(id);
-      canvasRef.current?.centerOnElement(el);
-    }
-  }, [elements]);
+    setActivatedElementId(id);
+  }, []);
 
   const handleExportToPng = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -652,50 +660,29 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
             </Button>
           </div>
 
-          {/* MobileMenu (flotante, fuera del overflow) */}
-          <MobileMenu
-            isOpen={isMobileMenuOpen}
-            onClose={handleToggleMobileMenu}
-            elements={elements || []}
-            boards={boards || []}
-            boardId={boardId}
-            user={user}
-            isListening={isListening}
-            onToggleDictation={toggleListening}
-            onSaveSelectionBeforeMic={saveSelectionBeforeMic}
-            onOpenNotepad={handleOpenNotepad}
-            onLocateElement={handleLocateElement}
-            addElement={addElement}
-            onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
-            onDeleteBoard={handleDeleteBoard}
-            onUploadImage={handleUploadImage}
-            onAddImageFromUrl={handleAddImageFromUrl}
-            onCropImage={handleCropImage}
-            onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-            onExportBoardToPng={handleExportToPng}
-            onDeleteAllUserImages={async () => {
-              if (!user) {
-                toast({
-                  variant: 'destructive',
-                  title: 'Error',
-                  description: 'Usuario no autenticado'
-                });
-                return;
-              }
-              const firebaseUrl = `https://console.firebase.google.com/project/${firebaseConfig.projectId || 'micerebroapp'}/storage/${firebaseConfig.storageBucket || 'micerebroapp.firebasestorage.app'}/files`;
-              navigator.clipboard?.writeText(firebaseUrl).then(() => {
-                toast({
-                  title: 'URL copiada al portapapeles',
-                  description: firebaseUrl
-                });
-              }).catch(() => {
-                toast({
-                  title: 'URL (cópiala manualmente)',
-                  description: firebaseUrl
-                });
-              });
-            }}
-          />
+          {isMobileMenuOpen && (
+            <MiniToolsSidebar
+              elements={elements || []}
+              boards={boards || []}
+              boardId={boardId}
+              user={user}
+              addElement={addElement}
+              onLocateElement={handleLocateElement}
+              onOpenElement={handleOpenElement}
+              selectedElementId={selectedElement?.id || null}
+              onDeleteElement={deleteElement}
+              onAddImageFromUrl={handleAddImageFromUrl}
+              isListening={isListening}
+              onToggleDictation={toggleListening}
+              onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+              onExportBoardToPng={handleExportToPng}
+              onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
+              onCreateMiniBoard={user?.uid ? async () => {
+                const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+                return id || null;
+              } : undefined}
+            />
+          )}
 
           <div className="h-screen w-screen relative overflow-hidden">
             {/* Nombre del tablero en esquina superior izquierda */}
@@ -732,6 +719,8 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onEditComment={handleEditComment} // Usar el handler migrado
               onDuplicateElement={() => {}} // Lógica para duplicar
               onUngroup={() => {}} // Lógica para desagrupar
+              onUndo={undo}
+              canUndo={undoStack.length > 0}
               user={user}
               storage={storage}
               toast={toast}
@@ -781,6 +770,14 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               onClose={handleCropCancel}
               imageSrc={imageToCrop}
               onCropComplete={handleCropComplete}
+            />
+
+            <AddUrlDocDialog
+              isOpen={isUrlDocDialogOpen}
+              onOpenChange={setIsUrlDocDialogOpen}
+              onAdd={(url, title) => {
+                addElement('url-doc', { content: { url, title } });
+              }}
             />
 
             {selectedCommentForEdit && (

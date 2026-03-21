@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { CommonElementProps } from '@/lib/types'; // <-- IMPORTADO
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import ContentEditable, { ContentEditableEvent } from 'react-contenteditable';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
@@ -125,24 +126,11 @@ export default function TextElement(props: CommonElementProps) {
           }
         }}
         onTouchStart={(e) => {
-          // En móvil, establecer foco y cursor al tocar
-          e.stopPropagation(); // Evitar que el evento suba al contenedor
-          if (isEditing && editorRef.current) {
-            editorRef.current.focus();
-            requestAnimationFrame(() => {
-              setTimeout(() => {
-                const selection = window.getSelection();
-                if (selection && selection.rangeCount === 0) {
-                  const range = document.createRange();
-                  if (editorRef.current) {
-                    range.selectNodeContents(editorRef.current);
-                    range.collapse(false);
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-                  }
-                }
-              }, 100);
-            });
+          const target = e.currentTarget as HTMLElement;
+          if (!shouldAllowTouchEdit(target)) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
           }
         }}
         className={cn(

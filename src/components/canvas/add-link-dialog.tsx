@@ -17,6 +17,7 @@ type AddLinkDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSaved?: () => void;
+  boardId?: string;
 };
 
 function isValidUrl(url: string): boolean {
@@ -30,7 +31,7 @@ function isValidUrl(url: string): boolean {
   }
 }
 
-export function AddLinkDialog({ open, onOpenChange, onSaved }: AddLinkDialogProps) {
+export function AddLinkDialog({ open, onOpenChange, onSaved, boardId }: AddLinkDialogProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
 
@@ -45,7 +46,7 @@ export function AddLinkDialog({ open, onOpenChange, onSaved }: AddLinkDialogProp
     const trimmedUrl = url.trim();
     if (!trimmedUrl) return;
     if (!isValidUrl(trimmedUrl)) return;
-    addSavedLink(name.trim() || 'Sin nombre', trimmedUrl);
+    addSavedLink(name.trim() || 'Sin nombre', trimmedUrl, boardId);
     onSaved?.();
     onOpenChange(false);
   };

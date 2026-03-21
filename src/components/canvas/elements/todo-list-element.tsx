@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import html2canvas from 'html2canvas';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { toPng } from 'html-to-image';
+import jsPDF from 'jspdf';
 import type { CommonElementProps, TodoItem, TodoContent } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,9 +27,13 @@ import {
   MoreVertical,
   Download,
   Copy,
+  ClipboardPaste,
   X,
   FileText,
   Camera,
+  Columns2,
+  Trash2,
+  Printer,
 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { cn } from '@/lib/utils';
@@ -37,6 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
+import { useDictationBinding } from '@/hooks/use-dictation-binding';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
 const EXTENDED_PALETTES = {
@@ -88,6 +93,71 @@ const EXTENDED_PALETTES = {
   emeraldVeryLight: { bg: '#ECFDF5', text: '#064E3B', name: 'Esmeralda Muy Claro' },
 };
 
+const normalizeColumnsFromContent = (input: TodoContent, elementId: string) => {
+  const legacyItems = Array.isArray(input.items) ? input.items : [];
+  let columns = Array.isArray(input.columns)
+    ? input.columns.map((col, idx) => ({
+        id: col.id || `todo-${elementId}-col-${idx + 1}`,
+        title: typeof col.title === 'string' ? col.title : '',
+        items: Array.isArray(col.items) ? col.items : [],
+      }))
+    : [];
+
+  if (columns.length === 0) {
+    columns = [{ id: `todo-${elementId}-col-1`, title: '', items: legacyItems }];
+  }
+
+  let layoutColumns: 1 | 2 | 3 | 4 =
+    input.layoutColumns === 2 || input.layoutColumns === 3 || input.layoutColumns === 4
+      ? input.layoutColumns
+      : columns.length === 4
+        ? 4
+      : columns.length === 3
+        ? 3
+      : columns.length === 2
+        ? 2
+          : 1;
+
+  if (columns.length < layoutColumns) {
+    const next = [...columns];
+    for (let i = columns.length; i < layoutColumns; i += 1) {
+      next.push({ id: `todo-${elementId}-col-${i + 1}`, title: '', items: [] });
+    }
+    columns = next;
+  }
+
+  if (columns.length > layoutColumns) {
+    const kept = columns.slice(0, layoutColumns);
+    const extra = columns.slice(layoutColumns);
+    const mergedItems = extra.flatMap((c) => c.items || []);
+    kept[kept.length - 1] = {
+      ...kept[kept.length - 1],
+      items: [...(kept[kept.length - 1].items || []), ...mergedItems],
+    };
+    columns = kept;
+  }
+
+  return { columns, layoutColumns };
+};
+
+const buildContentFromColumns = (base: TodoContent, nextColumns: { id: string; title?: string; items: TodoItem[] }[], nextLayout: 1 | 2 | 3 | 4) => {
+  const nextFlat = nextColumns.flatMap((c) => c.items || []);
+  return {
+    ...base,
+    columns: nextColumns,
+    items: nextFlat,
+    layoutColumns: nextLayout,
+    layout: nextLayout === 1 ? 'single' : 'two-columns',
+  } as TodoContent;
+};
+
+const LAYOUT_MIN_WIDTHS: Record<1 | 2 | 3 | 4, number> = {
+  1: 300,
+  2: 552,
+  3: 700,
+  4: 848,
+};
+
 export default function TodoListElement(props: CommonElementProps) {
   const {
     id,
@@ -113,12 +183,24 @@ export default function TodoListElement(props: CommonElementProps) {
 
   // Hook para pegar texto plano
   const { handlePaste } = usePastePlainText();
+  const { bindDictationTarget } = useDictationBinding({
+    isListening,
+    finalTranscript,
+    interimTranscript,
+    isSelected: Boolean(isSelected),
+  });
 
   const [newItemText, setNewItemText] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const [isLabelPopoverOpen, setIsLabelPopoverOpen] = useState(false);
   const titleRef = useRef<HTMLInputElement>(null);
   const newItemRef = useRef<HTMLTextAreaElement>(null);
+  const propertiesRef = useRef(properties);
+  const lastAutoHeightRef = useRef<number | null>(null);
+  const manualResizeRef = useRef(false);
+  useEffect(() => {
+    propertiesRef.current = properties;
+  }, [properties]);
 
   const safeProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const backgroundColor = safeProperties.backgroundColor || '#ffffff';
@@ -127,8 +209,29 @@ export default function TodoListElement(props: CommonElementProps) {
   // Type guard para TodoContent
   const todoContent: TodoContent = (typeof content === 'object' && content !== null && 'items' in content)
     ? content as TodoContent
-    : { title: 'Lista de Tareas', items: [] };
-  const { title, items } = todoContent;
+    : { title: 'Lista de Tareas', items: [], layout: 'single' };
+
+  const normalized = useMemo(() => normalizeColumnsFromContent(todoContent, id), [todoContent, id]);
+
+  const { columns, layoutColumns } = normalized;
+  const { title } = todoContent;
+  const flatItems = useMemo(() => columns.flatMap((c) => c.items || []), [columns]);
+
+  const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!columns.length) return;
+    if (!activeColumnId || !columns.some((c) => c.id === activeColumnId)) {
+      setActiveColumnId(columns[0].id);
+    }
+  }, [columns, activeColumnId]);
+
+  const activeColumn = useMemo(
+    () => columns.find((c) => c.id === activeColumnId) || columns[0],
+    [columns, activeColumnId]
+  );
+  const activeColumnLabel = activeColumn
+    ? activeColumn.title?.trim() || `Columna ${columns.indexOf(activeColumn) + 1}`
+    : 'Columna 1';
 
   // Hook de autoguardado robusto para la lista de tareas
   const { saveStatus, handleChange: handleAutoSaveChange } = useAutoSave({
@@ -148,23 +251,66 @@ export default function TodoListElement(props: CommonElementProps) {
   });
 
   const COPIED_KEY = 'micerebro-copied-element';
+  const TODO_COLUMN_CLIPBOARD_KEY = 'micerebro-todo-column-clipboard';
 
   // Dictation binding para el input de nueva tarea
 
-  const handleToggleItem = (index: number) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], completed: !newItems[index].completed };
-    const updatedContent: TodoContent = { ...todoContent, items: newItems };
-    onUpdate(id, { content: updatedContent });
+  const applyColumnsUpdate = (nextColumns: { id: string; title?: string; items: TodoItem[] }[], nextLayoutColumns = layoutColumns) => {
+    const updatedContent = buildContentFromColumns(todoContent, nextColumns, nextLayoutColumns);
+    const minRequiredWidth = LAYOUT_MIN_WIDTHS[nextLayoutColumns];
+    const propsSize = (safeProperties as any).size || {};
+    const currentWidth =
+      typeof propsSize.width === 'number'
+        ? propsSize.width
+        : typeof width === 'number'
+          ? width
+          : parseFloat(String(propsSize.width || 0)) || 0;
+
+    if (currentWidth < minRequiredWidth) {
+      const currentHeight =
+        typeof propsSize.height === 'number'
+          ? propsSize.height
+          : typeof height === 'number'
+            ? height
+            : parseFloat(String(propsSize.height || 0)) || 150;
+
+      onUpdate(id, {
+        content: updatedContent,
+        width: minRequiredWidth,
+        height: currentHeight,
+        properties: {
+          ...safeProperties,
+          size: {
+            ...(propsSize || {}),
+            width: minRequiredWidth,
+            height: currentHeight,
+          },
+        },
+      });
+    } else {
+      onUpdate(id, { content: updatedContent });
+    }
     handleAutoSaveChange(); // Programar auto-save
   };
 
-  const handleItemTextChange = (index: number, text: string) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], text };
-    const updatedContent: TodoContent = { ...todoContent, items: newItems };
-    onUpdate(id, { content: updatedContent });
-    handleAutoSaveChange(); // Programar auto-save
+  const handleToggleItem = (colIndex: number, index: number) => {
+    const nextColumns = columns.map((col, cIdx) => {
+      if (cIdx !== colIndex) return col;
+      const nextItems = [...(col.items || [])];
+      nextItems[index] = { ...nextItems[index], completed: !nextItems[index].completed };
+      return { ...col, items: nextItems };
+    });
+    applyColumnsUpdate(nextColumns);
+  };
+
+  const handleItemTextChange = (colIndex: number, index: number, text: string) => {
+    const nextColumns = columns.map((col, cIdx) => {
+      if (cIdx !== colIndex) return col;
+      const nextItems = [...(col.items || [])];
+      nextItems[index] = { ...nextItems[index], text };
+      return { ...col, items: nextItems };
+    });
+    applyColumnsUpdate(nextColumns);
   };
 
   const handleAddItem = () => {
@@ -172,23 +318,30 @@ export default function TodoListElement(props: CommonElementProps) {
     const currentText = newItemRef.current?.value || newItemText || '';
 
     if (currentText.trim() !== '') {
-      const newItems = [...items, { id: `item-${Date.now()}`, text: currentText.trim(), completed: false }];
-      const updatedContent: TodoContent = { ...todoContent, items: newItems };
-      onUpdate(id, { content: updatedContent });
+      const targetColIndex = Math.max(0, columns.findIndex((c) => c.id === activeColumnId));
+      const nextColumns = columns.map((col, idx) => {
+        if (idx !== targetColIndex) return col;
+        return {
+          ...col,
+          items: [...(col.items || []), { id: `item-${Date.now()}`, text: currentText.trim(), completed: false }],
+        };
+      });
+      applyColumnsUpdate(nextColumns);
       setNewItemText('');
       // Limpiar el textarea también
       if (newItemRef.current) {
         newItemRef.current.value = '';
       }
-      handleAutoSaveChange(); // Programar auto-save
     }
   };
 
-  const handleDeleteItem = (index: number) => {
-    const newItems = items.filter((_: TodoItem, i: number) => i !== index);
-    const updatedContent: TodoContent = { ...todoContent, items: newItems };
-    onUpdate(id, { content: updatedContent });
-    handleAutoSaveChange(); // Programar auto-save
+  const handleDeleteItem = (colIndex: number, index: number) => {
+    const nextColumns = columns.map((col, cIdx) => {
+      if (cIdx !== colIndex) return col;
+      const nextItems = (col.items || []).filter((_: TodoItem, i: number) => i !== index);
+      return { ...col, items: nextItems };
+    });
+    applyColumnsUpdate(nextColumns);
   };
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -201,6 +354,107 @@ export default function TodoListElement(props: CommonElementProps) {
     const updatedContent: TodoContent = { ...todoContent, label: value };
     onUpdate(id, { content: updatedContent });
     handleAutoSaveChange(); // Programar auto-save
+  };
+
+  const handleColumnTitleChange = (colIndex: number, value: string) => {
+    const nextColumns = columns.map((col, idx) => {
+      if (idx !== colIndex) return col;
+      return { ...col, title: value };
+    });
+    applyColumnsUpdate(nextColumns);
+  };
+
+  const handleDeleteColumn = (colIndex: number) => {
+    if (columns.length <= 1) {
+      toast({ title: 'No se puede eliminar', description: 'La lista debe tener al menos una columna.' });
+      return;
+    }
+
+    const removed = columns[colIndex];
+    const remaining = columns.filter((_, idx) => idx !== colIndex);
+    const targetIndex = colIndex > 0 ? colIndex - 1 : 0;
+
+    if (removed?.items?.length) {
+      const target = remaining[targetIndex];
+      remaining[targetIndex] = {
+        ...target,
+        items: [...(target.items || []), ...removed.items],
+      };
+    }
+
+    const nextLayout = Math.max(1, Math.min(4, remaining.length)) as 1 | 2 | 3 | 4;
+    applyColumnsUpdate(remaining, nextLayout);
+    setActiveColumnId(remaining[targetIndex]?.id || remaining[0]?.id || null);
+  };
+
+  const handleCopyColumn = (colIndex: number) => {
+    const column = columns[colIndex];
+    if (!column) return;
+    const payload = {
+      title: column.title || '',
+      items: (column.items || []).map((item) => ({
+        text: item.text,
+        completed: item.completed,
+      })),
+    };
+    try {
+      localStorage.setItem(TODO_COLUMN_CLIPBOARD_KEY, JSON.stringify(payload));
+      toast({ title: 'Columna copiada', description: 'Puedes pegarla en otra lista.' });
+    } catch (error) {
+      console.error('Error al copiar columna:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo copiar la columna.' });
+    }
+  };
+
+  const handlePasteColumn = (colIndex: number) => {
+    try {
+      const raw = localStorage.getItem(TODO_COLUMN_CLIPBOARD_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { title?: string; items?: Array<{ text: string; completed?: boolean }> };
+      if (!parsed) return;
+      const nextColumns = columns.map((col, idx) => {
+        if (idx !== colIndex) return col;
+        return {
+          ...col,
+          title: parsed.title || col.title || '',
+          items: (parsed.items || []).map((item) => ({
+            id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            text: item.text || '',
+            completed: !!item.completed,
+          })),
+        };
+      });
+      applyColumnsUpdate(nextColumns);
+      toast({ title: 'Columna pegada', description: 'La columna fue clonada.' });
+    } catch (error) {
+      console.error('Error al pegar columna:', error);
+      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo pegar la columna.' });
+    }
+  };
+
+  const handleLayoutToggle = () => {
+    const nextColumnsCount: 1 | 2 | 3 | 4 =
+      layoutColumns === 1 ? 2
+      : layoutColumns === 2 ? 3
+      : layoutColumns === 3 ? 4
+      : 1;
+    let nextColumns = [...columns];
+    if (nextColumns.length < nextColumnsCount) {
+      for (let i = nextColumns.length; i < nextColumnsCount; i += 1) {
+        nextColumns.push({ id: `todo-${id}-col-${i + 1}`, title: '', items: [] });
+      }
+    }
+    if (nextColumns.length > nextColumnsCount) {
+      const kept = nextColumns.slice(0, nextColumnsCount);
+      const extra = nextColumns.slice(nextColumnsCount);
+      const mergedItems = extra.flatMap((c) => c.items || []);
+      kept[kept.length - 1] = {
+        ...kept[kept.length - 1],
+        items: [...(kept[kept.length - 1].items || []), ...mergedItems],
+      };
+      nextColumns = kept;
+    }
+    applyColumnsUpdate(nextColumns, nextColumnsCount);
   };
 
   // Copiar la lista como elemento para pegarla en otros tableros
@@ -293,9 +547,10 @@ export default function TodoListElement(props: CommonElementProps) {
     if (!cardRef.current) return;
 
     const cardElement = cardRef.current;
-    const contentHeight = cardElement.scrollHeight;
+    const contentHeight = Math.ceil(cardElement.scrollHeight);
 
-    const propsSize = (safeProperties as any).size;
+    const currentProps = propertiesRef.current as any;
+    const propsSize = currentProps?.size;
     const currentHeight =
       (propsSize && typeof propsSize.height === 'number'
         ? propsSize.height
@@ -304,7 +559,7 @@ export default function TodoListElement(props: CommonElementProps) {
           : 150);
 
     // Evitar actualizaciones mínimas para no crear bucles
-    if (Math.abs(contentHeight - currentHeight) < 4) return;
+    if (Math.abs(contentHeight - currentHeight) < 6) return;
 
     const newSize = {
       width:
@@ -313,16 +568,20 @@ export default function TodoListElement(props: CommonElementProps) {
           : typeof width === 'number'
             ? width
             : 260),
-      height: contentHeight,
+      height: Math.max(150, contentHeight),
     };
 
+    lastAutoHeightRef.current = newSize.height;
+
     onUpdate(id, {
+      width: newSize.width,
+      height: newSize.height,
       properties: {
-        ...safeProperties,
+        ...(currentProps || {}),
         size: newSize,
       },
     });
-  }, [id, items, width, height, onUpdate, safeProperties]);
+  }, [id, flatItems, width, height, onUpdate]);
 
   const handleColorChange = (colorKey: { hex: string }) => {
     const selectedPalette = EXTENDED_PALETTES[colorKey.hex as keyof typeof EXTENDED_PALETTES];
@@ -334,7 +593,7 @@ export default function TodoListElement(props: CommonElementProps) {
   const handleCopyAsText = async () => {
     try {
       // Copiar solo texto plano, una tarea por línea con bullet simple
-      const lines = items.map((item: TodoItem) => `• ${item.text}`);
+      const lines = flatItems.map((item: TodoItem) => `• ${item.text}`);
       const text = lines.join('\n');
 
       await navigator.clipboard.writeText(text);
@@ -363,60 +622,105 @@ export default function TodoListElement(props: CommonElementProps) {
         return;
       }
 
-      // Mostrar toast de carga
       toast({
         title: 'Exportando...',
         description: 'Generando imagen PNG de la lista.',
       });
 
-      // Capturar el elemento usando html2canvas con configuración completa
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // Alta resolución completa
+      const element = cardRef.current;
+      const width = element.scrollWidth;
+      const height = element.scrollHeight;
+
+      const dataUrl = await toPng(element, {
+        cacheBust: true,
+        pixelRatio: 3,
+        quality: 0.98,
         backgroundColor: backgroundColor,
-        useCORS: true,
-        logging: false,
-        allowTaint: false,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: cardRef.current.scrollWidth,
-        windowHeight: cardRef.current.scrollHeight,
-        width: cardRef.current.scrollWidth,
-        height: cardRef.current.scrollHeight,
+        includeQueryParams: false,
+        width,
+        height,
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          overflow: 'visible',
+        },
       });
 
-      // Convertir canvas a blob y descargar
-      canvas.toBlob((blob: Blob | null) => {
-        if (!blob) {
-          toast({
-            variant: 'destructive',
-            title: 'Error',
-            description: 'No se pudo generar la imagen.',
-          });
-          return;
-        }
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `${title || 'lista'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-        // Crear URL temporal y descargar
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${title || 'lista'}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        // Mostrar toast de éxito
-        toast({
-          title: 'Exportado',
-          description: 'La lista se ha exportado como PNG.',
-        });
-      }, 'image/png');
+      toast({
+        title: 'Exportado',
+        description: 'La lista se ha exportado como PNG.',
+      });
     } catch (error: any) {
       console.error('Error al exportar:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
         description: error.message || 'No se pudo exportar la lista.',
+      });
+    }
+  };
+
+  const handleExportPdfOpen = async () => {
+    try {
+      if (!cardRef.current) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudo generar el PDF.',
+        });
+        return;
+      }
+
+      const element = cardRef.current;
+      const exportWidth = element.scrollWidth;
+      const exportHeight = element.scrollHeight;
+
+      const imgData = await toPng(element, {
+        cacheBust: true,
+        pixelRatio: 2,
+        quality: 0.98,
+        backgroundColor: '#ffffff',
+        width: exportWidth,
+        height: exportHeight,
+        style: {
+          width: `${exportWidth}px`,
+          height: `${exportHeight}px`,
+          overflow: 'visible',
+        },
+      });
+
+      const orientation = exportWidth >= exportHeight ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({
+        orientation,
+        unit: 'px',
+        format: [exportWidth, exportHeight],
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, exportWidth, exportHeight);
+      const blob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(blob);
+      const opened = window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+
+      if (!opened) {
+        toast({
+          variant: 'destructive',
+          title: 'Ventana bloqueada',
+          description: 'Permite pop-ups para abrir el PDF.',
+        });
+      }
+    } catch (error) {
+      console.error('Error al crear PDF:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'No se pudo crear el PDF.',
       });
     }
   };
@@ -428,12 +732,25 @@ export default function TodoListElement(props: CommonElementProps) {
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-    const newItems = Array.from(items);
-    const [reorderedItem] = newItems.splice(result.source.index, 1);
-    newItems.splice(result.destination.index, 0, reorderedItem);
-    const updatedContent: TodoContent = { ...todoContent, items: newItems };
-    onUpdate(id, { content: updatedContent });
-    handleAutoSaveChange(); // Programar auto-save después de reordenar
+    if (result.type === 'COLUMN') {
+      const nextColumns = Array.from(columns);
+      const [moved] = nextColumns.splice(result.source.index, 1);
+      nextColumns.splice(result.destination.index, 0, moved);
+      applyColumnsUpdate(nextColumns);
+      return;
+    }
+    const sourceColIndex = columns.findIndex((c) => c.id === result.source.droppableId);
+    const destColIndex = columns.findIndex((c) => c.id === result.destination?.droppableId);
+    if (sourceColIndex < 0 || destColIndex < 0) return;
+
+    const nextColumns = columns.map((col) => ({
+      ...col,
+      items: [...(col.items || [])],
+    }));
+
+    const [moved] = nextColumns[sourceColIndex].items.splice(result.source.index, 1);
+    nextColumns[destColIndex].items.splice(result.destination.index, 0, moved);
+    applyColumnsUpdate(nextColumns);
   };
 
   // Nueva función: Exportar captura usando html-to-image
@@ -513,7 +830,7 @@ export default function TodoListElement(props: CommonElementProps) {
       className={cn(
         'flex flex-col relative group overflow-visible',
         'rounded-lg shadow-md border border-gray-300',
-        isSelected && 'ring-2 ring-blue-500 ring-offset-2'
+        isSelected && 'ring-2 ring-blue-500 ring-offset-2 shadow-md'
       )}
       style={{
         backgroundColor: '#ffffff', // Fondo blanco para el card, color solo en header
@@ -539,9 +856,14 @@ export default function TodoListElement(props: CommonElementProps) {
         <div className="flex items-center justify-between gap-1">
           {/* Izquierda: Drag Handle + Título */}
           <div className="flex items-center gap-1 flex-1 min-w-0">
-            <div className="drag-handle cursor-grab active:cursor-grabbing flex-shrink-0">
-              <GripVertical className="h-3 w-3 text-gray-400" />
-            </div>
+            <Button
+              size="icon"
+              variant="secondary"
+              className="h-8 w-8 rounded-full shadow-sm drag-handle"
+              title="Arrastrar"
+            >
+              <GripVertical className="h-4 w-4" />
+            </Button>
             <Input
               ref={(el) => {
                 if (el) {
@@ -551,6 +873,7 @@ export default function TodoListElement(props: CommonElementProps) {
               type="text"
               value={title || ''}
               onChange={handleTitleChange}
+              data-dictation-target="true"
               className="font-semibold border-none shadow-none focus-visible:ring-0 p-1 bg-transparent flex-1 min-w-0"
               style={{ fontSize }}
               placeholder="Título..."
@@ -587,6 +910,7 @@ export default function TodoListElement(props: CommonElementProps) {
                   type="text"
                   value={todoContent.label || ''}
                   onChange={(e) => handleLabelChange(e.target.value)}
+                  data-dictation-target="true"
                   placeholder="Etiqueta..."
                   maxLength={24}
                   className="h-7 text-xs"
@@ -597,6 +921,27 @@ export default function TodoListElement(props: CommonElementProps) {
 
           {/* Derecha: Botones de Acción */}
           <div className="flex items-center gap-0.5 flex-shrink-0">
+            {/* Botón layout 2 columnas */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleLayoutToggle();
+              }}
+              title={
+                layoutColumns === 1
+                  ? 'Dividir en 2 columnas'
+                  : layoutColumns === 2
+                    ? 'Dividir en 3 columnas'
+                    : layoutColumns === 3
+                      ? 'Dividir en 4 columnas'
+                      : 'Volver a 1 columna'
+              }
+            >
+              <Columns2 className={cn('h-3 w-3', layoutColumns > 1 && 'text-blue-600')} />
+            </Button>
             {/* Botón Color */}
             <Popover>
               <PopoverTrigger asChild>
@@ -636,6 +981,20 @@ export default function TodoListElement(props: CommonElementProps) {
                 </div>
               </PopoverContent>
             </Popover>
+
+            {/* Menú Más Opciones */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleExportPdfOpen();
+              }}
+              title="Crear PDF y abrir"
+            >
+              <Printer className="h-3 w-3" />
+            </Button>
 
             {/* Menú Más Opciones */}
             <DropdownMenu>
@@ -695,109 +1054,231 @@ export default function TodoListElement(props: CommonElementProps) {
       {/* CONTENIDO: Lista de Items */}
       <CardContent className="flex-1 p-3">
         <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId={`droppable-${id}`}>
+          <Droppable droppableId={`todo-columns-${id}`} direction="horizontal" type="COLUMN">
             {(provided) => (
-              <div {...provided.droppableProps} ref={provided.innerRef} className="space-y-0.5 min-h-full">
-                {items.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic py-2 text-center">
-                    No hay tareas. Agrega una nueva...
-                  </p>
-                ) : (
-                  items.map((item: TodoItem, index: number) => (
-                    <Draggable key={item.id} draggableId={item.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          className={cn(
-                            'flex items-start gap-1 p-1 rounded transition-colors group/item min-h-[32px]',
-                            snapshot.isDragging ? 'bg-blue-100 shadow-md border border-blue-300' : 'hover:bg-gray-50/50',
-                            isSelected && 'hover:bg-gray-50'
-                          )}
-                        >
-                          {/* Drag Handle */}
-                          <div
-                            {...provided.dragHandleProps}
-                            className="cursor-grab active:cursor-grabbing p-0.5 opacity-50 hover:opacity-100 flex-shrink-0"
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="min-h-full grid gap-2 items-start"
+                style={{
+                  gridTemplateColumns:
+                    layoutColumns === 1
+                      ? 'minmax(0, 1fr)'
+                      : layoutColumns === 2
+                        ? 'repeat(2, minmax(260px, 1fr))'
+                        : layoutColumns === 3
+                          ? 'repeat(3, minmax(220px, 1fr))'
+                          : 'repeat(4, minmax(200px, 1fr))',
+                }}
+              >
+                {columns.map((column, colIndex) => (
+                  <Draggable key={column.id} draggableId={column.id} index={colIndex}>
+                    {(colProvided) => (
+                      <div
+                        ref={colProvided.innerRef}
+                        {...colProvided.draggableProps}
+                        className={cn(
+                          'flex flex-col gap-2 rounded-lg border border-gray-200/70 bg-white/70 p-2',
+                          activeColumnId === column.id && 'ring-1 ring-blue-300'
+                        )}
+                        onMouseDown={(e) => {
+                          e.stopPropagation();
+                          setActiveColumnId(column.id);
+                        }}
+                      >
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            {...colProvided.dragHandleProps}
+                            data-no-center="true"
+                            className="h-6 w-6 flex items-center justify-center text-slate-400 hover:text-slate-600 cursor-grab active:cursor-grabbing"
+                            title="Arrastrar columna"
                           >
-                            <GripVertical className="h-3 w-3 text-gray-400" />
-                          </div>
-
-                          {/* Checkbox */}
-                          <Checkbox
-                            checked={item.completed}
-                            onCheckedChange={() => handleToggleItem(index)}
-                            className="flex-shrink-0 h-3 w-3"
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                          <Input
+                            value={column.title || ''}
+                            onChange={(e) => handleColumnTitleChange(colIndex, e.target.value)}
+                            data-dictation-target="true"
+                            placeholder={`Columna ${colIndex + 1}`}
+                            className="h-7 text-xs font-semibold bg-white/80 border border-gray-200 focus-visible:ring-0 flex-1"
                             onClick={(e) => e.stopPropagation()}
                           />
-
-                          {/* Textarea de Texto (Compatible con Dictado) - Auto-expandible sin scroll */}
-                          <textarea
-                            ref={(el) => {
-                              if (el) {
-                                // Auto-expandir textarea
-                                el.style.height = 'auto';
-                                el.style.height = el.scrollHeight + 'px';
-                              }
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyColumn(colIndex);
                             }}
-                            data-dictation-target="true"
-                            value={item.text}
-                            onChange={(e) => {
-                              handleItemTextChange(index, e.target.value);
-                              // Auto-expandir cuando cambie el contenido
-                              const target = e.target as HTMLTextAreaElement;
-                              target.style.height = 'auto';
-                              target.style.height = target.scrollHeight + 'px';
+                            title="Copiar columna"
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePasteColumn(colIndex);
                             }}
-                            onPaste={handlePaste}
-                            onInput={(e) => {
-                              // Auto-expandir cuando cambie por dictado
-                              const target = e.currentTarget as HTMLTextAreaElement;
-                              target.style.height = 'auto';
-                              target.style.height = target.scrollHeight + 'px';
+                            title="Pegar columna"
+                          >
+                            <ClipboardPaste className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteColumn(colIndex);
                             }}
-                            className={cn(
-                              'flex-1 border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden',
-                              item.completed ? 'line-through text-gray-500' : 'text-gray-900'
-                            )}
-                            style={{
-                              fontSize,
-                              whiteSpace: 'pre-wrap',
-                              wordBreak: 'break-word',
-                              wordWrap: 'break-word',
-                              overflowWrap: 'break-word',
-                              minHeight: '24px',
-                              width: '100%',
-                              boxSizing: 'border-box'
-                            }}
-                            placeholder="Tarea..."
-                            rows={1}
-                            onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
-                            onFocus={(e) => {
-                              onEditElement(id);
-                            }}
-                          />
-
-                          {/* Botón Borrar Tarea */}
-                          {isSelected && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteItem(index);
-                              }}
-                              className="h-5 w-5 opacity-0 group-hover/item:opacity-100 hover:opacity-100 transition-opacity flex-shrink-0"
-                            >
-                              <X className="h-2.5 w-2.5 text-gray-400" />
-                            </Button>
-                          )}
+                            title="Eliminar columna"
+                            disabled={columns.length <= 1}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
                         </div>
-                      )}
-                    </Draggable>
-                  ))
-                )}
+                        <Droppable droppableId={column.id} type={`ITEM-${id}`}>
+                          {(provided) => (
+                            <div
+                              {...provided.droppableProps}
+                              ref={provided.innerRef}
+                              className="space-y-0.5 min-h-[36px]"
+                            >
+                              {column.items.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic py-2 text-center">
+                                  Sin tareas
+                                </p>
+                              ) : (
+                                column.items.map((item: TodoItem, index: number) => (
+                                  <Draggable key={item.id} draggableId={item.id} index={index}>
+                                    {(provided, snapshot) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.draggableProps}
+                                        onDragStart={(e) => {
+                                          // Mantener el handler interno de @hello-pangea/dnd
+                                          const baseHandler = (provided.draggableProps as any)?.onDragStart;
+                                          if (typeof baseHandler === 'function') {
+                                            baseHandler(e);
+                                          }
+                                          try {
+                                            e.dataTransfer.setData(
+                                              'application/x-micerebro-todo-item',
+                                              JSON.stringify({
+                                                type: 'todo-item',
+                                                sourceListId: id,
+                                                sourceColumnId: column.id,
+                                                itemId: item.id,
+                                              })
+                                            );
+                                            e.dataTransfer.effectAllowed = 'move';
+                                          } catch {
+                                            // no-op
+                                          }
+                                        }}
+                                        className={cn(
+                                          'relative flex items-stretch gap-2 rounded-lg border p-1.5 pl-4 transition-colors group/item min-h-[32px] border-slate-200',
+                                          snapshot.isDragging ? 'bg-blue-100 shadow-md border-blue-300' : 'hover:bg-gray-50/50',
+                                          isSelected && 'hover:bg-gray-50'
+                                        )}
+                                      >
+                                        <div
+                                          {...provided.dragHandleProps}
+                                          data-no-center="true"
+                                          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-slate-400 shrink-0 cursor-grab active:cursor-grabbing border border-slate-300"
+                                          title="Arrastrar para reordenar"
+                                        />
+
+                                        <div className="flex flex-col items-center shrink-0 gap-0.5">
+                                          <Checkbox
+                                            checked={item.completed}
+                                            onCheckedChange={() => handleToggleItem(colIndex, index)}
+                                            onClick={(e) => e.stopPropagation()}
+                                            className="h-4 w-4 shrink-0 mt-1"
+                                          />
+                                          {!isListening && (
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteItem(colIndex, index);
+                                              }}
+                                              className="w-4 h-1 rounded-full bg-slate-300/60 hover:bg-red-400/80 transition-colors flex-shrink-0"
+                                              title="Borrar tarea"
+                                              aria-label="Borrar tarea"
+                                            />
+                                          )}
+                                        </div>
+
+                                        <textarea
+                                          ref={(el) => {
+                                            if (el) {
+                                              el.style.height = 'auto';
+                                              el.style.height = el.scrollHeight + 'px';
+                                            }
+                                          }}
+                                          data-dictation-target="true"
+                                          value={item.text}
+                                          onChange={(e) => {
+                                            handleItemTextChange(colIndex, index, e.target.value);
+                                            const target = e.target as HTMLTextAreaElement;
+                                            target.style.height = 'auto';
+                                            target.style.height = target.scrollHeight + 'px';
+                                          }}
+                                          onPaste={handlePaste}
+                                          onInput={(e) => {
+                                            const target = e.currentTarget as HTMLTextAreaElement;
+                                            target.style.height = 'auto';
+                                            target.style.height = target.scrollHeight + 'px';
+                                          }}
+                                          className={cn(
+                                            'flex-1 min-w-0 min-h-[1.75rem] py-1 px-2 text-sm border-0 border-b rounded-none bg-transparent resize-none overflow-hidden focus:ring-0 focus-visible:ring-0',
+                                            item.completed ? 'text-gray-500' : 'text-gray-900'
+                                          )}
+                                          style={{
+                                            fontSize,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                            wordWrap: 'break-word',
+                                            overflowWrap: 'break-word',
+                                            minHeight: '24px',
+                                            width: '100%',
+                                            boxSizing: 'border-box',
+                                            borderBottomColor: `${EXTENDED_PALETTES.calypso.text}59`,
+                                            borderBottomWidth: '1px',
+                                            borderBottomStyle: 'solid',
+                                            ...(item.completed && {
+                                              textDecoration: 'line-through',
+                                              textDecorationColor: EXTENDED_PALETTES.calypso.text,
+                                              textDecorationThickness: '1px',
+                                            }),
+                                          }}
+                                          placeholder="Tarea..."
+                                          rows={1}
+                                          onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
+                                          onFocus={(e) => {
+                                            onEditElement(id);
+                                          }}
+                                        />
+
+                                      </div>
+                                    )}
+                                  </Draggable>
+                                ))
+                              )}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
                 {provided.placeholder}
               </div>
             )}
@@ -810,6 +1291,7 @@ export default function TodoListElement(props: CommonElementProps) {
         <div className="flex items-start gap-1 w-full min-h-[36px]">
           <textarea
             data-dictation-target="true"
+            data-dictation-controlled="true"
             ref={(el) => {
               if (el) {
                 newItemRef.current = el;
@@ -843,7 +1325,7 @@ export default function TodoListElement(props: CommonElementProps) {
                 handleAddItem();
               }
             }}
-            placeholder="Agregar tarea..."
+            placeholder={`Agregar tarea (${activeColumnLabel})...`}
             className="flex-1 border-none shadow-none focus:outline-none focus:ring-0 p-1 bg-transparent resize-none leading-snug overflow-hidden"
             style={{
               fontSize,
@@ -856,7 +1338,10 @@ export default function TodoListElement(props: CommonElementProps) {
               boxSizing: 'border-box'
             }}
             onClick={(e) => { e.stopPropagation(); onEditElement(id); }}
-            onFocusCapture={() => onEditElement(id)}
+            onFocusCapture={(e) => {
+              onEditElement(id);
+              bindDictationTarget(e.currentTarget);
+            }}
           />
           <Button
             onClick={(e) => {

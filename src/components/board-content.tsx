@@ -216,10 +216,6 @@ const BoardContent: React.FC<BoardContentProps> = ({
     >
       <div
         className="absolute inset-0"
-        style={{
-          transform: `scale(${1 / scale}) translate(${-offset.x}px, ${-offset.y}px)`,
-          transformOrigin: '0 0',
-        }}
       >
         {elements.map(renderElement)}
 

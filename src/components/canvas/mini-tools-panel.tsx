@@ -7,11 +7,9 @@ import {
   Underline,
   Highlighter,
   Paintbrush,
-  ImageIcon,
   X,
   GripVertical,
   ChevronRight,
-  Link as LinkIcon,
 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -146,10 +144,9 @@ function applySubtitle() {
 
 interface MiniToolsPanelProps {
   onClose: () => void;
-  onAddImageFromUrl: () => void;
 }
 
-export default function MiniToolsPanel({ onClose, onAddImageFromUrl }: MiniToolsPanelProps) {
+export default function MiniToolsPanel({ onClose }: MiniToolsPanelProps) {
   const [popover, setPopover] = useState<'font' | 'underline' | 'highlight' | 'color' | null>(null);
   const highlightSelRef = useRef<Range | null>(null);
 
@@ -260,7 +257,7 @@ export default function MiniToolsPanel({ onClose, onAddImageFromUrl }: MiniTools
             </PopoverContent>
           </Popover>
 
-          {/* Color texto */}
+          {/* Color texto (rueda cromática) */}
           <Popover open={popover === 'color'} onOpenChange={(o) => setPopover(o ? 'color' : null)}>
             <PopoverTrigger asChild>
               <button className={btnClass} onMouseDown={(e) => e.preventDefault()}>
@@ -269,29 +266,22 @@ export default function MiniToolsPanel({ onClose, onAddImageFromUrl }: MiniTools
               </button>
             </PopoverTrigger>
             <PopoverContent side="right" align="start" className="p-2" onMouseDown={(e) => e.preventDefault()}>
-              <div className={gridClass}>
-                {TEXT_COLORS.map(({ hex }) => (
-                  <button key={hex} className="w-7 h-7 rounded border border-gray-300 hover:scale-110" style={{ backgroundColor: hex }} onMouseDown={(e) => { e.preventDefault(); applyTextColor(hex); setPopover(null); }} />
-                ))}
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  defaultValue="#111111"
+                  onChange={(e) => {
+                    applyTextColor(e.target.value);
+                    setPopover(null);
+                  }}
+                  className="h-9 w-9 cursor-pointer rounded border border-gray-300 bg-transparent"
+                  aria-label="Selector de color de texto"
+                />
+                <span className="text-xs text-white/80">Color de texto</span>
               </div>
             </PopoverContent>
           </Popover>
 
-          {/* Imagen Desde URL */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                className={btnClass}
-                onClick={() => {
-                  onAddImageFromUrl();
-                }}
-              >
-                <ImageIcon className="size-4" />
-                <LinkIcon className="size-3 ml-0.5" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">Imagen desde URL</TooltipContent>
-          </Tooltip>
         </div>
       </div>
     </Rnd>

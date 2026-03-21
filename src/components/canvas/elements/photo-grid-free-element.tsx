@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ImageIcon, Upload, X, Maximize, GripVertical, FileImage, Trash2, Type } from 'lucide-react'; // Eliminado Minus
 import { useAuthContext } from '@/context/AuthContext';
 import { getFirebaseStorage } from '@/lib/firebase';
-import { uploadFile } from '@/lib/upload-helper';
+import { uploadFile, compressImage as compressImageFile } from '@/lib/upload-helper';
 import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import html2canvas from 'html2canvas';
@@ -21,43 +21,18 @@ function isPhotoGridFreeContent(content: unknown): content is PhotoGridFreeConte
 }
 
 
-// Comprimir imagen a max 72dpi y 200KB
+// Comprimir imagen a 72dpi y 100KB
 async function compressImage(file: File): Promise<string> {
+    const compressed = await compressImageFile(file, 100);
+    const sizeKB = compressed.size / 1024;
+    if (sizeKB > 100) {
+        throw new Error(`Imagen demasiado grande (${sizeKB.toFixed(2)}KB)`);
+    }
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                const maxSize = 800;
-                let width = img.width;
-                let height = img.height;
-                if (width > maxSize || height > maxSize) {
-                    if (width > height) {
-                        height = (height / width) * maxSize;
-                        width = maxSize;
-                    } else {
-                        width = (width / height) * maxSize;
-                        height = maxSize;
-                    }
-                }
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx?.drawImage(img, 0, 0, width, height);
-                let quality = 0.8;
-                let result = canvas.toDataURL('image/jpeg', quality);
-                while (result.length > 200 * 1024 * 1.37 && quality > 0.3) {
-                    quality -= 0.1;
-                    result = canvas.toDataURL('image/jpeg', quality);
-                }
-                resolve(result);
-            };
-            img.onerror = reject;
-            img.src = e.target?.result as string;
-        };
+        reader.onload = () => resolve(String(reader.result || ''));
         reader.onerror = reject;
-        reader.readAsDataURL(file);
+        reader.readAsDataURL(compressed);
     });
 }
 
@@ -179,44 +154,40 @@ export default function PhotoGridFreeElement(props: CommonElementProps) {
         if (!file.type.startsWith('image/')) continue;
 
         try {
-          const reader = new FileReader();
-          reader.onload = async (e) => {
-            const imgSrc = e.target?.result as string;
-            // Obtener dimensiones del contenedor y calcular posición inicial
-            const containerDims = getContainerDimensions();
-            const imageWidth = 200;
-            const imageHeight = 150;
-            // Calcular posición que mantenga la imagen dentro del contenedor
-            const maxX = Math.max(0, containerDims.width - imageWidth);
-            const maxY = Math.max(0, containerDims.height - imageHeight);
-            const x = maxX > 0 ? Math.random() * maxX : 0;
-            const y = maxY > 0 ? Math.random() * maxY : 0;
+          const imgSrc = await compressImage(file);
+          // Obtener dimensiones del contenedor y calcular posición inicial
+          const containerDims = getContainerDimensions();
+          const imageWidth = 200;
+          const imageHeight = 150;
+          // Calcular posición que mantenga la imagen dentro del contenedor
+          const maxX = Math.max(0, containerDims.width - imageWidth);
+          const maxY = Math.max(0, containerDims.height - imageHeight);
+          const x = maxX > 0 ? Math.random() * maxX : 0;
+          const y = maxY > 0 ? Math.random() * maxY : 0;
 
-            const newImage = {
-              id: Date.now().toString(),
-              src: imgSrc,
-              alt: file.name,
-              size: 'medium' as const,
-              position: { x, y },
-              rotation: 0,
-              zIndex: 1,
-            };
-
-            const updatedImageIds = [...(gridContent.imageIds || []), newImage.id];
-            onUpdate(id, { content: { ...gridContent, imageIds: updatedImageIds } });
-
-            toast({
-              title: 'Imagen agregada',
-              description: 'La imagen se ha agregado a la guía.',
-            });
+          const newImage = {
+            id: Date.now().toString(),
+            src: imgSrc,
+            alt: file.name,
+            size: 'medium' as const,
+            position: { x, y },
+            rotation: 0,
+            zIndex: 1,
           };
-          reader.readAsDataURL(file);
-        } catch (error) {
+
+          const updatedImageIds = [...(gridContent.imageIds || []), newImage.id];
+          onUpdate(id, { content: { ...gridContent, imageIds: updatedImageIds } });
+
+          toast({
+            title: 'Imagen agregada',
+            description: 'La imagen se ha agregado a la guía.',
+          });
+        } catch (error: any) {
           console.error('Error al procesar imagen:', error);
           toast({
             variant: 'destructive',
-            title: 'Error',
-            description: 'No se pudo cargar la imagen.',
+            title: 'Imagen demasiado grande',
+            description: error?.message || 'No se pudo comprimir a 100KB.',
           });
         }
       }
@@ -264,41 +235,37 @@ export default function PhotoGridFreeElement(props: CommonElementProps) {
             if (!file.type.startsWith('image/')) continue;
 
             try {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    const imgSrc = e.target?.result as string;
+                const imgSrc = await compressImage(file);
 
-                    // Crear nueva imagen para el recibidor
-                    const containerRect = containerRef.current?.getBoundingClientRect();
-                    const containerWidth = containerRect?.width || 600;
-                    const containerHeight = containerRect?.height || 500;
+                // Crear nueva imagen para el recibidor
+                const containerRect = containerRef.current?.getBoundingClientRect();
+                const containerWidth = containerRect?.width || 600;
+                const containerHeight = containerRect?.height || 500;
 
-                    const newImage = {
-                        id: `recibidor_${Date.now()}_${i}`,
-                        src: imgSrc,
-                        alt: file.name,
-                        x: Math.random() * (containerWidth - 200), // Posición aleatoria dentro del contenedor
-                        y: Math.random() * (containerHeight - 150),
-                        width: 200,
-                        height: 150,
-                        rotation: 0,
-                        zIndex: recibidorImages.length + 1,
-                    };
-
-                    setRecibidorImages(prev => [...prev, newImage]);
-
-                    toast({
-                        title: 'Imagen agregada al recibidor',
-                        description: 'La imagen se ha agregado al área de trabajo.',
-                    });
+                const newImage = {
+                    id: `recibidor_${Date.now()}_${i}`,
+                    src: imgSrc,
+                    alt: file.name,
+                    x: Math.random() * (containerWidth - 200), // Posición aleatoria dentro del contenedor
+                    y: Math.random() * (containerHeight - 150),
+                    width: 200,
+                    height: 150,
+                    rotation: 0,
+                    zIndex: recibidorImages.length + 1,
                 };
-                reader.readAsDataURL(file);
-            } catch (error) {
+
+                setRecibidorImages(prev => [...prev, newImage]);
+
+                toast({
+                    title: 'Imagen agregada al recibidor',
+                    description: 'La imagen se ha agregado al área de trabajo.',
+                });
+            } catch (error: any) {
                 console.error('Error al procesar imagen:', error);
                 toast({
                     variant: 'destructive',
-                    title: 'Error',
-                    description: 'No se pudo cargar la imagen.',
+                    title: 'Imagen demasiado grande',
+                    description: error?.message || 'No se pudo comprimir a 100KB.',
                 });
             }
         }

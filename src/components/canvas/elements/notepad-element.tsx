@@ -8,7 +8,7 @@ import {
   FileImage, Settings, Settings2,
   Info, Eraser, CalendarDays, FileSignature, Calendar,
   ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock, Sparkles, Copy,
-  Volume2, Pause, Square
+  Volume2, Pause, Square, Printer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import DeleteNotepadDialog from './delete-notepad-dialog';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import ExportPdfDialog from './export-pdf-dialog';
@@ -874,6 +875,58 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, [toast, id, isPreview, typedContent, onUpdate]);
 
+  const handleOpenPdfInNewWindow = useCallback(async () => {
+    if (isPreview) return;
+
+    try {
+      const notepadCard = document.querySelector(`[data-element-id="${id}"].notepad-card`) as HTMLElement
+        || (document.querySelector(`[data-element-id="${id}"]`) as HTMLElement);
+      if (!notepadCard) {
+        toast({
+          variant: 'destructive',
+          title: 'Error',
+          description: 'No se pudo encontrar el cuaderno para exportar.',
+        });
+        return;
+      }
+
+      const canvas = await html2canvas(notepadCard, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        allowTaint: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: canvas.width >= canvas.height ? 'landscape' : 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+
+      const blob = pdf.output('blob');
+      const pdfUrl = URL.createObjectURL(blob);
+      const opened = window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+
+      if (!opened) {
+        toast({
+          variant: 'destructive',
+          title: 'Ventana bloqueada',
+          description: 'Permite pop-ups para abrir el PDF.',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error al abrir PDF del cuaderno:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error?.message || 'No se pudo crear el PDF.',
+      });
+    }
+  }, [id, isPreview, toast]);
+
   useEffect(() => {
     // Cuando el notepad se activa para edición desde el canvas padre, forzar el foco
     if (!isPreview && props.activatedElementId === id && contentRef.current) {
@@ -1258,11 +1311,20 @@ export default function NotepadElement(props: CommonElementProps) {
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Completa" onClick={handleInsertDate}><Calendar className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
-                    <Button variant="ghost" size="icon" className="size-7" title="Minimizar" onMouseDown={(e) => {e.stopPropagation(); toggleMinimize(e);}}>
-                      <Minus className="size-4" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      title="Crear PDF y abrir"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenPdfInNewWindow();
+                      }}
+                    >
+                      <Printer className="size-4" />
                     </Button>
                     <DropdownMenu modal={false}>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-7" title="Más opciones"><MoreVertical className="size-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-6" title="Más opciones"><MoreVertical className="size-3" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>
                           <DropdownMenuItem onClick={handleCopyAsTxt}>
                               <FileSignature className="mr-2 h-4 w-4" />
@@ -1301,14 +1363,14 @@ export default function NotepadElement(props: CommonElementProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7 text-red-600 hover:bg-red-50"
+                      className="size-6 text-red-600 hover:bg-red-50"
                       title="Eliminar cuaderno"
                       onMouseDown={(e) => {e.stopPropagation(); handleDelete();}}
                     >
-                      <Trash2 className="size-4" />
+                      <Trash2 className="size-3" />
                     </Button>
 
-                    <Button variant="ghost" size="icon" className="size-7" title="Cerrar" onMouseDown={handleCloseNotepad}><X className="size-4" /></Button>
+                    <Button variant="ghost" size="icon" className="size-6" title="Cerrar" onMouseDown={handleCloseNotepad}><X className="size-3" /></Button>
                 </div>
             )}
         </div>
@@ -1383,10 +1445,11 @@ export default function NotepadElement(props: CommonElementProps) {
                               }
                             }}
                             onTouchStart={(e) => {
-                              // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
-                              e.stopPropagation(); // Evitar que el evento suba al contenedor
-                              if (contentRef.current && !isPreview && (!typedContent.password || isUnlockedForEditing)) {
-                                contentRef.current.focus();
+                              const target = contentRef.current || (e.currentTarget as HTMLElement);
+                              if (!shouldAllowTouchEdit(target)) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return;
                               }
                             }}
                             onInput={handleChange}

@@ -3,7 +3,7 @@
 'use client';
 
 import { useCallback, useRef, useEffect } from 'react';
-import { initFirebase, getFirebaseFirestore } from '@/lib/firebase';
+import { initFirebase, getFirebaseFirestore, getFirebaseAuth } from '@/lib/firebase';
 import {
   collection,
   doc,
@@ -22,7 +22,7 @@ import { useAuthContext } from '@/context/AuthContext';
 export function useElementManager(boardId: string, getViewportCenter: () => { x: number, y: number }, getNextZIndex: (baseElementId?: string) => number) {
   const { user } = useAuthContext() as any;
   const { toast } = useToast();
-  // Instancia global de Firestore (se inicializa en cliente). Si es null, los handlers harán early-return.
+  // Instancia global de Firestore (se inicializa en cliente). Si es null, se intentará inicializar al usar.
   const firestore = getFirebaseFirestore();
 
   useEffect(() => {
@@ -55,18 +55,44 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
     tags?: string[];
     hidden?: boolean;
   }): Promise<string> => {
-    const userId = user?.uid;
-    if (!firestore || !userId || !boardId) {
-      const errorMsg = !firestore ? 'Firestore no está disponible' : !userId ? 'Usuario no autenticado' : 'Board ID no válido';
+    const NOTEBOOK_TYPES: ElementType[] = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'libreta'];
+    let userId = user?.uid || getFirebaseAuth()?.currentUser?.uid;
+    if (!userId || !boardId) {
+      try {
+        await initFirebase();
+        userId = userId || getFirebaseAuth()?.currentUser?.uid;
+      } catch {}
+    }
+    if (!userId || !boardId) {
+      const errorMsg = !userId ? 'Usuario no autenticado' : 'Board ID no válido';
       return Promise.reject(new Error(errorMsg));
     }
-    const elementsRef = collection(firestore, 'users', userId, 'canvasBoards', boardId, 'canvasElements');
+
+    let db = firestore;
+    if (!db) {
+      try {
+        await initFirebase();
+        db = getFirebaseFirestore();
+      } catch (e) {
+        return Promise.reject(new Error('Firestore no está disponible'));
+      }
+    }
+    if (!db) {
+      return Promise.reject(new Error('Firestore no está disponible'));
+    }
+
+    const elementsRef = collection(db, 'users', userId, 'canvasBoards', boardId, 'canvasElements');
     const defaultPosition = getViewportCenterRef.current(); // ✅ Usar ref
 
-    // REGLAS GENERALES: Elementos de cuadernos y contenedores inician con zIndex -1
-    // Otros elementos van a la primera capa (zIndex máximo + 1)
-    const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'container', 'two-columns', 'block-dibujo', 'time-list', 'timer-lista'].includes(type);
-    const zIndex = getNextZIndexRef.current(); // ✅ REGLA: Todos los elementos nuevos aparecen en primera capa
+    // REGLAS GLOBALES DE CAPA:
+    // 1) Cuadernos siempre nacen en la última capa (z=-1).
+    // 2) Cualquier otro elemento nuevo aparece sobre los demás.
+    const zIndex =
+      typeof props?.zIndex === 'number'
+        ? props.zIndex
+        : NOTEBOOK_TYPES.includes(type)
+          ? -1
+          : getNextZIndexRef.current();
 
     // REGLA #1: Los elementos se abren centrados en el viewport del usuario
     // Si no se proporciona una posición específica, usar el centro del viewport
@@ -162,11 +188,11 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           width: notepadSize.width,
           height: notepadSize.height,
           userId,
-          properties: { ...baseProperties, position: notepadPos, size: notepadSize, format: notepadFormat, zIndex: -1 },
+          properties: { ...baseProperties, position: notepadPos, size: notepadSize, format: notepadFormat, zIndex },
           content: (props?.content && typeof props.content === 'object')
             ? props.content
             : { title: 'Nuevo Cuaderno', pages: ['<div><br></div>'], currentPage: 0 },
-          zIndex: -1,
+          zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         }; break;
@@ -273,7 +299,24 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         // Estándar iPad: 20cm alto x 15cm ancho (vertical)
         const blockDibujoSize = { width: 567, height: 756 };
         const blockDibujoPos = getCenteredPosition(blockDibujoSize.width, blockDibujoSize.height);
-        newElementData = { type, x: blockDibujoPos.x, y: blockDibujoPos.y, width: blockDibujoSize.width, height: blockDibujoSize.height, userId, properties: { ...baseProperties, position: blockDibujoPos, size: blockDibujoSize, backgroundColor: '#FFFFFF' }, content: props?.content || { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] }, zIndex: -1, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: blockDibujoPos.x, y: blockDibujoPos.y, width: blockDibujoSize.width, height: blockDibujoSize.height, userId, properties: { ...baseProperties, position: blockDibujoPos, size: blockDibujoSize, backgroundColor: '#FFFFFF' }, content: props?.content || { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+      case 'block-dibujo-2':
+        const blockDibujo2Size = { width: 567, height: 756 };
+        const blockDibujo2Pos = getCenteredPosition(blockDibujo2Size.width, blockDibujo2Size.height);
+        newElementData = {
+          type,
+          x: blockDibujo2Pos.x,
+          y: blockDibujo2Pos.y,
+          width: blockDibujo2Size.width,
+          height: blockDibujo2Size.height,
+          userId,
+          properties: { ...baseProperties, position: blockDibujo2Pos, size: blockDibujo2Size, backgroundColor: '#FFFFFF' },
+          content: props?.content || { title: 'BLOCK DIBUJO 2', strokes: [], images: [], texts: [], background: '#ffffff' },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
       case 'mini-notes':
         const miniNotesSize = { width: 227, height: 378 }; // 6cm x 10cm
         const miniNotesPos = getCenteredPosition(miniNotesSize.width, miniNotesSize.height);
@@ -318,14 +361,14 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
             position: containerPos,
             size: containerSize,
             backgroundColor: '#ffffff',
-            zIndex: -1,
+            zIndex,
           },
           content: {
             title: 'Nuevo Contenedor',
             elementIds: [],
             layout: type === 'two-columns' ? 'two-columns' : 'single',
           },
-          zIndex: -1,
+          zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -364,6 +407,24 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           updatedAt: serverTimestamp(),
         };
         break;
+      case 'mis-imagenes': {
+        const carouselSize = { width: 360, height: 360 };
+        const carouselPos = getCenteredPosition(carouselSize.width, carouselSize.height);
+        newElementData = {
+          type,
+          x: carouselPos.x,
+          y: carouselPos.y,
+          width: carouselSize.width,
+          height: carouselSize.height,
+          userId,
+          properties: { ...baseProperties, position: carouselPos, size: carouselSize },
+          content: { title: 'Mis imágenes', images: [], activeIndex: 0 },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      }
       case 'url-doc': {
         const urlDocSize = { width: 180, height: 140 };
         const urlDocPos = getCenteredPosition(urlDocSize.width, urlDocSize.height);
@@ -572,13 +633,13 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
           width: dictadoSize.width,
           height: dictadoSize.height,
           userId,
-          properties: { ...baseProperties, position: dictadoPos, size: dictadoSize, zIndex: -1 },
+          properties: { ...baseProperties, position: dictadoPos, size: dictadoSize, zIndex },
           content: (props?.content && typeof props.content === 'object') ? props.content : {
             title: `Dictado ${dictadoTimestamp}`,
             content: '<div><br></div>',
             createdAt: dictadoTimestamp
           },
-          zIndex: -1,
+          zIndex,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };

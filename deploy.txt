@@ -1,5 +1,7 @@
 # Comandos de deploy MicerebroAPP_CLEAN
-# Producción: https://micerebroapp.vercel.app/
+# REGLA CRITICA (NUNCA CAMBIA):
+# Producción oficial y única: https://micerebroapp.vercel.app/
+# Si un deploy genera otra URL, NO se considera producción.
 
 # 1. Instalar dependencias
 npm install
@@ -25,11 +27,13 @@ git add -A
 
 # Paso 2: Crear commit con descripción de los cambios
 git commit -m "Descripción de los cambios"
+git commit -m "ultimos febrero"
 
 # Paso 3: Subir a GitHub (Vercel hace deploy automático si el proyecto está vinculado)
 git push origin main
 
 # Verificar: entra a vercel.com → Deployments → el último debe estar Building o Ready
+# Verificar dominio de producción: https://micerebroapp.vercel.app/
 
 # Si "ECANCELED: operation canceled" → ejecutar en Terminal del sistema (fuera de Cursor)
 

@@ -35,6 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import html2canvas from 'html2canvas';
 import { toPng } from 'html-to-image';
 import { format } from 'date-fns';
@@ -602,25 +603,15 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           >
             <CalendarDays className="h-4 w-4" />
           </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0"
-            title={minimized ? 'Maximizar' : 'Minimizar'}
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
-            style={{ color: '#000000' }}
-          >
-            {minimized ? <Maximize className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 hover:bg-black/10 p-0"
+                className="h-5 w-5 hover:bg-black/10 p-0"
                 style={{ color: '#000000' }}
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVertical className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -656,20 +647,20 @@ export default function YellowNotepadElement(props: CommonElementProps) {
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0"
+            className="h-5 w-5 hover:bg-black/10 p-0"
             onClick={handleDelete}
             style={{ color: '#000000' }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 hover:bg-black/10 p-0"
+            className="h-5 w-5 hover:bg-black/10 p-0"
             onClick={handleClose}
             style={{ color: '#000000' }}
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -726,24 +717,11 @@ export default function YellowNotepadElement(props: CommonElementProps) {
             }
           }}
           onTouchStart={(e) => {
-            // En móvil, establecer foco y cursor al tocar
-            e.stopPropagation(); // Evitar que el evento suba al contenedor
-            if (contentRef.current && !isPreview) {
-              contentRef.current.focus();
-              requestAnimationFrame(() => {
-                setTimeout(() => {
-                  const selection = window.getSelection();
-                  if (selection) {
-                    if (selection.rangeCount === 0) {
-                      const range = document.createRange();
-                      range.selectNodeContents(contentRef.current!);
-                      range.collapse(false); // Al final
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-                }, 100);
-              });
+            const target = contentRef.current || (e.currentTarget as HTMLElement);
+            if (!shouldAllowTouchEdit(target)) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
             }
           }}
           onMouseDown={(e) => {

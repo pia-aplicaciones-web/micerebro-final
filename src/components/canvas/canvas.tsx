@@ -39,6 +39,10 @@ type CanvasProps = {
   onUngroup: (id: string) => void;
   setIsDirty: (isDirty: boolean) => void;
   isMobile: boolean;
+  onUndo?: () => void;
+  canUndo?: boolean;
+  onRedo?: () => void;
+  canRedo?: boolean;
   user?: any;
   storage?: any;
   toast?: any;
@@ -103,6 +107,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   onUngroup,
   setIsDirty,
   isMobile,
+  onUndo,
+  canUndo,
+  onRedo,
+  canRedo,
   user,
   storage,
   toast,
@@ -120,24 +128,36 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const [isPanningActive, setIsPanningActive] = useState(false);
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
+  const initialScrollSetRef = useRef(false);
 
   const canvasDimensions = useMemo(() => {
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
     if (elements.length === 0) {
-      return { width: window.innerWidth + CANVAS_PADDING, height: window.innerHeight + CANVAS_PADDING };
+      return { width: viewportWidth + CANVAS_PADDING, height: viewportHeight + CANVAS_PADDING };
     }
     let maxX = 0;
     let maxY = 0;
     elements.forEach(el => {
-      const elWidth = typeof el.width === 'number' ? el.width : parseFloat(el.width || '0');
-      const elHeight = typeof el.height === 'number' ? el.height : parseFloat(el.height || '0');
+      const props = (typeof el.properties === 'object' && el.properties !== null) ? el.properties : {};
+      const pos = (props as any).position || {};
+      const size = (props as any).size || {};
+      const baseX = typeof el.x === 'number' ? el.x : (typeof pos.x === 'number' ? pos.x : parseFloat(String(pos.x || 0)) || 0);
+      const baseY = typeof el.y === 'number' ? el.y : (typeof pos.y === 'number' ? pos.y : parseFloat(String(pos.y || 0)) || 0);
+      const elWidth = typeof el.width === 'number'
+        ? el.width
+        : (typeof size.width === 'number' ? size.width : parseFloat(String(size.width || el.width || 0)) || 0);
+      const elHeight = typeof el.height === 'number'
+        ? el.height
+        : (typeof size.height === 'number' ? size.height : parseFloat(String(size.height || el.height || 0)) || 0);
       if (isFinite(elWidth) && isFinite(elHeight)) {
-        maxX = Math.max(maxX, el.x + elWidth);
-        maxY = Math.max(maxY, el.y + elHeight);
+        maxX = Math.max(maxX, baseX + elWidth);
+        maxY = Math.max(maxY, baseY + elHeight);
       }
     });
     return {
-      width: Math.max(maxX + CANVAS_PADDING, window.innerWidth),
-      height: Math.max(maxY + CANVAS_PADDING, window.innerHeight)
+      width: Math.max(maxX + CANVAS_PADDING, viewportWidth),
+      height: Math.max(maxY + CANVAS_PADDING, viewportHeight),
     };
   }, [elements]);
   
@@ -303,6 +323,17 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
     });
   }, [isMobile, forceScrollToOrigin]);
 
+  // En desktop: iniciar siempre con scrollLeft = 0 (esquina izquierda).
+  useEffect(() => {
+    if (isMobile) return;
+    const container = canvasContainerRef.current;
+    if (!container || initialScrollSetRef.current) return;
+    initialScrollSetRef.current = true;
+    requestAnimationFrame(() => {
+      forceScrollToOrigin(container);
+    });
+  }, [isMobile, forceScrollToOrigin]);
+
   // Efecto para inicializar el scroll en (0, 0) cuando se carga un tablero
   // CRÍTICO: El tablero SIEMPRE se inicia en scroll 0,0 - nunca pueden haber elementos fuera de este punto
   // El efecto para inicializar el scroll en (0, 0) ha sido removido.
@@ -386,13 +417,21 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   
   const centerOnElement = useCallback((element?: WithId<CanvasElement>, zoomLevel: number = 1, offset?: { x?: number; y?: number }) => {
     if (!element) return;
-    
-    const width = typeof element.width === 'number' ? element.width : parseFloat(element.width || '0');
-    const height = typeof element.height === 'number' ? element.height : parseFloat(element.height || '0');
+    const props = (typeof element.properties === 'object' && element.properties !== null) ? element.properties : {};
+    const pos = (props as any).position || {};
+    const size = (props as any).size || {};
+    const baseX = typeof element.x === 'number' ? element.x : (typeof pos.x === 'number' ? pos.x : parseFloat(String(pos.x || 0)) || 0);
+    const baseY = typeof element.y === 'number' ? element.y : (typeof pos.y === 'number' ? pos.y : parseFloat(String(pos.y || 0)) || 0);
+    const width = typeof element.width === 'number'
+      ? element.width
+      : (typeof size.width === 'number' ? size.width : parseFloat(String(size.width || element.width || 0)) || 0);
+    const height = typeof element.height === 'number'
+      ? element.height
+      : (typeof size.height === 'number' ? size.height : parseFloat(String(size.height || element.height || 0)) || 0);
     
     const centerPoint = {
-      x: element.x + width / 2 + (offset?.x ?? 0),
-      y: element.y + height / 2 + (offset?.y ?? 0),
+      x: baseX + width / 2 + (offset?.x ?? 0),
+      y: baseY + height / 2 + (offset?.y ?? 0),
     };
     centerOnPoint(centerPoint, zoomLevel);
   }, [centerOnPoint]);
@@ -516,15 +555,18 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
   const transformableElements = useMemo(() => elements, [elements]);
   const allElementsProp = useMemo(() => elements, [elements]);
   
+  const outerClassName = 'relative w-full h-screen';
+  const innerClassName = cn(
+    isMobile ? 'relative w-full h-full overflow-auto bg-canvas-teal' : 'relative w-full h-full overflow-auto bg-canvas-teal',
+    isPanningActive && 'cursor-grab',
+    dragState?.isPanning && 'cursor-grabbing'
+  );
+
   return (
-    <div className="relative w-full h-screen">
+    <div className={outerClassName}>
       <div
         ref={canvasContainerRef}
-        className={cn(
-          "relative w-full h-screen overflow-auto bg-canvas-teal",
-          isPanningActive && "cursor-grab",
-          dragState?.isPanning && "cursor-grabbing"
-        )}
+        className={innerClassName}
         style={{
           backgroundColor: canvasBackgroundColor ?? '#96e4e6',
           backgroundImage: `radial-gradient(#ffffff 1px, transparent 0)`,
@@ -573,6 +615,7 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
                       onUngroup={onUngroup}
                       setIsDirty={setIsDirty}
                       boardId={board.id}
+                      isMobile={isMobile}
                       user={user}
                       storage={storage}
                       toast={toast}
@@ -600,6 +643,10 @@ const Canvas = forwardRef<CanvasHandle, CanvasProps>(({
         onSendToBack={onSendToBack}
         onMoveBackward={onMoveBackward}
         isMobile={isMobile}
+        onUndo={onUndo}
+        canUndo={canUndo}
+        onRedo={onRedo}
+        canRedo={canRedo}
       />
     </div>
   );

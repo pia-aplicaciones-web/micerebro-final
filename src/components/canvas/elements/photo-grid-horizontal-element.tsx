@@ -22,49 +22,25 @@ import {
   Trash2,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
+import { compressImage as compressImageFile } from '@/lib/upload-helper';
 
 
 function isPhotoGridContent(content: unknown): content is PhotoGridContent {
   return typeof content === 'object' && content !== null && 'rows' in content && 'columns' in content;
 }
 
-// Comprimir imagen a max 72dpi y 200KB
+// Comprimir imagen a 72dpi y 100KB
 async function compressImage(file: File): Promise<string> {
+  const compressed = await compressImageFile(file, 100);
+  const sizeKB = compressed.size / 1024;
+  if (sizeKB > 100) {
+    throw new Error(`Imagen demasiado grande (${sizeKB.toFixed(2)}KB)`);
+  }
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const maxSize = 800;
-        let width = img.width;
-        let height = img.height;
-        if (width > maxSize || height > maxSize) {
-          if (width > height) {
-            height = (height / width) * maxSize;
-            width = maxSize;
-          } else {
-            width = (width / height) * maxSize;
-            height = maxSize;
-          }
-        }
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-        let quality = 0.8;
-        let result = canvas.toDataURL('image/jpeg', quality);
-        while (result.length > 200 * 1024 * 1.37 && quality > 0.3) {
-          quality -= 0.1;
-          result = canvas.toDataURL('image/jpeg', quality);
-        }
-        resolve(result);
-      };
-      img.onerror = reject;
-      img.src = e.target?.result as string;
-    };
+    reader.onload = () => resolve(String(reader.result || ''));
     reader.onerror = reject;
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(compressed);
   });
 }
 
@@ -145,8 +121,13 @@ export default function PhotoGridHorizontalElement(props: CommonElementProps) {
           url: compressedUrl,
         };
         nextEmptyIndex = newCells.findIndex((c, i) => i > nextEmptyIndex && !c.url);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error compressing image:', error);
+        toast({
+          variant: 'destructive',
+          title: 'Imagen demasiado grande',
+          description: error?.message || 'No se pudo comprimir a 100KB.',
+        });
       }
     }
     onUpdate(id, { content: { ...gridContent, cells: newCells } });

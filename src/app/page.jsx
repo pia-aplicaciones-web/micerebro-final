@@ -84,7 +84,7 @@ export default function HomePage() {
       }
 
       // Para usuarios autenticados, usar Firestore normalmente
-      const firestore = getFirebaseFirestore();
+      const { firestore } = await initFirebase();
       if (!firestore) throw new Error('Firestore no disponible');
 
       const userDocRef = doc(firestore, 'users', user.uid);

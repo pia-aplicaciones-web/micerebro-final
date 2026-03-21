@@ -62,7 +62,8 @@ export default function StickyNoteType2(props: CommonElementProps) {
 
   const safeProperties: CanvasElementProperties = typeof properties === 'object' && properties !== null ? properties : {};
   const colorKey = (safeProperties.color as keyof typeof PASTEL_COLORS) || 'morado-claro';
-  const currentColor = PASTEL_COLORS[colorKey] || PASTEL_COLORS['morado-claro'];
+  const customColor = typeof (safeProperties as any).customColor === 'string' ? (safeProperties as any).customColor : '';
+  const currentColor = customColor ? { bg: customColor, name: 'Personalizado' } : (PASTEL_COLORS[colorKey] || PASTEL_COLORS['morado-claro']);
 
   const typedContent = (content || {}) as { text: string };
   const textContent = typedContent.text || '';
@@ -178,6 +179,15 @@ export default function StickyNoteType2(props: CommonElementProps) {
   };
 
   const getTagColor = (index: number) => TAG_COLORS[index % TAG_COLORS.length];
+  const handleColorWheelChange = (hex: string) => {
+    onUpdate(id, {
+      properties: {
+        ...safeProperties,
+        color: 'custom',
+        customColor: hex,
+      },
+    });
+  };
 
   return (
     <div
@@ -204,7 +214,7 @@ export default function StickyNoteType2(props: CommonElementProps) {
     >
       {/* Header Compacto */}
       <div className="flex items-center justify-between px-3 py-1.5 bg-white/40 border-b border-gray-300/30">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
           {/* Drag Handle de 9 puntos */}
           <div 
             className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/5 rounded flex-shrink-0"
@@ -253,6 +263,23 @@ export default function StickyNoteType2(props: CommonElementProps) {
           >
             Aa
           </Button>
+          <div className="relative flex items-center">
+            <button
+              type="button"
+              className="h-5 w-5 rounded-full border border-black/20 shadow-sm"
+              style={{ backgroundColor: currentColor.bg }}
+              onMouseDown={(e) => e.stopPropagation()}
+              title="Color de la nota"
+            />
+            <input
+              type="color"
+              value={currentColor.bg}
+              onChange={(e) => handleColorWheelChange(e.target.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              className="absolute inset-0 opacity-0 cursor-pointer"
+              aria-label="Selector de color"
+            />
+          </div>
         </div>
         <Button
           variant="ghost"

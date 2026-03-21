@@ -51,6 +51,20 @@ function shouldUsePopup() {
   return usePopup;
 }
 
+function isSessionStorageAvailable() {
+  if (typeof window === 'undefined') return false;
+  try {
+    const testKey = '__firebase_auth_test__';
+    sessionStorage.setItem(testKey, 'test');
+    const retrieved = sessionStorage.getItem(testKey);
+    sessionStorage.removeItem(testKey);
+    return retrieved === 'test';
+  } catch (e) {
+    console.warn('⚠️ sessionStorage no disponible:', e);
+    return false;
+  }
+}
+
 /**
  * Inicia sesión con Google usando popup (siempre en móviles para evitar problemas con sessionStorage)
  */
@@ -189,9 +203,24 @@ export const createUserWithEmail = async (email, password) => {
  */
 export async function handleGoogleSignInResult(auth) {
   try {
+    // Evitar getRedirectResult si sessionStorage no está disponible
+    if (!isSessionStorageAvailable()) {
+      return null;
+    }
+
     // Intentar obtener resultado de redirect (por si se usó redirect en una sesión anterior)
     // Esto es solo para limpiar redirects pendientes, no para el flujo normal
-    const redirectResult = await getRedirectResult(auth);
+    let redirectResult = null;
+    try {
+      redirectResult = await getRedirectResult(auth);
+    } catch (error) {
+      // Ignorar errores de "missing initial state" en navegadores con storage particionado
+      if (error?.message?.includes('missing initial state') || error?.message?.includes('sessionStorage')) {
+        console.warn('⚠️ getRedirectResult ignorado por storage no disponible:', error?.message);
+        return null;
+      }
+      throw error;
+    }
     if (redirectResult) {
       console.log('✅ Login con Google exitoso (redirect pendiente procesado):', redirectResult.user.email);
       return redirectResult;
@@ -237,4 +266,3 @@ export const signOut = async () => {
     throw error;
   }
 };
-

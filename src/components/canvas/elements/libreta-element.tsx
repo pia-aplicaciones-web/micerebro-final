@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import { format } from 'date-fns';
 import DeleteNotepadDialog from './delete-notepad-dialog';
 
@@ -305,6 +306,7 @@ export default function LibretaElement(props: CommonElementProps) {
             <div
               ref={titleRef}
               contentEditable={!isPreview}
+              data-dictation-target="true"
               onInput={(e) => {
                 // El auto-guardado se encarga de guardar los cambios
               }}
@@ -344,15 +346,6 @@ export default function LibretaElement(props: CommonElementProps) {
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 hover:bg-gray-200"
-                  title={minimized ? 'Maximizar' : 'Minimizar'}
-                  onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); toggleMinimize(e); }}
-                >
-                  {minimized ? <Maximize className="h-4 w-4 text-gray-700" /> : <Minus className="h-4 w-4 text-gray-700" />}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 hover:bg-gray-200"
                   title="Copiar texto como .txt ordenado"
                   onClick={handleCopyAsTxt}
                 >
@@ -372,14 +365,14 @@ export default function LibretaElement(props: CommonElementProps) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 hover:bg-gray-200 ml-1"
+                  className="h-5 w-5 hover:bg-gray-200 ml-1"
                   title="Cerrar libreta"
                   onClick={(e) => {
                     e.stopPropagation();
                     onUpdate(id, { hidden: true });
                   }}
                 >
-                  <X className="h-4 w-4 text-gray-700" />
+                  <X className="h-3 w-3 text-gray-700" />
                 </Button>
 
               </div>
@@ -392,6 +385,7 @@ export default function LibretaElement(props: CommonElementProps) {
           <div
             ref={contentRef}
             contentEditable={!isPreview}
+            data-dictation-target="true"
             onInput={handleContentInput}
             onBlur={handleContentBlur}
             onFocus={() => {
@@ -410,10 +404,11 @@ export default function LibretaElement(props: CommonElementProps) {
               }
             }}
             onTouchStart={(e) => {
-              // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
-              e.stopPropagation();
-              if (contentRef.current && !isPreview) {
-                contentRef.current.focus();
+              const target = contentRef.current || (e.currentTarget as HTMLElement);
+              if (!shouldAllowTouchEdit(target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
               }
             }}
             className={cn(

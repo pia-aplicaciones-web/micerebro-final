@@ -78,6 +78,7 @@ interface MobileMenuProps {
   onOpenNotepad: (id: string) => void;
   onLocateElement: (id: string) => void;
   addElement: (type: ElementType, content?: any) => Promise<any>;
+  onCreateMiniBoard?: () => Promise<string | null>;
   onOpenRenameBoardDialog: () => void;
   onDeleteBoard: () => void;
   onUploadImage: () => void;
@@ -126,6 +127,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   isListening = false,
   onToggleDictation,
   onSaveSelectionBeforeMic,
+  onCreateMiniBoard,
   onOpenNotepad,
   onLocateElement,
   addElement,
@@ -146,11 +148,11 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
   const [openAddLinkDialog, setOpenAddLinkDialog] = useState(false);
 
   useEffect(() => {
-    if (isOpen) setSavedLinks(getSavedLinks());
-  }, [isOpen]);
+    if (isOpen) setSavedLinks(getSavedLinks(boardId));
+  }, [isOpen, boardId]);
   const refreshSavedLinks = useCallback(() => {
-    setSavedLinks(getSavedLinks());
-  }, []);
+    setSavedLinks(getSavedLinks(boardId));
+  }, [boardId]);
 
   const toggleSubMenu = (label: string) => {
     setOpenSubMenus((prev) => ({
@@ -210,7 +212,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       label: 'Tableros',
       icon: LayoutDashboard,
       subMenu: [
-        { label: 'Nuevo Tablero', onClick: () => router.push('/') },
+        onCreateMiniBoard
+          ? {
+              label: '+ Tablero Mini',
+              onClick: async () => {
+                const id = await onCreateMiniBoard();
+                if (id) router.push(`/board/${id}/`);
+              },
+            }
+          : { label: '+ Tablero Mini', onClick: () => {} },
         {
           label: 'Abrir Tablero...',
           subMenu: boards.map((boardItem) => ({
@@ -230,9 +240,11 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'iPhone', onClick: () => handleAddElement('dictado') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
+        { label: 'Block Dibujo', onClick: () => handleAddElement('block-dibujo') },
+        { label: 'Dibujar', onClick: () => handleAddElement('block-dibujo-2') },
         {
           label: 'Elementos Abiertos',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden !== true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true).map(element => {
             let title = 'Sin título';
             const elementType = element.type as ElementType;
             switch (elementType) {
@@ -257,6 +269,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 const dictadoContentOpen = element.content as any;
                 title = dictadoContentOpen?.title || 'iPhone';
                 break;
+              case 'block-dibujo':
+                const blockDibujoContent = element.content as any;
+                title = blockDibujoContent?.title || 'BLOCK DIBUJO';
+                break;
+              case 'block-dibujo-2':
+                const blockDibujo2Content = element.content as any;
+                title = blockDibujo2Content?.title || 'Dibujar';
+                break;
               default:
                 title = 'Elemento';
             }
@@ -265,7 +285,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         },
         {
           label: 'Cerrados',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado'].includes(el.type) && el.hidden === true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden === true).map(element => {
             let title = 'Sin título';
             const elementType = element.type as ElementType;
             switch (elementType) {
@@ -287,6 +307,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
               case 'dictado':
                 const dictadoContent = element.content as any;
                 title = dictadoContent?.title || 'iPhone';
+                break;
+              case 'block-dibujo':
+                const blockDibujoContentHidden = element.content as any;
+                title = blockDibujoContentHidden?.title || 'BLOCK DIBUJO';
+                break;
+              case 'block-dibujo-2':
+                const blockDibujo2ContentHidden = element.content as any;
+                title = blockDibujo2ContentHidden?.title || 'Dibujar';
                 break;
               default:
                 title = 'Elemento';
@@ -319,10 +347,6 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
           onClick: () => handleAddElement('todo'),
         },
         {
-          label: 'Time List',
-          onClick: () => handleAddElement('time-list'),
-        },
-        {
           label: 'Timer Lista',
           onClick: () => handleAddElement('timer-lista'),
         },
@@ -338,13 +362,27 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       icon: LinkIcon,
       subMenu: [
         { label: 'Agregar página', onClick: () => setOpenAddLinkDialog(true) },
-        ...savedLinks.map((link) => ({
-          label: link.name,
-          onClick: () => {
-            window.open(link.url, '_blank');
-            onClose();
-          },
-        })),
+        ...savedLinks.map((link) => {
+          const url = link.url || '';
+          const lower = url.toLowerCase();
+          let typeLabel = 'DOC';
+
+          if (/\.(doc|docx)$/.test(lower)) {
+            typeLabel = 'Word';
+          } else if (/\.(xls|xlsx|csv)$/.test(lower)) {
+            typeLabel = 'Excel';
+          } else if (lower.endsWith('.pdf')) {
+            typeLabel = 'PDF';
+          }
+
+          return {
+            label: `${link.name} [${typeLabel}]`,
+            onClick: () => {
+              window.open(link.url, '_blank');
+              onClose();
+            },
+          };
+        }),
       ],
     },
     {
@@ -368,6 +406,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Desde URL', onClick: onAddImageFromUrl },
         ...(onOpenUrlDocDialog ? [{ label: '+ URL docs', onClick: onOpenUrlDocDialog }] : []),
         { label: 'Marco de foto', onClick: () => handleAddElement('image-frame') },
+        { label: 'Mis imágenes', onClick: () => handleAddElement('mis-imagenes') },
         { label: 'Subir + Crop', onClick: onCropImage },
         { label: 'Desde URL + Crop', onClick: onAddImageFromUrlWithCrop },
       ],
@@ -410,6 +449,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
       open={openAddLinkDialog}
       onOpenChange={setOpenAddLinkDialog}
       onSaved={refreshSavedLinks}
+      boardId={boardId}
     />
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent

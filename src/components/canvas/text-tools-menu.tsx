@@ -36,6 +36,69 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
     onFormat(command, value);
   };
 
+  const applyFormatToPlainTextarea = (textarea: HTMLTextAreaElement, command: string) => {
+    const { selectionStart, selectionEnd, value } = textarea;
+    if (selectionStart == null || selectionEnd == null) return;
+    const hasSelection = selectionEnd > selectionStart;
+    if (!hasSelection) return;
+
+    const before = value.slice(0, selectionStart);
+    const selected = value.slice(selectionStart, selectionEnd);
+    const after = value.slice(selectionEnd);
+
+    let wrapped = selected;
+    if (command === 'bold') {
+      wrapped = `**${selected}**`;
+    } else if (command === 'italic') {
+      wrapped = `*${selected}*`;
+    } else {
+      return;
+    }
+
+    const nextValue = before + wrapped + after;
+    textarea.value = nextValue;
+    textarea.selectionStart = selectionStart;
+    textarea.selectionEnd = selectionStart + wrapped.length;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
+  const applyListToPlainTextarea = (textarea: HTMLTextAreaElement, type: 'bullet' | 'ordered') => {
+    const { selectionStart, selectionEnd, value } = textarea;
+    if (selectionStart == null || selectionEnd == null) return;
+
+    const start = value.lastIndexOf('\n', selectionStart - 1) + 1;
+    const endIdx = value.indexOf('\n', selectionEnd);
+    const end = endIdx === -1 ? value.length : endIdx;
+    const block = value.slice(start, end);
+
+    const lines = block.split(/\r?\n/);
+    const transformed = lines
+      .map((line, idx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return '';
+        if (type === 'bullet') {
+          if (/^([•\-*]|\u2022)\s/.test(trimmed)) {
+            return trimmed;
+          }
+          return `• ${trimmed}`;
+        }
+        // ordered
+        if (/^\d+\s*[\.\-]/.test(trimmed)) {
+          return trimmed;
+        }
+        const num = idx + 1;
+        return `${num}.- ${trimmed}`;
+      })
+      .join('\n');
+
+    const nextValue = value.slice(0, start) + transformed + value.slice(end);
+    textarea.value = nextValue;
+    const newEnd = start + transformed.length;
+    textarea.selectionStart = newEnd;
+    textarea.selectionEnd = newEnd;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
   const applyFontSize = (size: string) => {
     handleFormat('fontSize', '4');
     // Luego aplicar el tamaño específico
@@ -176,7 +239,14 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
       <DropdownMenuContent className="w-48 bg-white border border-gray-200">
         {/* Negrita */}
         <DropdownMenuItem
-          onClick={() => handleFormat('bold')}
+          onClick={() => {
+            const activeEl = document.activeElement as HTMLElement | null;
+            if (activeEl && activeEl.tagName === 'TEXTAREA') {
+              applyFormatToPlainTextarea(activeEl as HTMLTextAreaElement, 'bold');
+              return;
+            }
+            handleFormat('bold');
+          }}
           className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
         >
           <Bold className="w-4 h-4" />
@@ -186,7 +256,14 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
 
         {/* Cursiva */}
         <DropdownMenuItem
-          onClick={() => handleFormat('italic')}
+          onClick={() => {
+            const activeEl = document.activeElement as HTMLElement | null;
+            if (activeEl && activeEl.tagName === 'TEXTAREA') {
+              applyFormatToPlainTextarea(activeEl as HTMLTextAreaElement, 'italic');
+              return;
+            }
+            handleFormat('italic');
+          }}
           className="flex items-center gap-2 p-2 cursor-pointer hover:bg-gray-100"
         >
           <Italic className="w-4 h-4" />
@@ -260,6 +337,11 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
         {/* Lista con viñetas */}
         <DropdownMenuItem
           onClick={() => {
+            const activeEl = document.activeElement as HTMLElement | null;
+            if (activeEl && activeEl.tagName === 'TEXTAREA') {
+              applyListToPlainTextarea(activeEl as HTMLTextAreaElement, 'bullet');
+              return;
+            }
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0) {
               const range = selection.getRangeAt(0);
@@ -278,17 +360,17 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
                 document.execCommand('insertUnorderedList', false);
               }
               // Disparar evento input para guardar
-              const activeElement = document.activeElement as HTMLElement;
-              if (activeElement) {
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+              const activeElementDom = document.activeElement as HTMLElement;
+              if (activeElementDom) {
+                activeElementDom.dispatchEvent(new Event('input', { bubbles: true }));
               }
             } else {
               // Si no hay selección, insertar lista en el cursor
-              const activeElement = document.activeElement as HTMLElement;
-              if (activeElement && activeElement.isContentEditable) {
-                activeElement.focus();
+              const activeElementDom = document.activeElement as HTMLElement;
+              if (activeElementDom && activeElementDom.isContentEditable) {
+                activeElementDom.focus();
                 document.execCommand('insertUnorderedList', false);
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                activeElementDom.dispatchEvent(new Event('input', { bubbles: true }));
               }
             }
           }}
@@ -302,6 +384,11 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
         {/* Lista numerada */}
         <DropdownMenuItem
           onClick={() => {
+            const activeEl = document.activeElement as HTMLElement | null;
+            if (activeEl && activeEl.tagName === 'TEXTAREA') {
+              applyListToPlainTextarea(activeEl as HTMLTextAreaElement, 'ordered');
+              return;
+            }
             const selection = window.getSelection();
             if (selection && selection.rangeCount > 0) {
               const range = selection.getRangeAt(0);
@@ -320,17 +407,17 @@ const TextToolsMenu: React.FC<TextToolsMenuProps> = ({ onFormat }) => {
                 document.execCommand('insertOrderedList', false);
               }
               // Disparar evento input para guardar
-              const activeElement = document.activeElement as HTMLElement;
-              if (activeElement) {
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+              const activeElementDom = document.activeElement as HTMLElement;
+              if (activeElementDom) {
+                activeElementDom.dispatchEvent(new Event('input', { bubbles: true }));
               }
             } else {
               // Si no hay selección, insertar lista en el cursor
-              const activeElement = document.activeElement as HTMLElement;
-              if (activeElement && activeElement.isContentEditable) {
-                activeElement.focus();
+              const activeElementDom = document.activeElement as HTMLElement;
+              if (activeElementDom && activeElementDom.isContentEditable) {
+                activeElementDom.focus();
                 document.execCommand('insertOrderedList', false);
-                activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+                activeElementDom.dispatchEvent(new Event('input', { bubbles: true }));
               }
             }
           }}

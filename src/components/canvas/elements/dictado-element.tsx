@@ -13,6 +13,7 @@ import { useAutoSave } from '@/hooks/use-auto-save';
 import { SaveStatusIndicator } from '@/components/canvas/save-status-indicator';
 import { usePastePlainText } from '@/hooks/use-paste-plain-text';
 import { getDefaultSpeechVoice } from '@/lib/speech-voice';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 
 export default function DictadoElement(props: CommonElementProps) {
   const { 
@@ -285,11 +286,11 @@ export default function DictadoElement(props: CommonElementProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 hover:bg-black/10"
+              className="h-5 w-5 hover:bg-black/10"
               onClick={handleClose}
               title="Cerrar"
             >
-              <X className="h-4 w-4 text-gray-700" />
+              <X className="h-3 w-3 text-gray-700" />
             </Button>
             <Button
               variant="ghost"
@@ -299,15 +300,6 @@ export default function DictadoElement(props: CommonElementProps) {
               title="Guardar"
             >
               <Save className="h-4 w-4 text-gray-700" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 hover:bg-black/10"
-              onClick={toggleMinimize}
-              title="Minimizar"
-            >
-              <Minus className="h-4 w-4 text-gray-700" />
             </Button>
             <div className="drag-handle cursor-grab active:cursor-grabbing p-1 hover:bg-black/10 rounded">
               <GripVertical className="h-4 w-4 text-gray-700" />
@@ -343,23 +335,11 @@ export default function DictadoElement(props: CommonElementProps) {
             data-placeholder="iPhone"
             onMouseDown={(e) => e.stopPropagation()}
             onTouchStart={(e) => {
-              e.stopPropagation();
-              if (titleRef.current && !isPreview) {
-                titleRef.current.focus();
-                requestAnimationFrame(() => {
-                  setTimeout(() => {
-                    const selection = window.getSelection();
-                    if (selection) {
-                      if (selection.rangeCount === 0) {
-                        const range = document.createRange();
-                        range.selectNodeContents(titleRef.current!);
-                        range.collapse(false);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                      }
-                    }
-                  }, 100);
-                });
+              const target = titleRef.current || (e.currentTarget as HTMLElement);
+              if (!shouldAllowTouchEdit(target)) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
               }
             }}
             style={{
@@ -378,6 +358,10 @@ export default function DictadoElement(props: CommonElementProps) {
             <div
               ref={contentRef}
               contentEditable={!isPreview}
+              spellCheck={true}
+              lang="es-419"
+              autoCorrect="on"
+              autoCapitalize="sentences"
               suppressContentEditableWarning
               onInput={handleContentChange}
               onBlur={handleBlurWithSave}
@@ -396,24 +380,11 @@ export default function DictadoElement(props: CommonElementProps) {
                 }
               }}
               onTouchStart={(e) => {
-                // En móvil, establecer foco y cursor al tocar
-                e.stopPropagation(); // Evitar que el evento suba al contenedor
-                if (contentRef.current && !isPreview) {
-                  contentRef.current.focus();
-                  requestAnimationFrame(() => {
-                    setTimeout(() => {
-                      const selection = window.getSelection();
-                      if (selection) {
-                        if (selection.rangeCount === 0) {
-                          const range = document.createRange();
-                          range.selectNodeContents(contentRef.current!);
-                          range.collapse(false); // Al final
-                          selection.removeAllRanges();
-                          selection.addRange(range);
-                        }
-                      }
-                    }, 100);
-                  });
+                const target = contentRef.current || (e.currentTarget as HTMLElement);
+                if (!shouldAllowTouchEdit(target)) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return;
                 }
               }}
               onPaste={handlePaste}

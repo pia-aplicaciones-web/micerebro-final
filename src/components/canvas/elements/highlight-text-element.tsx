@@ -8,6 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Paintbrush, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 
 // Paletas expandidas con texto oscuro del mismo tono (NO usar negro)
 const EXTENDED_PALETTES = {
@@ -183,10 +184,11 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
             }
           }}
           onTouchStart={(e) => {
-            // En móvil, solo enfocamos y dejamos que el navegador coloque el cursor donde se toca
-            e.stopPropagation();
-            if (contentRef.current && !isPreview) {
-              contentRef.current.focus();
+            const target = contentRef.current || (e.currentTarget as HTMLElement);
+            if (!shouldAllowTouchEdit(target)) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
             }
           }}
           className="outline-none min-h-[100px] w-full"
@@ -200,4 +202,3 @@ export default function HighlightTextElement({ id, content, properties, onUpdate
       </div>
   );
 }
-

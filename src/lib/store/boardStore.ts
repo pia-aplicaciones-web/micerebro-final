@@ -47,6 +47,7 @@ function updateExistingElements(elements: WithId<CanvasElement>[], userId: strin
 
 // MODO DESARROLLO: usar localStorage en lugar de Firebase
 const DEV_MODE = false; // Cambiado a false para siempre usar Firebase
+const UNDO_LIMIT = 10;
 
 // Funciones para modo desarrollo (localStorage)
 const getDevElements = (boardId: string): WithId<CanvasElement>[] => {
@@ -217,6 +218,10 @@ interface BoardState {
   isLoading: boolean;
   error: string | null;
   unsubscribeElements: (() => void) | null;
+  undoStack: WithId<CanvasElement>[][];
+  redoStack: WithId<CanvasElement>[][];
+  lastUndoSnapshotAt: number;
+  isUndoing: boolean;
 
   loadBoard: (boardId: string, userId: string) => Promise<string | null>;
   createBoard: (userId: string, boardName?: string, password?: string, boardType?: 'standard' | 'mini') => Promise<string>;
@@ -224,6 +229,8 @@ interface BoardState {
   updateElement: (elementId: string, updates: Partial<CanvasElement>) => Promise<void>;
   deleteElement: (elementId: string) => Promise<void>;
   setSelectedElementIds: (ids: string[]) => void;
+  undo: () => Promise<void>;
+  redo: () => Promise<void>;
   cleanup: () => void;
 }
 
@@ -234,6 +241,10 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   isLoading: true,
   error: null,
   unsubscribeElements: null,
+  undoStack: [],
+  redoStack: [],
+  lastUndoSnapshotAt: 0,
+  isUndoing: false,
 
   // Función auxiliar para limpiar elementos huérfanos
   cleanupOrphanedElements: async (boardId: string, userId: string, currentElements: WithId<CanvasElement>[]) => {
@@ -279,7 +290,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       set({ unsubscribeElements: null });
     }
 
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, undoStack: [], redoStack: [], lastUndoSnapshotAt: 0, isUndoing: false });
     
     // MODO DESARROLLO: usar localStorage
     if (DEV_MODE) {
@@ -482,6 +493,109 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  undo: async () => {
+    const { undoStack, redoStack, board, elements, isUndoing } = get();
+    if (isUndoing) return;
+    if (!board || !board.id) return;
+    if (undoStack.length === 0) return;
+
+    const previous = undoStack[undoStack.length - 1];
+    const nextStack = undoStack.slice(0, -1);
+
+    set({ isUndoing: true, undoStack: nextStack, redoStack: [...redoStack, JSON.parse(JSON.stringify(elements))].slice(-UNDO_LIMIT), elements: previous });
+
+    if (DEV_MODE) {
+      saveDevElements(board.id, previous);
+      set({ isUndoing: false });
+      return;
+    }
+
+    const userId = board.userId || (board as { ownerId?: string }).ownerId;
+    if (!userId) {
+      set({ isUndoing: false });
+      return;
+    }
+
+    try {
+      const db = getDb();
+      const batch = writeBatch(db);
+      const currentIds = new Set(elements.map((el) => el.id));
+      const previousIds = new Set(previous.map((el) => el.id));
+
+      for (const id of currentIds) {
+        if (!previousIds.has(id)) {
+          const elementRef = doc(db, 'users', userId, 'canvasBoards', board.id, 'canvasElements', id);
+          batch.delete(elementRef);
+        }
+      }
+
+      for (const element of previous) {
+        const elementRef = doc(db, 'users', userId, 'canvasBoards', board.id, 'canvasElements', element.id);
+        batch.set(elementRef, cleanUpdatesForFirestore({ ...element, updatedAt: serverTimestamp() }));
+      }
+
+      await batch.commit();
+    } catch (error) {
+      console.error('❌ Error al deshacer cambios:', error);
+    } finally {
+      set({ isUndoing: false });
+    }
+  },
+
+  redo: async () => {
+    const { undoStack, redoStack, board, elements, isUndoing } = get();
+    if (isUndoing) return;
+    if (!board || !board.id) return;
+    if (redoStack.length === 0) return;
+
+    const next = redoStack[redoStack.length - 1];
+    const nextRedoStack = redoStack.slice(0, -1);
+
+    set({
+      isUndoing: true,
+      redoStack: nextRedoStack,
+      undoStack: [...undoStack, JSON.parse(JSON.stringify(elements))].slice(-UNDO_LIMIT),
+      elements: next,
+    });
+
+    if (DEV_MODE) {
+      saveDevElements(board.id, next);
+      set({ isUndoing: false });
+      return;
+    }
+
+    const userId = board.userId || (board as { ownerId?: string }).ownerId;
+    if (!userId) {
+      set({ isUndoing: false });
+      return;
+    }
+
+    try {
+      const db = getDb();
+      const batch = writeBatch(db);
+      const currentIds = new Set(elements.map((el) => el.id));
+      const nextIds = new Set(next.map((el) => el.id));
+
+      for (const id of currentIds) {
+        if (!nextIds.has(id)) {
+          const elementRef = doc(db, 'users', userId, 'canvasBoards', board.id, 'canvasElements', id);
+          batch.delete(elementRef);
+        }
+      }
+
+      for (const element of next) {
+        const elementRef = doc(db, 'users', userId, 'canvasBoards', board.id, 'canvasElements', element.id);
+        batch.set(elementRef, cleanUpdatesForFirestore({ ...element, updatedAt: serverTimestamp() }));
+      }
+
+      await batch.commit();
+    } catch (error) {
+      console.error('❌ Error al rehacer cambios:', error);
+    } finally {
+      set({ isUndoing: false });
+    }
+  },
+
   cleanup: () => {
     const { unsubscribeElements } = get();
     if (unsubscribeElements) {
@@ -540,9 +654,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   addElement: async (element: Omit<CanvasElement, 'id'>) => {
     const { board, elements } = get();
     if (!board) return;
+    const { isUndoing } = get();
 
     // MODO DESARROLLO: usar localStorage
     if (DEV_MODE) {
+      if (!isUndoing) {
+        const snapshot = JSON.parse(JSON.stringify(elements));
+        set((state) => ({
+          undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+          redoStack: [],
+          lastUndoSnapshotAt: Date.now(),
+        }));
+      }
       const newElement: WithId<CanvasElement> = {
         ...element,
         id: `dev-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -559,6 +682,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!userId) {
       console.error("No se pudo obtener userId para añadir elemento");
       return;
+    }
+
+    if (!isUndoing) {
+      const snapshot = JSON.parse(JSON.stringify(elements));
+      set((state) => ({
+        undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+        redoStack: [],
+        lastUndoSnapshotAt: Date.now(),
+      }));
     }
 
     // Validación: asegurar que content nunca sea undefined
@@ -593,9 +725,18 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       console.warn("Board no disponible para actualizar elemento:", elementId);
       throw new Error('Tablero no disponible');
     }
+    const { isUndoing, lastUndoSnapshotAt } = get();
 
     // MODO DESARROLLO: usar localStorage
     if (DEV_MODE) {
+      if (!isUndoing && Date.now() - lastUndoSnapshotAt > 350) {
+        const snapshot = JSON.parse(JSON.stringify(elements));
+        set((state) => ({
+          undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+          redoStack: [],
+          lastUndoSnapshotAt: Date.now(),
+        }));
+      }
       const newElements = elements.map(el =>
         el.id === elementId ? { ...el, ...updates } : el
       );
@@ -608,6 +749,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!userId) {
       console.error("No se pudo obtener userId para actualizar elemento");
       throw new Error('Usuario no identificado');
+    }
+
+    if (!isUndoing && Date.now() - lastUndoSnapshotAt > 350) {
+      const snapshot = JSON.parse(JSON.stringify(elements));
+      set((state) => ({
+        undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+        redoStack: [],
+        lastUndoSnapshotAt: Date.now(),
+      }));
     }
 
     // OPTIMIZACIÓN: Actualizar estado local INMEDIATAMENTE para mejor UX
@@ -645,11 +795,19 @@ export const useBoardStore = create<BoardState>((set, get) => ({
   },
 
   deleteElement: async (elementId: string) => {
-    const { board, elements } = get();
+    const { board, elements, isUndoing } = get();
     if (!board) return;
 
     // MODO DESARROLLO: usar localStorage
     if (DEV_MODE) {
+      if (!isUndoing) {
+        const snapshot = JSON.parse(JSON.stringify(elements));
+        set((state) => ({
+          undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+          redoStack: [],
+          lastUndoSnapshotAt: Date.now(),
+        }));
+      }
       const newElements = elements.filter(el => el.id !== elementId);
       set({ elements: newElements });
       saveDevElements(board.id, newElements);
@@ -661,6 +819,15 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     if (!userId) {
       console.error("No se pudo obtener userId para eliminar elemento");
       return;
+    }
+
+    if (!isUndoing) {
+      const snapshot = JSON.parse(JSON.stringify(elements));
+      set((state) => ({
+        undoStack: [...state.undoStack, snapshot].slice(-UNDO_LIMIT),
+        redoStack: [],
+        lastUndoSnapshotAt: Date.now(),
+      }));
     }
 
     try {

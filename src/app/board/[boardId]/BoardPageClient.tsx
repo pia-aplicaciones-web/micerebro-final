@@ -38,7 +38,6 @@ import MiniToolsSidebar from '@/components/canvas/mini-tools-sidebar';
 import GlobalSearch from '@/components/canvas/global-search';
 import ImageCropDialog from '@/components/canvas/image-crop-dialog';
 import { BoardPasswordDialog } from '@/components/BoardPasswordDialog';
-import MobileMenu from '@/components/canvas/mobile-menu';
 
 
 // Debug Menu (temporal)
@@ -70,7 +69,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   };
   const storage = getFirebaseStorage();
   const { toast } = useToast();
-  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isMobile = useMediaQuery('(max-width: 1024px)');
   
   // Guía: no crear usuarios anónimos ni cargar sin usuario real de AuthContext
   
@@ -87,6 +86,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     createBoard,
     updateElement,
     deleteElement,
+    undo,
+    redo,
+    undoStack,
+    redoStack,
     selectedElementIds,
     setSelectedElementIds,
     isLoading: isBoardLoading,
@@ -308,12 +311,9 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
 
   const { addElement } = useElementManager(boardId, getViewportCenter, getNextZIndex);
 
-  // En Tablero Mini: notepad y block-dibujo siempre van en capa -1
+  // En Tablero Mini: respetar la regla global de zIndex (capa más alta)
   const addElementForMiniBoard = useCallback(
     async (type: ElementType, props?: any) => {
-      if ((type === 'notepad' || type === 'block-dibujo') && (board as any)?.boardType === 'mini') {
-        return addElement(type, { ...props, zIndex: -1, properties: { ...(props?.properties || {}), zIndex: -1 } });
-      }
       return addElement(type, props);
     },
     [addElement, board]
@@ -402,6 +402,24 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
       handlePasteElement();
     }
   }, { enableOnFormTags: false }, [handlePasteElement]);
+
+  // Cmd/Ctrl + Z → SOLO undo local del navegador (no tocamos el tablero)
+  // Atajo para undo GLOBAL del tablero: Cmd/Ctrl + Shift + Z
+  useHotkeys('mod+shift+z', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (redoStack.length > 0) {
+      ev.preventDefault();
+      redo();
+    }
+  }, { enableOnFormTags: false }, [redo, redoStack, shouldIgnoreKeyboard]);
+
+  useHotkeys('mod+y', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (redoStack.length > 0) {
+      ev.preventDefault();
+      redo();
+    }
+  }, { enableOnFormTags: false }, [redo, redoStack, shouldIgnoreKeyboard]);
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
@@ -1077,6 +1095,14 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     }
   }, [elements, updateElement, handleSelectElement]);
 
+  const handleOpenElement = useCallback((id: string) => {
+    const el = elements.find(e => e.id === id);
+    if (!el) return;
+    updateElement(id, { hidden: false, minimized: false } as any);
+    handleSelectElement(id);
+    canvasRef.current?.centerOnElement(el);
+  }, [elements, updateElement, handleSelectElement]);
+
   const handleChangeNotepadFormat = useCallback((id: string) => {
     const el = elements.find(e => e.id === id);
     if (el) {
@@ -1101,12 +1127,67 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   }, []);
 
   const handleEditElement = useCallback((id: string) => {
-    const el = elements.find(e => e.id === id);
-    if (el) {
-      setActivatedElementId(id);
-      canvasRef.current?.centerOnElement(el);
-    }
-  }, [elements]);
+    setActivatedElementId(id);
+  }, []);
+
+  const getElementZ = useCallback((el: WithId<CanvasElement>) => {
+    const props = typeof el.properties === 'object' && el.properties !== null ? el.properties : {};
+    const propZ = (props as any).zIndex;
+    if (typeof propZ === 'number') return propZ;
+    if (typeof el.zIndex === 'number') return el.zIndex;
+    return 0;
+  }, []);
+
+  const handleBringToFront = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const maxZ = elements.reduce((acc, el) => Math.max(acc, getElementZ(el)), 0);
+    const nextZ = maxZ + 1;
+    const props = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    updateElement(id, {
+      zIndex: nextZ,
+      properties: { ...(props as any), zIndex: nextZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
+
+  const handleSendToBack = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const minZ = elements.reduce((acc, el) => Math.min(acc, getElementZ(el)), getElementZ(target));
+    const nextZ = minZ - 1;
+    const props = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    updateElement(id, {
+      zIndex: nextZ,
+      properties: { ...(props as any), zIndex: nextZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
+
+  const handleMoveBackward = useCallback((id: string) => {
+    const target = elements.find((el) => el.id === id);
+    if (!target) return;
+    const targetZ = getElementZ(target);
+    const lowerCandidates = elements
+      .filter((el) => el.id !== id)
+      .map((el) => ({ el, z: getElementZ(el) }))
+      .filter(({ z }) => z < targetZ)
+      .sort((a, b) => b.z - a.z);
+
+    if (lowerCandidates.length === 0) return;
+    const adjacent = lowerCandidates[0];
+
+    const targetProps = typeof target.properties === 'object' && target.properties !== null ? target.properties : {};
+    const adjacentProps = typeof adjacent.el.properties === 'object' && adjacent.el.properties !== null ? adjacent.el.properties : {};
+
+    // Intercambiar capas con el elemento inmediatamente inferior.
+    updateElement(id, {
+      zIndex: adjacent.z,
+      properties: { ...(targetProps as any), zIndex: adjacent.z } as any,
+    });
+    updateElement(adjacent.el.id, {
+      zIndex: targetZ,
+      properties: { ...(adjacentProps as any), zIndex: targetZ } as any,
+    });
+  }, [elements, getElementZ, updateElement]);
 
   const handleExportToPng = useCallback(async () => {
     if (!canvasRef.current) return;
@@ -1247,32 +1328,30 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
               </Button>
             </div>
           )}
-          {isMobile && (
-            <MobileMenu
-              isOpen={isMobileMenuOpen}
-              onClose={handleToggleMobileMenu}
+          {isMobile && isMobileMenuOpen && (
+            <MiniToolsSidebar
               elements={elements || []}
               boards={boards || []}
               boardId={boardId}
               user={user}
-              onOpenNotepad={handleOpenNotepad}
+              addElement={addElementForMiniBoard}
               onLocateElement={handleLocateElement}
+              onOpenElement={handleOpenElement}
+              selectedElementId={selectedElementId}
+              onDeleteElement={deleteElement}
+              onAddImageFromUrl={() => {
+                setIsImageUrlDialogOpen(true);
+                setShouldOpenCropAfterUrl(false);
+              }}
               isListening={isListening}
               onToggleDictation={toggleListening}
               onSaveSelectionBeforeMic={saveSelectionBeforeMic}
-              addElement={addElement}
-              onOpenRenameBoardDialog={() => setIsRenameBoardDialogOpen(true)}
-              onDeleteBoard={handleDeleteBoard}
-              onUploadImage={handleUploadImage}
-              onAddImageFromUrl={handleAddImageFromUrl}
-              onOpenUrlDocDialog={() => {
-                handleToggleMobileMenu();
-                setIsUrlDocDialogOpen(true);
-              }}
-              onCropImage={handleCropImage}
-              onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
               onExportBoardToPng={handleExportToPng}
-              onDeleteAllUserImages={deleteAllUserImages}
+              onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
+              onCreateMiniBoard={user?.uid ? async () => {
+                const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+                return id || null;
+              } : undefined}
             />
           )}
           <RenameBoardDialog
@@ -1282,7 +1361,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         onSave={(name) => { handleRenameBoard(name); setIsRenameBoardDialogOpen(false); }}
       />
 
-      <div className="h-screen w-screen relative overflow-hidden">
+      <div className={isMobile ? 'h-screen w-screen relative overflow-hidden' : 'relative w-full min-h-screen'}>
         <BoardTitleDisplay
           name={board?.name || ''}
           onUpdateName={handleRenameBoard}
@@ -1298,6 +1377,9 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             user={user}
             addElement={addElementForMiniBoard}
             onLocateElement={handleLocateElement}
+            onOpenElement={handleOpenElement}
+            selectedElementId={selectedElementId}
+            onDeleteElement={deleteElement}
             onAddImageFromUrl={() => {
               setIsImageUrlDialogOpen(true);
               setShouldOpenCropAfterUrl(false);
@@ -1306,6 +1388,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
             onToggleDictation={toggleListening}
             onSaveSelectionBeforeMic={saveSelectionBeforeMic}
             onExportBoardToPng={handleExportToPng}
+            onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
             onCreateMiniBoard={user?.uid ? async () => {
               const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
               return id || null;
@@ -1314,48 +1397,75 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         )}
 
         {!isMobile && (board as any)?.boardType !== 'mini' && (
-          <ToolsSidebar
-            elements={elements || []}
-            boards={boards || []}
-            boardId={boardId}
-            user={user}
-            onUploadImage={handleUploadImage}
-            onAddImageFromUrl={() => {
-              setIsImageUrlDialogOpen(true);
-              setShouldOpenCropAfterUrl(false);
-            }}
-            onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
-            onCropImage={handleCropImage}
-            onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-            onPanToggle={() => canvasRef.current?.activatePanMode()}
-            onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
-            onDeleteBoard={handleDeleteBoard}
-            onDeleteAllUserImages={deleteAllUserImages}
-            onOpenNotepad={handleOpenNotepad}
-            onLocateElement={handleLocateElement}
-            onAddComment={handleAddMarker}
-            updateElement={updateElement}
-            selectedElementIds={selectedElementIds}
-            addElement={addElement}
-            selectElement={handleSelectElement}
-            clearCanvas={() => clearCanvas(elements)}
-            onExportBoardToPng={handleExportToPng}
-            onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
-            isFormatToolbarOpen={isFormatToolbarOpen}
-            onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-            canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
-            canvasScale={canvasRef.current?.getTransform().scale || 1}
-            isGalleryPanelOpen={isGalleryOpen}
-            onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
-            isListening={isListening}
-            onToggleDictation={toggleListening}
-            onSaveSelectionBeforeMic={saveSelectionBeforeMic}
-            drawingMode={drawingMode}
-            onCreateMiniBoard={user?.uid ? async () => {
-              const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
-              return id || null;
-            } : undefined}
-          />
+          <>
+            {/* Clon del menú principal de tablero mini en desktop */}
+            <MiniToolsSidebar
+              elements={elements || []}
+              boards={boards || []}
+              boardId={boardId}
+              user={user}
+              addElement={addElementForMiniBoard}
+              onLocateElement={handleLocateElement}
+              onOpenElement={handleOpenElement}
+              selectedElementId={selectedElementId}
+              onDeleteElement={deleteElement}
+              onAddImageFromUrl={() => {
+                setIsImageUrlDialogOpen(true);
+                setShouldOpenCropAfterUrl(false);
+              }}
+              isListening={isListening}
+              onToggleDictation={toggleListening}
+              onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+              onExportBoardToPng={handleExportToPng}
+              onCreateMiniBoard={user?.uid ? async () => {
+                const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+                return id || null;
+              } : undefined}
+            />
+
+            <ToolsSidebar
+              elements={elements || []}
+              boards={boards || []}
+              boardId={boardId}
+              user={user}
+              onUploadImage={handleUploadImage}
+              onAddImageFromUrl={() => {
+                setIsImageUrlDialogOpen(true);
+                setShouldOpenCropAfterUrl(false);
+              }}
+              onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
+              onCropImage={handleCropImage}
+              onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+              onPanToggle={() => canvasRef.current?.activatePanMode()}
+              onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
+              onDeleteBoard={handleDeleteBoard}
+              onDeleteAllUserImages={deleteAllUserImages}
+              onOpenNotepad={handleOpenNotepad}
+              onLocateElement={handleLocateElement}
+              onAddComment={handleAddMarker}
+              updateElement={updateElement}
+              selectedElementIds={selectedElementIds}
+              addElement={addElement}
+              selectElement={handleSelectElement}
+              clearCanvas={() => clearCanvas(elements)}
+              onExportBoardToPng={handleExportToPng}
+              onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
+              isFormatToolbarOpen={isFormatToolbarOpen}
+              onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+              canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
+              canvasScale={canvasRef.current?.getTransform().scale || 1}
+              isGalleryPanelOpen={isGalleryOpen}
+              onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
+              isListening={isListening}
+              onToggleDictation={toggleListening}
+              onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+              drawingMode={drawingMode}
+              onCreateMiniBoard={user?.uid ? async () => {
+                const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+                return id || null;
+              } : undefined}
+            />
+          </>
         )}
 
 
@@ -1363,7 +1473,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           ref={canvasRef}
           elements={canvasElements as WithId<CanvasElement>[]}
           board={board as WithId<Board>}
-          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#a6a6a6' : undefined}
+          canvasBackgroundColor={(board as any)?.boardType === 'mini' ? '#a9e5d3' : undefined}
           selectedElementIds={selectedElementIds}
           onSelectElement={handleSelectElement}
           updateElement={updateElement}
@@ -1378,9 +1488,9 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           activatedElementId={activatedElementId}
           isMobile={isMobile}
           setIsDirty={setIsDirty}
-          onBringToFront={() => {}}
-          onSendToBack={() => {}}
-          onMoveBackward={() => {}}
+          onBringToFront={handleBringToFront}
+          onSendToBack={handleSendToBack}
+          onMoveBackward={handleMoveBackward}
           onGoToHome={() => canvasRef.current?.goToHome()}
           onCenterView={() => {}}
           onCenterElementInView={(el) => canvasRef.current?.centerOnElement(el)}
@@ -1396,6 +1506,10 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           onEditComment={handleEditComment}
           onDuplicateElement={() => {}}
           onUngroup={() => {}}
+          onUndo={undo}
+          canUndo={undoStack.length > 0}
+          onRedo={redo}
+          canRedo={redoStack.length > 0}
           user={user}
           storage={storage}
           toast={toast}
@@ -1489,20 +1603,28 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
         <>
         <div
           key={`gallery-panel-${isGalleryOpen ? 'open' : 'closed'}`}
-          className="fixed left-0 top-0 h-screen flex items-center"
-          style={{ zIndex: isGalleryOpen ? 20000 : -1 }}
+          className="fixed left-0 flex items-center"
+          style={{
+            zIndex: isGalleryOpen ? 20000 : -1,
+            height: isMobile ? '50vh' : '100vh',
+            top: isMobile ? '25vh' : '0',
+            width: isMobile ? '90vw' : undefined,
+          }}
         >
           {/* Panel completo */}
           <div
             className={`
               h-full bg-white shadow-2xl border-r border-gray-200
               transition-all duration-300 ease-in-out
-              ${isGalleryOpen ? 'w-96' : 'w-0 overflow-hidden'}
+              ${isGalleryOpen ? '' : 'w-0 overflow-hidden'}
             `}
             style={{
               zIndex: isGalleryOpen ? 20000 : -1,
               backgroundColor: 'white',
-              border: '1px solid #e5e7eb'
+              border: '1px solid #e5e7eb',
+              width: isGalleryOpen
+                ? (isMobile ? '90vw' : '24rem')
+                : undefined,
             }}
           >
                 <div className="h-full flex flex-col min-h-0">

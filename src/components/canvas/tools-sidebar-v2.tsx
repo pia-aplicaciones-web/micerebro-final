@@ -243,7 +243,7 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
   };
 
   const allNotepads = useMemo(
-    () => elements.filter((el) => ['notepad', 'yellow-notepad'].includes(el.type)),
+    () => elements.filter((el) => ['notepad', 'yellow-notepad', 'block-dibujo', 'block-dibujo-2'].includes(el.type)),
     [elements]
   );
   const hiddenNotepads = useMemo(() => allNotepads.filter((el) => el.hidden), [allNotepads]);
@@ -295,7 +295,7 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
         position: { x: initialX, y: initialY },
         size: { width: defaultElementWidth, height: defaultElementHeight },
         // Aquí puedes añadir zIndex: -1 para los tipos específicos si no se hace ya en TransformableElement
-        zIndex: ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'container', 'two-columns'].includes(type) ? -1 : 1,
+        zIndex: undefined,
       },
       ...(props || {}), // Asegúrate de que las props existentes se fusionen
     };
@@ -311,6 +311,10 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
         description: e.message || 'No se pudo crear el elemento.'
       });
     }
+  };
+
+  const handleAddNotebook = async (type: ElementType, props?: any) => {
+    return handleAdd(type, { ...(props || {}), zIndex: 0 });
   };
 
   const handleSignOut = async () => {
@@ -620,11 +624,17 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" className="bg-blue-700 border-white/10 text-white">
-              <DropdownMenuItem onClick={() => handleAdd('notepad')} className="hover:bg-white/10">
+              <DropdownMenuItem onClick={() => handleAddNotebook('notepad')} className="hover:bg-white/10">
                 <Plus className="mr-2 h-4 w-4" /> Cuaderno clásico
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAdd('yellow-notepad')} className="hover:bg-white/10">
+              <DropdownMenuItem onClick={() => handleAddNotebook('yellow-notepad')} className="hover:bg-white/10">
                 <Plus className="mr-2 h-4 w-4" /> Block
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebook('block-dibujo')} className="hover:bg-white/10">
+                <Plus className="mr-2 h-4 w-4" /> Block Dibujo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebook('block-dibujo-2')} className="hover:bg-white/10">
+                <Plus className="mr-2 h-4 w-4" /> Dibujar
               </DropdownMenuItem>
               {hiddenNotepads.length > 0 && (
                 <>
@@ -661,6 +671,12 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
                 Desde URL
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
+              <DropdownMenuItem onClick={() => handleAdd('image-frame')} className="hover:bg-white/10">
+                Marco de foto
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAdd('mis-imagenes')} className="hover:bg-white/10">
+                Mis imágenes
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAdd('moodboard')} className="hover:bg-white/10">
                 Moodboard
               </DropdownMenuItem>
@@ -668,7 +684,21 @@ export default function ToolsSidebarV2(props: ToolsSidebarV2Props) {
           </DropdownMenu>
 
           {/* To-Do */}
-          <ToolButton icon={CheckSquare} label="Lista de tareas" onClick={() => handleAdd('todo')} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div>
+                <ToolButton icon={CheckSquare} label="Lista de tareas" hasDropdown />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" className="bg-blue-700 border-white/10 text-white">
+              <DropdownMenuItem onClick={() => handleAdd('todo')} className="hover:bg-white/10">
+                Lista de tareas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAdd('timer-lista')} className="hover:bg-white/10">
+                Timer Lista
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Divider />
 

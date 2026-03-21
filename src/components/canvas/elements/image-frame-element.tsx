@@ -103,9 +103,9 @@ export default function ImageFrameElement(props: CommonElementProps) {
           return;
         }
 
-        const compressedFile = await compressImage(file, 200);
+        const compressedFile = await compressImage(file, 100);
         const sizeKB = compressedFile.size / 1024;
-        if (sizeKB > 200) {
+        if (sizeKB > 100) {
           toast({ variant: 'destructive', title: 'Imagen demasiado grande', description: `Tamaño final: ${sizeKB.toFixed(2)}KB` });
           return;
         }
@@ -146,9 +146,9 @@ export default function ImageFrameElement(props: CommonElementProps) {
           return;
         }
 
-        const compressedFile = await compressImage(file, 200);
+        const compressedFile = await compressImage(file, 100);
         const sizeKB = compressedFile.size / 1024;
-        if (sizeKB > 200) {
+        if (sizeKB > 100) {
           toast({ variant: 'destructive', title: 'Imagen demasiado grande', description: `Tamaño final: ${sizeKB.toFixed(2)}KB` });
           return;
         }

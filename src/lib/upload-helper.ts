@@ -16,12 +16,12 @@ export interface UploadResponse {
 }
 
 /**
- * Comprime una imagen a máximo 200KB y 72 DPI sin afectar significativamente la visibilidad
+ * Comprime una imagen a máximo 100KB y 72 DPI sin afectar significativamente la visibilidad
  * @param file - El archivo de imagen original
- * @param maxSizeKB - Tamaño máximo en KB (default: 200)
+ * @param maxSizeKB - Tamaño máximo en KB (default: 100)
  * @returns Promise<File> - Archivo comprimido con resolución de 72 DPI
  */
-export async function compressImage(file: File, maxSizeKB: number = 200): Promise<File> {
+export async function compressImage(file: File, maxSizeKB: number = 100): Promise<File> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -88,7 +88,7 @@ export async function compressImage(file: File, maxSizeKB: number = 200): Promis
         // Dibujar imagen redimensionada
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Comprimir con calidad ajustable hasta alcanzar máximo 200KB
+        // Comprimir con calidad ajustable hasta alcanzar máximo 100KB
         let quality = 0.9;
         let compressedBlob: Blob | null = null;
         
@@ -111,7 +111,7 @@ export async function compressImage(file: File, maxSizeKB: number = 200): Promis
                   file.name,
                   { type: 'image/jpeg', lastModified: Date.now() }
                 );
-                // Verificar que el archivo final NO exceda 200KB
+                // Verificar que el archivo final NO exceda 100KB
                 if (sizeKB > maxSizeKB) {
                   console.warn(`⚠️ Imagen comprimida pero aún excede ${maxSizeKB}KB: ${sizeKB.toFixed(2)}KB`);
                 }
@@ -173,7 +173,7 @@ export async function uploadFile(
     };
   }
 
-  // Validar el tamaño del archivo (máximo 20MB - se comprimirá a 200KB y 72 DPI)
+  // Validar el tamaño del archivo (máximo 20MB - se comprimirá a 100KB y 72 DPI)
   const maxSize = 20 * 1024 * 1024; // 20MB
   if (file.size > maxSize) {
     return {
@@ -208,23 +208,23 @@ export async function uploadFile(
       userId 
     });
 
-    // Comprimir imagen si es necesario (máximo 200KB y 72 DPI efectivo)
-    // PERMITE archivos de hasta 20MB, pero SIEMPRE comprime a 200KB y 72 DPI
+    // Comprimir imagen si es necesario (máximo 100KB y 72 DPI efectivo)
+    // PERMITE archivos de hasta 20MB, pero SIEMPRE comprime a 100KB y 72 DPI
     let fileToUpload = file;
     if (file.type.startsWith('image/') && !file.type.includes('svg')) {
       const originalSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-      console.log(`📦 Comprimiendo imagen (${originalSizeMB}MB) a máximo 200KB y 72 DPI efectivo...`);
+      console.log(`📦 Comprimiendo imagen (${originalSizeMB}MB) a máximo 100KB y 72 DPI efectivo...`);
       try {
-        fileToUpload = await compressImage(file, 200);
+        fileToUpload = await compressImage(file, 100);
         const finalSizeKB = fileToUpload.size / 1024;
         
-        // VERIFICACIÓN CRÍTICA: El archivo NUNCA debe exceder 200KB después de compresión
-        if (finalSizeKB > 200) {
-          console.error(`❌ ERROR: Archivo comprimido excede 200KB: ${finalSizeKB.toFixed(2)}KB`);
+        // VERIFICACIÓN CRÍTICA: El archivo NUNCA debe exceder 100KB después de compresión
+        if (finalSizeKB > 100) {
+          console.error(`❌ ERROR: Archivo comprimido excede 100KB: ${finalSizeKB.toFixed(2)}KB`);
           // Intentar compresión más agresiva con calidad más baja
-          fileToUpload = await compressImage(file, 200);
+          fileToUpload = await compressImage(file, 100);
           const retrySizeKB = fileToUpload.size / 1024;
-          if (retrySizeKB > 200) {
+          if (retrySizeKB > 100) {
             return {
               success: false,
               url: '',
@@ -232,7 +232,7 @@ export async function uploadFile(
               fileName: '',
               size: fileToUpload.size,
               type: file.type,
-              error: `No se pudo comprimir la imagen a menos de 200KB. Tamaño final: ${retrySizeKB.toFixed(2)}KB`,
+              error: `No se pudo comprimir la imagen a menos de 100KB. Tamaño final: ${retrySizeKB.toFixed(2)}KB`,
             };
           }
         }
@@ -265,7 +265,7 @@ export async function uploadFile(
         };
       }
     } else {
-      // Para archivos no imagen que exceden 200KB
+      // Para archivos no imagen que exceden 100KB
       return {
         success: false,
         url: '',
@@ -344,4 +344,3 @@ export async function uploadFile(
     };
   }
 }
-

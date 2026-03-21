@@ -85,6 +85,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   const canEditLocator = isCommentSelected && !!selectedElement && !!onEditComment;
   const [popoverOpen, setPopoverOpen] = useState<'fontSize' | 'underlineColor' | 'textColor' | 'highlight' | null>(null);
   const highlightSelectionRef = useRef<Range | null>(null);
+  const textColorSelectionRef = useRef<Range | null>(null);
   const [fontSize, setFontSize] = useState('18px');
   const [rndPosition, setRndPosition] = useState({ x: 0, y: 0 });
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
@@ -151,12 +152,55 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     }
   };
 
+  const applyFormatToPlainTextarea = (textarea: HTMLTextAreaElement, command: string, value?: string) => {
+    const { selectionStart, selectionEnd, value: text } = textarea;
+    if (selectionStart == null || selectionEnd == null) return;
+
+    const hasSelection = selectionEnd > selectionStart;
+    const before = text.slice(0, selectionStart);
+    const selected = text.slice(selectionStart, selectionEnd);
+    const after = text.slice(selectionEnd);
+
+    let nextValue = text;
+    let nextSelectionStart = selectionStart;
+    let nextSelectionEnd = selectionEnd;
+
+    if (command === 'bold') {
+      if (!hasSelection) return;
+      const wrapped = `**${selected}**`;
+      nextValue = before + wrapped + after;
+      nextSelectionStart = selectionStart;
+      nextSelectionEnd = selectionStart + wrapped.length;
+    } else if (command === 'italic') {
+      if (!hasSelection) return;
+      const wrapped = `*${selected}*`;
+      nextValue = before + wrapped + after;
+      nextSelectionStart = selectionStart;
+      nextSelectionEnd = selectionStart + wrapped.length;
+    } else {
+      // Para otros comandos, de momento no hacemos nada especial en textarea
+      return;
+    }
+
+    textarea.value = nextValue;
+    textarea.selectionStart = nextSelectionStart;
+    textarea.selectionEnd = nextSelectionEnd;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
   const handleFormat = (e: React.MouseEvent, command: string, value?: string) => {
     e.preventDefault();
     e.stopPropagation();
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    // Soporte especial para textarea (ej. tareas en TodoList)
+    if (activeElement && activeElement.tagName === 'TEXTAREA') {
+      applyFormatToPlainTextarea(activeElement as HTMLTextAreaElement, command, value);
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
-      const activeElement = document.activeElement as HTMLElement;
       if (activeElement && (activeElement.isContentEditable || activeElement.tagName === 'DIV')) {
         activeElement.focus();
         if (value) {
@@ -170,6 +214,7 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       return;
     }
 
+    // Caso general: contentEditable con selección
     if (value) {
       document.execCommand(command, false, value);
     } else {
@@ -177,9 +222,9 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     }
     
     // Disparar evento input para guardar cambios
-    const activeElement = document.activeElement as HTMLElement;
-    if (activeElement) {
-      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+    const activeForInput = document.activeElement as HTMLElement;
+    if (activeForInput) {
+      activeForInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
     
     setPopoverOpen(null);
@@ -315,9 +360,9 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
       selection.removeAllRanges();
       selection.addRange(range);
       // Disparar evento input para guardar
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement) {
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      const activeElForInput = document.activeElement as HTMLElement;
+      if (activeElForInput) {
+        activeElForInput.dispatchEvent(new Event('input', { bubbles: true }));
       }
     } catch (err) {
       console.error('Error aplicando color:', err);
@@ -371,6 +416,40 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
   const handleList = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    // Soporte para listas en textarea (ej. items de TodoList)
+    if (activeElement && activeElement.tagName === 'TEXTAREA') {
+      const textarea = activeElement as HTMLTextAreaElement;
+      const { selectionStart, selectionEnd, value } = textarea;
+      if (selectionStart == null || selectionEnd == null) return;
+
+      const start = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const endIdx = value.indexOf('\n', selectionEnd);
+      const end = endIdx === -1 ? value.length : endIdx;
+      const block = value.slice(start, end);
+
+      const lines = block.split(/\r?\n/);
+      const transformed = lines
+        .map((line) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          if (/^([•\-*]|\u2022)\s/.test(trimmed)) {
+            return trimmed;
+          }
+          return `• ${trimmed}`;
+        })
+        .join('\n');
+
+      const nextValue = value.slice(0, start) + transformed + value.slice(end);
+      textarea.value = nextValue;
+      const newEnd = start + transformed.length;
+      textarea.selectionStart = newEnd;
+      textarea.selectionEnd = newEnd;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
@@ -417,24 +496,59 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
     // Fallback: usar execCommand para otros casos (por ejemplo, inputs simples)
     if (selection && selection.rangeCount > 0) {
       document.execCommand('insertUnorderedList', false);
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement) {
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      const activeForInputList = document.activeElement as HTMLElement;
+      if (activeForInputList) {
+        activeForInputList.dispatchEvent(new Event('input', { bubbles: true }));
       }
       return;
     }
 
-    const activeElement = document.activeElement as HTMLElement;
-    if (activeElement && activeElement.isContentEditable) {
-      activeElement.focus();
+    const activeEditableList = document.activeElement as HTMLElement;
+    if (activeEditableList && activeEditableList.isContentEditable) {
+      activeEditableList.focus();
       document.execCommand('insertUnorderedList', false);
-      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      activeEditableList.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 
   const handleOrderedList = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    // Soporte para listas numeradas en textarea (ej. items de TodoList)
+    if (activeElement && activeElement.tagName === 'TEXTAREA') {
+      const textarea = activeElement as HTMLTextAreaElement;
+      const { selectionStart, selectionEnd, value } = textarea;
+      if (selectionStart == null || selectionEnd == null) return;
+
+      const start = value.lastIndexOf('\n', selectionStart - 1) + 1;
+      const endIdx = value.indexOf('\n', selectionEnd);
+      const end = endIdx === -1 ? value.length : endIdx;
+      const block = value.slice(start, end);
+
+      const lines = block.split(/\r?\n/);
+      const transformed = lines
+        .map((line, idx) => {
+          const trimmed = line.trim();
+          if (!trimmed) return '';
+          if (/^\d+\s*[\.\-]/.test(trimmed)) {
+            return trimmed;
+          }
+          const num = idx + 1;
+          return `${num}.- ${trimmed}`;
+        })
+        .join('\n');
+
+      const nextValue = value.slice(0, start) + transformed + value.slice(end);
+      textarea.value = nextValue;
+      const newEnd = start + transformed.length;
+      textarea.selectionStart = newEnd;
+      textarea.selectionEnd = newEnd;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0 && !selection.isCollapsed) {
       const range = selection.getRangeAt(0);
@@ -479,18 +593,18 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
 
     if (selection && selection.rangeCount > 0) {
       document.execCommand('insertOrderedList', false);
-      const activeElement = document.activeElement as HTMLElement;
-      if (activeElement) {
-        activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      const activeForInputOrdered = document.activeElement as HTMLElement;
+      if (activeForInputOrdered) {
+        activeForInputOrdered.dispatchEvent(new Event('input', { bubbles: true }));
       }
       return;
     }
 
-    const activeElement = document.activeElement as HTMLElement;
-    if (activeElement && activeElement.isContentEditable) {
-      activeElement.focus();
+    const activeEditableOrdered = document.activeElement as HTMLElement;
+    if (activeEditableOrdered && activeEditableOrdered.isContentEditable) {
+      activeEditableOrdered.focus();
       document.execCommand('insertOrderedList', false);
-      activeElement.dispatchEvent(new Event('input', { bubbles: true }));
+      activeEditableOrdered.dispatchEvent(new Event('input', { bubbles: true }));
     }
   };
 
@@ -847,39 +961,56 @@ const FormattingToolbar: React.FC<FormattingToolbarProps> = ({
         </PopoverContent>
       </Popover>
 
-      {/* PINCEL - Color de texto (sin amarillo ni ámbar) */}
-      <Popover open={popoverOpen === 'textColor'} onOpenChange={(open) => setPopoverOpen(open ? 'textColor' : null)}>
+      {/* COLOR TEXTO - A subrayada calipso */}
+      <Popover
+        open={popoverOpen === 'textColor'}
+        onOpenChange={(open) => {
+          if (open) {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0) {
+              textColorSelectionRef.current = sel.getRangeAt(0).cloneRange();
+            } else {
+              textColorSelectionRef.current = null;
+            }
+            setPopoverOpen('textColor');
+          } else {
+            setPopoverOpen(null);
+          }
+        }}
+      >
         <PopoverTrigger asChild>
           <button className={whiteButtonClassName} onMouseDown={(e) => e.preventDefault()} title="Color de texto">
-            <Paintbrush className={iconClassName} />
+            <span
+              className="inline-flex items-center justify-center text-[15px] font-semibold leading-none"
+              style={{
+                color: '#111111',
+                textDecorationLine: 'underline',
+                textDecorationColor: '#28c4d8',
+                textDecorationThickness: '3px',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              A
+            </span>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-2 bg-background border border-border" onMouseDown={(e) => e.preventDefault()}>
-          <div className="grid grid-cols-5 gap-1.5">
-            {[
-              { hex: '#14b8a6', label: 'Teal' },
-              { hex: '#f97316', label: 'Naranja' },
-              { hex: '#84cc16', label: 'Verde lima' },
-              { hex: '#3b82f6', label: 'Azul' },
-              { hex: '#1f2937', label: 'Gris oscuro' },
-              { hex: '#475569', label: 'Slate' },
-              { hex: '#ef4444', label: 'Rojo' },
-              { hex: '#ffffff', label: 'Blanco' },
-              { hex: '#28c4d8', label: 'Calipso' },
-              { hex: '#e91e8c', label: 'Fucsia' },
-              { hex: '#a855f7', label: 'Morado' },
-            ].map(({ hex, label }) => (
-              <Tooltip key={label}>
-                <TooltipTrigger asChild>
-                  <button
-                    className="w-7 h-7 rounded border border-gray-300 hover:scale-110"
-                    style={{ backgroundColor: hex }}
-                    onMouseDown={(e) => applyTextColor(e, hex)}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>{label}</TooltipContent>
-              </Tooltip>
-            ))}
+          <div className="flex items-center gap-2">
+            <input
+              type="color"
+              defaultValue="#111111"
+              onChange={(e) => {
+                const sel = window.getSelection();
+                if (textColorSelectionRef.current && sel) {
+                  sel.removeAllRanges();
+                  sel.addRange(textColorSelectionRef.current);
+                }
+                applyTextColor(e as unknown as React.MouseEvent, e.target.value);
+              }}
+              className="h-9 w-9 cursor-pointer rounded border border-gray-300 bg-transparent"
+              aria-label="Selector de color de texto"
+            />
+            <span className="text-xs text-muted-foreground">Color de texto</span>
           </div>
         </PopoverContent>
       </Popover>

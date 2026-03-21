@@ -4,6 +4,7 @@
 import React, { useCallback, useState, useEffect, useMemo, useRef } from 'react';
 import type { CanvasElement, WithId, ElementType, CanvasElementProperties, ContainerContent, CommonElementProps, Point, ElementContent, BaseVisualProperties, StickyCanvasElement, NotepadCanvasElement } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import { Rnd, type DraggableData, type ResizableDelta, type Position, type RndDragEvent } from 'react-rnd';
 import { Button } from '@/components/ui/button';
 import DeleteElementDialog from './elements/delete-element-dialog';
@@ -30,6 +31,7 @@ import WeeklyMenuElement from './elements/weekly-menu-element';
 import ContainerElement from './elements/container-element';
 import LocatorElement from './elements/locator-element';
 import ImageFrameElement from './elements/image-frame-element';
+import MisImagenesElement from './elements/mis-imagenes-element';
 import UrlDocElement from './elements/url-doc-element';
 import PhotoGridElement from './elements/photo-grid-element';
 import CommentSmallElement from './elements/comment-small-element';
@@ -43,6 +45,7 @@ import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
 import DictadoElement from './elements/dictado-element';
 import BlockDibujoElement from './elements/block-dibujo-element';
+import BlockDibujo2Element from './elements/block-dibujo-2-element';
 import TimeListElement from './elements/time-list-element';
 import TimerListaElement from './elements/timer-lista-element';
 
@@ -68,6 +71,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'two-columns': ContainerElement,
   locator: LocatorElement,
   'image-frame': ImageFrameElement,
+  'mis-imagenes': MisImagenesElement,
   'url-doc': UrlDocElement,
   'photo-grid': PhotoGridElement,
   'photo-grid-horizontal': PhotoGridHorizontalElement,
@@ -81,6 +85,7 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'countdown': CountdownElement,
   'dictado': DictadoElement,
   'block-dibujo': BlockDibujoElement,
+  'block-dibujo-2': BlockDibujo2Element,
   'time-list': TimeListElement,
   'timer-lista': TimerListaElement,
 };
@@ -91,6 +96,7 @@ type TransformableElementProps = {
   scale: number;
   canvasContainerRef: React.RefObject<HTMLDivElement>;
   isSelected: boolean;
+  isMobile?: boolean;
   updateElement: (id: string, updates: Partial<CanvasElement>) => void;
   unanchorElement: (id: string) => void;
   deleteElement: (id: string) => void;
@@ -155,6 +161,7 @@ export default function TransformableElement({
   scale,
   canvasContainerRef,
   isSelected,
+  isMobile,
   updateElement,
   unanchorElement,
   deleteElement,
@@ -209,10 +216,33 @@ export default function TransformableElement({
   const position = (element.parentId && elementProps.relativePosition) ? elementProps.relativePosition : (elementProps.position || { x: element.x || 0, y: element.y || 0 });
   const size = elementProps.size || { width: element.width || 200, height: element.height || 150 };
   const rotation = elementProps.rotation ?? element.rotation ?? 0;
-  // REGLA GENERAL: Elementos de cuadernos inician con zIndex -1, pasan al frente cuando se seleccionan
-  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini', 'container', 'two-columns', 'libreta'].includes(element.type);
+  // REGLAS GLOBALES:
+  // - Cuadernos siempre van en la última capa (z=-1) cuando NO están en edición.
+  // - Al seleccionar para editar, suben temporalmente a z=999.
+  // - Al terminar edición (deselección), vuelven a su capa base.
+  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'libreta'].includes(element.type);
   const baseZIndex = isNotebookElement ? -1 : (elementProps.zIndex ?? element.zIndex ?? 1);
   const zIndex = isDraggingOrResizing ? 30001 : (isSelected ? 999 : baseZIndex);
+
+  const isTouchDevice = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  }, []);
+
+  const handleEditableTouchGate = useCallback((e: React.TouchEvent) => {
+    if (!isTouchDevice) return;
+    const target = e.target as HTMLElement;
+    if (!target) return;
+    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+    const editableParent = target.closest('[contenteditable="true"]') as HTMLElement | null;
+    if (!isEditable && !editableParent) return;
+
+    const gateTarget = editableParent || target;
+    if (!shouldAllowTouchEdit(gateTarget)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, [isTouchDevice]);
   
   // Asegurar que size tenga valores numéricos válidos
   // pomodoro mantiene ancho fijo de 180px
@@ -223,10 +253,46 @@ export default function TransformableElement({
            (typeof size.width === 'number' && size.width > 0 ? size.width : (isWeeklyPlanner ? 794 : 200)),
     height: (typeof size.height === 'number' && size.height > 0 ? size.height : (isWeeklyPlanner ? 794 : 150))
   };
+
+  const [livePosition, setLivePosition] = useState(position);
+  useEffect(() => {
+    if (!isDraggingOrResizing) {
+      setLivePosition(position);
+    }
+  }, [position.x, position.y, isDraggingOrResizing]);
   
-  // Centrar elemento en vista: scroll del canvas (no mover el elemento) para edición cómoda
-  const requestCenterInView = useCallback(() => {
+  const centerViewOnClientPoint = useCallback((clientX: number, clientY: number) => {
+    const container = canvasContainerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const pointX = (container.scrollLeft + (clientX - rect.left)) / scale;
+    const pointY = (container.scrollTop + (clientY - rect.top)) / scale;
+    const targetX = container.clientWidth * 0.9;
+    const targetY = container.clientHeight * 0.9;
+    const nextScrollLeft = Math.max(0, pointX * scale - targetX);
+    const nextScrollTop = Math.max(0, pointY * scale - targetY);
+    container.scrollTo({ left: nextScrollLeft, top: nextScrollTop, behavior: 'smooth' });
+  }, [canvasContainerRef, scale]);
+
+  const getClientPointFromEvent = useCallback((event: any): { x: number; y: number } | null => {
+    if (!event) return null;
+    if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
+      return { x: event.clientX, y: event.clientY };
+    }
+    const touch = event.changedTouches?.[0] || event.touches?.[0];
+    if (touch && typeof touch.clientX === 'number' && typeof touch.clientY === 'number') {
+      return { x: touch.clientX, y: touch.clientY };
+    }
+    return null;
+  }, []);
+
+  // Centrar en vista usando la posición visual del cursor (no mover el elemento)
+  const requestCenterInView = useCallback((clientPoint?: { x: number; y: number } | null) => {
     if (element.parentId) return;
+    if (clientPoint && typeof clientPoint.x === 'number' && typeof clientPoint.y === 'number') {
+      centerViewOnClientPoint(clientPoint.x, clientPoint.y);
+      return;
+    }
     if (!onCenterElementInView) return;
     onCenterElementInView({
       ...element,
@@ -235,7 +301,7 @@ export default function TransformableElement({
       width: safeSize.width,
       height: safeSize.height,
     } as WithId<CanvasElement>);
-  }, [element, position.x, position.y, safeSize.width, safeSize.height, onCenterElementInView]);
+  }, [element, position.x, position.y, safeSize.width, safeSize.height, onCenterElementInView, centerViewOnClientPoint]);
 
   // FIX: Evitar estado "congelado" cuando isDraggingOrResizing queda true (ej. onDragStop no se disparó).
   // Reset al deseleccionar y al perder foco de ventana para que el header vuelva a ser clickeable.
@@ -339,6 +405,7 @@ export default function TransformableElement({
     
     // Limpiar posición de inicio de arrastre
     setDragStartPos(null);
+    setLivePosition(newPosition);
     
     // Intento de anclar a contenedor si se suelta sobre uno
     const containers = allElements?.filter(el => (el.type as any) === 'container') || [];
@@ -458,22 +525,9 @@ export default function TransformableElement({
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (isDraggingOrResizing) return; // No manejar toques si ya estamos arrastrando/redimensionando
 
-    // Permitir que los eventos lleguen a los elementos editables
-    const target = e.target as HTMLElement;
-    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
-    const isEditableParent = target.closest('[contenteditable="true"]');
-    
-    if (isEditable || isEditableParent) {
-      // No interferir con elementos editables - dejar que manejen su propio touch
-      // NO llamar stopPropagation aquí porque el evento ya está en el elemento editable
-      return; // Permitir que el navegador maneje el foco y el cursor
-    }
-
     const currentTime = Date.now();
     if (currentTime - lastTapTime < DOUBLE_TAP_DELAY) {
-      // Doble toque detectado
-      // onDoubleClickElement(element.id);
-      console.log("Doble toque en elemento: ", element.id);
+      onSelectElement(element.id, false);
       setLastTapTime(0); // Reset para evitar triple toque accidental
       return;
     }
@@ -548,15 +602,22 @@ export default function TransformableElement({
     if (!isDraggingOrResizing) {
       const isMultiSelect = e.altKey || e.shiftKey || e.metaKey || e.ctrlKey;
       onSelectElement(element.id, isMultiSelect);
-
-      // Regla general: al pinchar, centrar el elemento en la vista (scroll suave, sin mover el elemento)
-      // Excepción: no centrar si el clic es en el header del notepad (permite editar título sin que salte la vista)
-      const isNotepadHeader = (target as HTMLElement).closest('[data-notepad-header]');
-      if (!isSelected && !isMultiSelect && !isNotepadHeader) {
-        requestCenterInView();
-      }
     }
   };
+
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const isEditable = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable || target.closest('[contenteditable="true"]');
+    const isButton = target.tagName === 'BUTTON' || target.closest('button');
+    if (isEditable || isButton) return;
+    if (element.parentId) return;
+    if (!canvasContainerRef.current) return;
+
+    if (!isSelected) {
+      const isMultiSelect = e.altKey || e.shiftKey || e.metaKey || e.ctrlKey;
+      onSelectElement(element.id, isMultiSelect);
+    }
+  }, [element, isSelected, onSelectElement, canvasContainerRef]);
 
   const handleDragStart = useCallback((e: RndDragEvent, data?: DraggableData) => {
     // Guardar posición inicial para validar umbral de movimiento
@@ -576,35 +637,30 @@ export default function TransformableElement({
     }
   }, [element.id]);
 
-  const getClientPointFromEvent = (event: any): { x: number; y: number } | null => {
-    if (!event) return null;
-    if (typeof event.clientX === 'number' && typeof event.clientY === 'number') {
-      return { x: event.clientX, y: event.clientY };
-    }
-    const touch = event.changedTouches?.[0] || event.touches?.[0];
-    if (touch && typeof touch.clientX === 'number' && typeof touch.clientY === 'number') {
-      return { x: touch.clientX, y: touch.clientY };
-    }
-    return null;
-  };
-
   
   const rndProps = useMemo(() => ({
     style: {
       zIndex: zIndex,
-      border: isSelected && (element.type as any) !== 'pomodoro-timer' ? '2px solid hsl(var(--primary))' : 'none',
+      border: isSelected && !['pomodoro-timer', 'todo'].includes(element.type as any) ? '2px solid hsl(var(--primary))' : 'none',
       boxSizing: 'border-box' as 'border-box',
       transform: `rotate(${rotation}deg)`,
       transformOrigin: 'center center',
     },
     size: { width: safeSize.width, height: safeSize.height },
     position: {
-      x: position.x,
-      y: position.y,
+      x: livePosition.x,
+      y: livePosition.y,
     },
     onDragStart: (e, data) => {
       setIsDraggingOrResizing(true);
       handleDragStart(e, data);
+    },
+    onDrag: (e, data) => {
+      const minY = element.parentId ? 0 : TOP_MENU_PROTECTED_AREA;
+      setLivePosition({
+        x: Math.max(0, data.x),
+        y: Math.max(minY, data.y),
+      });
     },
     onDragStop: (e, data) => {
       setIsDraggingOrResizing(false);
@@ -729,7 +785,9 @@ export default function TransformableElement({
     },
     // Regla: solo arrastrar desde elementos con clase .drag-handle (no desde inputs o áreas de texto)
     dragHandleClassName: 'drag-handle',
-  }), [zIndex, isSelected, rotation, safeSize.width, safeSize.height, position, handleDragStart, onDragStop, onResizeStop, scale, element.parentId, element.type, canvasContainerRef.current]);
+    // En móvil, el primer toque solo selecciona; para mover, el elemento debe estar seleccionado.
+    disableDragging: Boolean(isMobile && !isSelected),
+  }), [zIndex, isSelected, rotation, safeSize.width, safeSize.height, position, handleDragStart, onDragStop, onResizeStop, scale, element.parentId, element.type, canvasContainerRef.current, isMobile]);
 
   return (
     <>
@@ -742,6 +800,8 @@ export default function TransformableElement({
         >
           <div
             className="w-full h-full"
+            onTouchStartCapture={handleEditableTouchGate}
+            onDoubleClick={handleDoubleClick}
             onTouchStart={(e) => {
             // Verificar si el toque es en un elemento editable antes de manejar
             const target = e.target as HTMLElement;
@@ -774,7 +834,7 @@ export default function TransformableElement({
                   backgroundColor={element.backgroundColor}
                   hidden={element.hidden}
                   minimized={
-                    ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado'].includes(element.type)
+                    ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'block-dibujo', 'block-dibujo-2', 'mis-imagenes'].includes(element.type)
                       ? (element as { minimized?: boolean }).minimized
                       : undefined
                   }
@@ -814,6 +874,10 @@ export default function TransformableElement({
                 toast
               })}
               {...(element.type === 'image-frame' && {
+                userId: user?.uid,
+                storage
+              })}
+              {...(element.type === 'mis-imagenes' && {
                 userId: user?.uid,
                 storage
               })}

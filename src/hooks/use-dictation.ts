@@ -200,8 +200,9 @@ export const useDictation = (
       if (isInterim) return;
       // No insertar en inputs que gestionan el dictado por su cuenta (evita duplicar texto)
       if (inputTarget.getAttribute('data-dictation-controlled') === 'true') return;
-      // Solo dictar en inputs marcados explícitamente como objetivo de dictado
-      if (inputTarget.getAttribute('data-dictation-target') !== 'true') return;
+      // Dictar en inputs por defecto; si está marcado explícitamente, respetar.
+      const dictationTarget = inputTarget.getAttribute('data-dictation-target');
+      if (dictationTarget && dictationTarget !== 'true') return;
       const start = inputTarget === activeElement
         ? (inputTarget.selectionStart ?? 0)
         : savedInputRef.current!.start;
@@ -266,8 +267,9 @@ export const useDictation = (
       : (container as HTMLElement).closest?.('[contenteditable="true"]');
     
     if (!editableParent) return;
-    // Solo dictar en contentEditables marcados explícitamente como objetivo de dictado
-    if ((editableParent as HTMLElement).getAttribute('data-dictation-target') !== 'true') return;
+    // Dictar en contentEditables por defecto; si está marcado explícitamente, respetar.
+    const dictationTarget = (editableParent as HTMLElement).getAttribute('data-dictation-target');
+    if (dictationTarget && dictationTarget !== 'true') return;
 
     // Remover interim anterior
     removeInterimNode();

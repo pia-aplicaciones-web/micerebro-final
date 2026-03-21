@@ -88,7 +88,6 @@ type AuthUser = {
 };
 import { useToast } from '@/hooks/use-toast';
 import CreateBoardDialog from './create-board-dialog';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import { getSavedLinks } from '@/lib/saved-links';
 import type { SavedLink } from '@/lib/saved-links';
 import { AddLinkDialog } from './add-link-dialog';
@@ -157,7 +156,7 @@ const SidebarButton = forwardRef<
       </TooltipTrigger>
       <TooltipContent
         side="bottom"
-        className="bg-gray-100 text-black border border-gray-300 shadow-md"
+        className="bg-white/95 text-slate-700 border border-slate-200 shadow-sm text-[11px] px-2 py-1"
       >
         {tooltipText}
       </TooltipContent>
@@ -251,9 +250,7 @@ interface ToolsSidebarProps {
  }, ref) => {
   const { toast } = useToast();
   const router = useRouter();
-  const isMobile = useMediaQuery('(max-width: 768px)');
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
-  const [isHamburgerMenuOpen, setIsHamburgerMenuOpen] = useState(false);
   const [savedGuides, setSavedGuides] = useState<any[]>([]);
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
   const [openAddLinkDialog, setOpenAddLinkDialog] = useState(false);
@@ -298,7 +295,17 @@ interface ToolsSidebarProps {
   }, [elements]);
   useEffect(() => {
     try {
+      const floatingMode = localStorage.getItem('toolsSidebarFloatingMode') === 'true';
       const savedPosition = localStorage.getItem('toolsSidebarPosition');
+      if (floatingMode) {
+        const floatingCentered = {
+          x: typeof window !== 'undefined' ? Math.max(0, (window.innerWidth - 988) / 2) : 20,
+          y: 5,
+        };
+        setRndPosition(floatingCentered);
+        localStorage.setItem('toolsSidebarPosition', JSON.stringify(floatingCentered));
+        return;
+      }
       if (savedPosition) {
         const parsedPosition = JSON.parse(savedPosition);
         // Si la posición guardada no es la posición fija deseada (5px del borde superior),
@@ -346,12 +353,20 @@ interface ToolsSidebarProps {
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
   const allLocators = useMemo(
     () => (Array.isArray(elements) ? elements : []).filter((el) => el.type === 'locator'),
+    [elements]
+  );
+  const openMisImagenes = useMemo(
+    () => (Array.isArray(elements) ? elements : []).filter((el) => el.type === 'mis-imagenes' && (el as any).minimized !== true),
+    [elements]
+  );
+  const closedMisImagenes = useMemo(
+    () => (Array.isArray(elements) ? elements : []).filter((el) => el.type === 'mis-imagenes' && (el as any).minimized === true),
     [elements]
   );
 
@@ -365,7 +380,7 @@ interface ToolsSidebarProps {
   const hiddenNotebooks = useMemo(
     () =>
       hiddenElements.filter((el) =>
-        ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo'].includes(el.type)
+        ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type)
       ),
     [hiddenElements]
   );
@@ -429,7 +444,7 @@ interface ToolsSidebarProps {
     const w = typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || 300;
     const h = typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || 200;
     const currentSize = { width: w, height: h };
-    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado'];
+    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'block-dibujo', 'block-dibujo-2'];
     if (typesWithMinimized.includes(element.type)) {
       updateElement(id, {
         minimized: true,
@@ -442,11 +457,11 @@ interface ToolsSidebarProps {
 
   // Enlaces guardados (Link)
   useEffect(() => {
-    setSavedLinks(getSavedLinks());
-  }, []);
+    setSavedLinks(getSavedLinks(boardId));
+  }, [boardId]);
   const refreshSavedLinks = useCallback(() => {
-    setSavedLinks(getSavedLinks());
-  }, []);
+    setSavedLinks(getSavedLinks(boardId));
+  }, [boardId]);
 
   // Cargar guías de fotos guardadas
   const loadSavedGuides = async () => {
@@ -524,6 +539,10 @@ interface ToolsSidebarProps {
     }
   };
 
+  const handleAddNotebookElement = async (type: ElementType, props?: any) => {
+    return handleAddElement(type, { ...(props || {}), zIndex: 0 });
+  };
+
   // Helpers para mejoras
   const getViewportCenter = () => {
     const centerX = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
@@ -570,254 +589,9 @@ interface ToolsSidebarProps {
     }
   };
 
-  // Si es móvil/tablet, mostrar menú hamburguesa centrado
-  if (isMobile) {
-    return (
-      <>
-        <CreateBoardDialog isOpen={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen} />
+  // Menú móvil eliminado: la UI móvil se maneja con MiniToolsSidebar
 
-        {/* Botón hamburguesa centrado */}
-        <div
-          className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50"
-          style={{ zIndex: 10000 }}
-        >
-          <button
-            onClick={() => setIsHamburgerMenuOpen(!isHamburgerMenuOpen)}
-            className="bg-background text-black border border-border p-2 rounded-full shadow-lg hover:bg-[#ADD8E6] active:bg-white transition-colors"
-            title="Abrir menú"
-          >
-            {isHamburgerMenuOpen ? <CloseIcon className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
-
-        {/* Menú hamburguesa desplegable */}
-        {isHamburgerMenuOpen && (
-          <div
-            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-background text-black border border-border rounded-lg shadow-xl z-40 max-w-sm w-full mx-4"
-            style={{ zIndex: 9999 }}
-          >
-            <div className="p-4 max-h-96 overflow-y-auto">
-              {/* Aquí irá el contenido del menú hamburguesa */}
-              <div className="space-y-2">
-                {/* Botón Dictar */}
-                <SidebarButton
-                  icon={isListening ? MicOff : Mic}
-                  label={isListening ? 'Detener' : 'Dictar'}
-                  title={isListening ? 'Detener dictado por voz' : 'Iniciar dictado por voz'}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (onToggleDictation) {
-                      onToggleDictation();
-                    }
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    onSaveSelectionBeforeMic?.();
-                  }}
-                  className={cn(
-                    'w-full justify-start hover:bg-[#ADD8E6] active:bg-white',
-                    isListening && 'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 animate-pulse'
-                  )}
-                />
-
-                {/* Cuaderno */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left">
-                      <BookCopy className="w-4 h-4" />
-                      <span>Cuaderno</span>
-                      <ChevronDown className="w-4 h-4 ml-auto" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="center" className="w-56 max-h-[70vh] overflow-y-auto">
-                    <DropdownMenuItem onClick={handlePasteElement}>
-                      <ClipboardPaste className="mr-2 h-4 w-4" />
-                      <span>Pegar</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Agregar Cuaderno</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('yellow-notepad')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Nuevo Block</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('notes')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Agregar Apuntes</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('libreta')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Libreta</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('mini')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Mini</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>iPhone</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>BLOCK DIBUJO</span>
-                    </DropdownMenuItem>
-                    {elementsOnCanvas.length > 0 && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuSub>
-                          <DropdownMenuSubTrigger>
-                            <span>Elementos Abiertos ({elementsOnCanvas.length})</span>
-                          </DropdownMenuSubTrigger>
-                          <DropdownMenuSubContent>
-                            {elementsOnCanvas.map((element) => {
-                              let title = 'Sin título';
-                              switch (element.type) {
-                                case 'notepad': {
-                                  const notepadContent = element.content as NotepadContent;
-                                  title = notepadContent?.title || 'Cuaderno';
-                                  break;
-                                }
-                                case 'yellow-notepad':
-                                  title = 'Cuaderno Amarillo';
-                                  break;
-                                case 'notes':
-                                  title = 'Apuntes';
-                                  break;
-                                case 'libreta': {
-                                  const libretaContent = element.content as LibretaContent;
-                                  title = libretaContent?.title || 'Libreta';
-                                  break;
-                                }
-                                case 'mini':
-                                  title = 'Mini';
-                                  break;
-                                case 'dictado': {
-                                  const dictadoContentOpen = element.content as any;
-                                  title = dictadoContentOpen?.title || 'iPhone';
-                                  break;
-                                }
-                                case 'block-dibujo': {
-                                  const blockDibujoContent = element.content as any;
-                                  title = blockDibujoContent?.title || 'BLOCK DIBUJO';
-                                  break;
-                                }
-                                default:
-                                  title = 'Elemento';
-                              }
-                              return (
-                                <DropdownMenuItem
-                                  key={element.id}
-                                  onClick={() => onLocateElement(element.id)}
-                                  className="flex items-center justify-between gap-2"
-                                >
-                                  <span className="flex-1 truncate">{title}</span>
-                                  <div className="flex items-center gap-0.5 flex-shrink-0">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      title="Copiar"
-                                      onClick={(e) => handleCopyElement(e, element)}
-                                    >
-                                      <Copy className="h-3 w-3" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      title="Minimizar"
-                                      onClick={(e) => handleMinimizeElement(e, element)}
-                                    >
-                                      <Minus className="h-3 w-3" />
-                                    </Button>
-                                  </div>
-                                </DropdownMenuItem>
-                              );
-                            })}
-                          </DropdownMenuSubContent>
-                        </DropdownMenuSub>
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Fotos */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left">
-                      <ImageIcon className="w-4 h-4" />
-                      <span>Fotos</span>
-                      <ChevronDown className="w-4 h-4 ml-auto" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="top" align="center" className="w-56">
-                    <DropdownMenuItem onClick={() => handleAddElement('image')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Imagen</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('gallery')}>
-                      <Images className="mr-2 h-4 w-4" />
-                      <span>Galería</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Tareas */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
-                    >
-                      <List className="w-4 h-4" />
-                      <span>Lista de Tareas</span>
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent side="right" align="start" sideOffset={5}>
-                    <DropdownMenuItem onClick={() => handleAddElement('todo')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Lista de Tareas</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('time-list')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Time List</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleAddElement('timer-lista')}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      <span>Timer Lista</span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Sticky Note */}
-                <button
-                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
-                  onClick={() => handleAddElement('sticky')}
-                >
-                  <StickyNote className="w-4 h-4" />
-                  <span>Nota Adhesiva</span>
-                </button>
-
-                {/* Contenedor */}
-                <button
-                  className="w-full flex items-center gap-2 p-2 hover:bg-[#ADD8E6] active:bg-white rounded text-left"
-                  onClick={() => handleAddElement('container')}
-                >
-                  <Frame className="w-4 h-4" />
-                  <span>Contenedor</span>
-                </button>
-
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // Menú normal para desktop
+// Menú normal para desktop
   return (
     <>
       <CreateBoardDialog isOpen={isCreateBoardOpen} onOpenChange={setIsCreateBoardOpen} />
@@ -834,11 +608,19 @@ interface ToolsSidebarProps {
         dragHandleClassName="drag-handle"
         onDragStop={onDragStop}
         className="z-[10003]"
+        style={{ position: 'fixed' }}
       >
         <div className="flex flex-row gap-[2px] flex-nowrap justify-start p-2">
-          <div className="drag-handle cursor-grab active:cursor-grabbing py-1 px-1 mr-1 rounded-md bg-background border border-border flex justify-center" title="Arrastrar menú">
-            <GripVertical className="size-3 rotate-90 text-black" />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="drag-handle cursor-grab active:cursor-grabbing py-1 px-1 mr-1 rounded-md bg-background border border-border flex justify-center" title="Arrastrar menú">
+                <GripVertical className="size-3 rotate-90 text-black" />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="bg-white/95 text-slate-700 border border-slate-200 shadow-sm text-[11px] px-2 py-1">
+              Arrastrar menú
+            </TooltipContent>
+          </Tooltip>
 
           {/* Tableros */}
           <DropdownMenu>
@@ -911,7 +693,7 @@ interface ToolsSidebarProps {
                 <span>Pegar</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Agregar Cuaderno</span>
               </DropdownMenuItem>
@@ -919,29 +701,33 @@ interface ToolsSidebarProps {
                 <Plus className="mr-2 h-4 w-4" />
                 <span>A3</span>
               </DropdownMenuItem> */} {/* DESACTIVADO - causando problemas */}
-              <DropdownMenuItem onClick={() => handleAddElement('yellow-notepad')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('yellow-notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Nuevo Block</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('notes')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('notes')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Agregar Apuntes</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('libreta')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('libreta')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Libreta</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('mini')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('mini')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>Mini</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('dictado')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('dictado')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>iPhone</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo')}>
                 <Plus className="mr-2 h-4 w-4" />
                 <span>BLOCK DIBUJO</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo-2')}>
+                <Plus className="mr-2 h-4 w-4" />
+                <span>Dibujar</span>
               </DropdownMenuItem>
               {elementsOnCanvas.length > 0 && (
                 <>
@@ -992,6 +778,11 @@ interface ToolsSidebarProps {
                           case 'block-dibujo': {
                             const blockDibujoContent = element.content as any;
                             title = blockDibujoContent?.title || 'BLOCK DIBUJO';
+                            break;
+                          }
+                          case 'block-dibujo-2': {
+                            const blockDibujo2Content = element.content as any;
+                            title = blockDibujo2Content?.title || 'Dibujar';
                             break;
                           }
                           default:
@@ -1066,6 +857,11 @@ interface ToolsSidebarProps {
                             title = blockDibujoContentHidden?.title || 'BLOCK DIBUJO';
                             break;
                           }
+                          case 'block-dibujo-2': {
+                            const blockDibujo2ContentHidden = element.content as any;
+                            title = blockDibujo2ContentHidden?.title || 'Dibujar';
+                            break;
+                          }
                           default:
                             title = 'Elemento';
                         }
@@ -1130,10 +926,6 @@ interface ToolsSidebarProps {
                     <Plus className="mr-2 h-4 w-4" />
                     <span>Lista de Tareas</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleAddElement('time-list')}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    <span>Time List</span>
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleAddElement('timer-lista')}>
                     <Plus className="mr-2 h-4 w-4" />
                     <span>Timer Lista</span>
@@ -1156,15 +948,39 @@ interface ToolsSidebarProps {
               {savedLinks.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
-                  {savedLinks.map((link) => (
-                    <DropdownMenuItem
-                      key={link.id}
-                      onClick={() => window.open(link.url, '_blank')}
-                    >
-                      <LinkIcon className="mr-2 h-4 w-4 text-slate-600" />
-                      <span className="truncate">{link.name}</span>
-                    </DropdownMenuItem>
-                  ))}
+                  {savedLinks.map((link) => {
+                    const url = link.url || '';
+                    const lower = url.toLowerCase();
+                    let badgeColor = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    let badgeLabel = 'DOC';
+
+                    if (/\.(doc|docx)$/.test(lower)) {
+                      badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                      badgeLabel = 'Word';
+                    } else if (/\.(xls|xlsx|csv)$/.test(lower)) {
+                      badgeColor = 'bg-green-100 text-green-800 border-green-200';
+                      badgeLabel = 'Excel';
+                    } else if (lower.endsWith('.pdf')) {
+                      badgeColor = 'bg-red-100 text-red-800 border-red-200';
+                      badgeLabel = 'PDF';
+                    }
+
+                    return (
+                      <DropdownMenuItem
+                        key={link.id}
+                        onClick={() => window.open(link.url, '_blank')}
+                      >
+                        {/* Icono de hoja de cuaderno simulada */}
+                        <FileText className="mr-2 h-4 w-4 text-slate-700" />
+                        <span className="truncate flex-1">{link.name}</span>
+                        <span
+                          className={`ml-2 inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-full border ${badgeColor}`}
+                        >
+                          {badgeLabel}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </>
               )}
             </DropdownMenuContent>
@@ -1173,6 +989,7 @@ interface ToolsSidebarProps {
             open={openAddLinkDialog}
             onOpenChange={setOpenAddLinkDialog}
             onSaved={refreshSavedLinks}
+            boardId={boardId}
           />
 
           {/* Contenedor */}
@@ -1226,12 +1043,6 @@ interface ToolsSidebarProps {
                 <LinkIcon className="mr-2 h-4 w-4" />
                 <span>Desde URL</span>
               </DropdownMenuItem>
-              {onOpenUrlDocDialog && (
-                <DropdownMenuItem onClick={onOpenUrlDocDialog}>
-                  <FileText className="mr-2 h-4 w-4" />
-                  <span>+ URL docs</span>
-                </DropdownMenuItem>
-              )}
               <DropdownMenuItem onClick={onUploadImage}>
                 <Upload className="mr-2 h-4 w-4" />
                 <span>Subir</span>
@@ -1240,6 +1051,51 @@ interface ToolsSidebarProps {
                 <Frame className="mr-2 h-4 w-4" />
                 <span>Marco de foto</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('mis-imagenes')}>
+                <ImageIcon className="mr-2 h-4 w-4" />
+                <span>Mis imágenes</span>
+              </DropdownMenuItem>
+              {(openMisImagenes.length > 0 || closedMisImagenes.length > 0) && (
+                <>
+                  <DropdownMenuSeparator />
+                  {openMisImagenes.length > 0 && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Mis imágenes abiertas</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {openMisImagenes.map((el) => {
+                          const title = (el.content as any)?.title || 'Mis imágenes';
+                          return (
+                            <DropdownMenuItem key={el.id} onClick={() => onLocateElement(el.id)}>
+                              {title}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  {closedMisImagenes.length > 0 && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger>Mis imágenes cerradas</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {closedMisImagenes.map((el) => {
+                          const title = (el.content as any)?.title || 'Mis imágenes';
+                          return (
+                            <DropdownMenuItem
+                              key={el.id}
+                              onClick={() => {
+                                updateElement(el.id, { minimized: false } as any);
+                                onLocateElement(el.id);
+                              }}
+                            >
+                              {title}
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onCropImage}>
                 <Crop className="mr-2 h-4 w-4" />
@@ -1337,9 +1193,13 @@ interface ToolsSidebarProps {
                 {drawingMode?.strokeWidth === 6 && <span className="ml-auto text-xs">✓</span>}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo')}>
                 <Pencil className="mr-2 h-4 w-4" />
                 <span>Crear BLOCK DIBUJO</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo-2')}>
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Crear Dibujar</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -1399,6 +1259,9 @@ interface ToolsSidebarProps {
               <DropdownMenuItem onClick={() => handleAddElement('image-frame')}>
                 Marco de fotos
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('mis-imagenes')}>
+                Mis imágenes
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('moodboard')}>
                 Moodboard
               </DropdownMenuItem>
@@ -1438,12 +1301,23 @@ interface ToolsSidebarProps {
           </DropdownMenu>
 
           {/* Subir (icono carpeta) */}
-          <SidebarButton
-            icon={Folder}
-            label="Subir"
-            title="Subir imagen"
-            onClick={onUploadImage}
-          />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarButton icon={Folder} label="Subir" title="Subir archivos" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuItem onClick={onUploadImage}>
+                <Upload className="mr-2 h-4 w-4" />
+                <span>Subir imagen</span>
+              </DropdownMenuItem>
+              {onOpenUrlDocDialog && (
+                <DropdownMenuItem onClick={onOpenUrlDocDialog}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  <span>+ URL docs</span>
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Tools */}
           <SidebarButton icon={Wrench} label="Tools" title="Herramientas de formato" onClick={onFormatToggle} isActive={isFormatToolbarOpen} />
@@ -1479,6 +1353,21 @@ interface ToolsSidebarProps {
               <DropdownMenuItem onClick={onDeleteAllUserImages}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 <span>Eliminar todas mis imágenes</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const centeredX = Math.max(0, (window.innerWidth - 988) / 2);
+                    const topCenteredPosition = { x: centeredX, y: 5 };
+                    localStorage.setItem('toolsSidebarFloatingMode', 'true');
+                    localStorage.setItem('toolsSidebarPosition', JSON.stringify(topCenteredPosition));
+                    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                  }
+                  router.push('/');
+                }}
+              >
+                <Menu className="mr-2 h-4 w-4" />
+                <span>XTRa menu: menu principal de la App</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <AlertDialog>

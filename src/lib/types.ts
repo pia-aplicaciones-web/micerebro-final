@@ -28,6 +28,7 @@ export type ElementType =
   'two-columns' |
   'locator' |
   'image-frame' |
+  'mis-imagenes' |
   'photo-grid' |
   'photo-grid-horizontal' |
   'photo-grid-adaptive' |
@@ -36,6 +37,7 @@ export type ElementType =
   'libreta' |
   'dictado' |
   'block-dibujo' |
+  'block-dibujo-2' |
   'timer-lista' |
   'url-doc';
 
@@ -122,6 +124,51 @@ export interface BlockDibujoContent {
   currentPage?: number; // Índice de la página actual (0-based)
 }
 
+export interface BlockDibujo2StrokePoint {
+  x: number; // Normalizado 0..1
+  y: number; // Normalizado 0..1
+  pressure?: number;
+}
+
+export interface BlockDibujo2Stroke {
+  id: string;
+  points: BlockDibujo2StrokePoint[];
+  color: string;
+  size: number; // Tamaño relativo (0..1, respecto al lado menor)
+  erased?: boolean;
+}
+
+export interface BlockDibujo2Content {
+  title?: string;
+  strokes?: BlockDibujo2Stroke[];
+  background?: string;
+  paths?: any[];
+  strokeColor?: string;
+  strokeWidth?: number;
+  pages?: Array<{
+    id: string;
+    paths?: any[];
+    thumbnail?: string;
+  }>;
+  currentPage?: number;
+  images?: Array<{
+    id: string;
+    src: string;
+    x: number; // Normalizado 0..1
+    y: number; // Normalizado 0..1
+    width: number; // Normalizado 0..1
+    height: number; // Normalizado 0..1
+  }>;
+  texts?: Array<{
+    id: string;
+    text: string;
+    x: number; // Normalizado 0..1
+    y: number; // Normalizado 0..1
+    color: string;
+    size: number; // Relativo 0..1
+  }>;
+}
+
 export interface WeeklyPlannerContent {
   days: Record<string, string>;
 }
@@ -135,6 +182,13 @@ export interface TodoContent {
   title?: string;
   // Etiqueta opcional para la lista (un solo tag corto)
   label?: string;
+  layout?: 'single' | 'two-columns';
+  layoutColumns?: 1 | 2 | 3 | 4;
+  columns?: Array<{
+    id: string;
+    title?: string;
+    items: TodoItem[];
+  }>;
   items: TodoItem[];
 }
 
@@ -184,6 +238,16 @@ export interface ImageFrameContent {
   panX?: number;
   panY?: number;
   rotation?: number;
+}
+
+export interface ImageCarouselContent {
+  title?: string;
+  images: Array<{
+    id: string;
+    url: string;
+    name?: string;
+  }>;
+  activeIndex?: number;
 }
 
 export interface WeeklyMenuContent {
@@ -395,6 +459,12 @@ export interface ImageFrameCanvasElement extends BaseVisualProperties {
   content: ImageFrameContent;
 }
 
+export interface ImageCarouselCanvasElement extends BaseVisualProperties {
+  type: 'mis-imagenes';
+  hidden?: boolean;
+  content: ImageCarouselContent;
+}
+
 export interface PomodoroTimerCanvasElement extends BaseVisualProperties {
   type: 'pomodoro-timer';
   hidden?: boolean;
@@ -431,6 +501,7 @@ export type CanvasElement =
   | PhotoGridAdaptiveCanvasElement
   | PhotoGridFreeCanvasElement
   | ImageFrameCanvasElement
+  | ImageCarouselCanvasElement
   | PomodoroTimerCanvasElement
   | LocatorCanvasElement
   | UrlDocCanvasElement;
@@ -483,6 +554,7 @@ export type ElementContent =
   | MoodboardContent
   | GalleryContent
   | ImageFrameContent
+  | ImageCarouselContent
   | PhotoGridContent
   | PhotoGridFreeContent
   | PhotoIdeasGuideContent
@@ -491,6 +563,8 @@ export type ElementContent =
   | TimeListContent
   | TimerListaContent
   | ContainerContent
+  | BlockDibujoContent
+  | BlockDibujo2Content
   | DictadoContent
   | Record<string, unknown>;
 

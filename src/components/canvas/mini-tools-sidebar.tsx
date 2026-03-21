@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import { useRouter } from 'next/navigation';
 import {
@@ -20,6 +20,12 @@ import {
   StickyNote,
   ListTodo,
   CalendarRange,
+  Timer,
+  Frame,
+  ImageIcon,
+  Trash2,
+  LogOut,
+  FileText,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +46,7 @@ import CreateBoardDialog from './create-board-dialog';
 import MiniToolsPanel from './mini-tools-panel';
 import { cn } from '@/lib/utils';
 import type { ElementType, CanvasElement, Board, WithId } from '@/lib/types';
+import { signOut } from '@/lib/auth';
 
 const MENU_BG = '#555556';
 const MENU_WIDTH = 56;
@@ -51,12 +58,16 @@ interface MiniToolsSidebarProps {
   user: { uid?: string } | null;
   addElement: (type: ElementType, props?: any) => Promise<string>;
   onLocateElement: (id: string) => void;
+  onOpenElement?: (id: string) => void;
+  selectedElementId?: string | null;
+  onDeleteElement?: (id: string) => void;
   onAddImageFromUrl: () => void;
   isListening: boolean;
   onToggleDictation: () => void;
   onSaveSelectionBeforeMic?: () => void;
   onExportBoardToPng: () => void;
   onCreateMiniBoard?: () => Promise<string | null>;
+  onOpenUrlDocDialog?: () => void;
 }
 
 function MiniSidebarButton({
@@ -127,12 +138,16 @@ export default function MiniToolsSidebar({
   user,
   addElement,
   onLocateElement,
+  onOpenElement,
+  selectedElementId,
+  onDeleteElement,
   onAddImageFromUrl,
   isListening,
   onToggleDictation,
   onSaveSelectionBeforeMic,
   onExportBoardToPng,
   onCreateMiniBoard,
+  onOpenUrlDocDialog,
 }: MiniToolsSidebarProps) {
   const router = useRouter();
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
@@ -140,17 +155,40 @@ export default function MiniToolsSidebar({
   const [isCreateBoardOpen, setIsCreateBoardOpen] = useState(false);
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(false);
   const [rndPos, setRndPos] = useState({ x: 8, y: 100 });
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const clampToViewport = useCallback((x: number, y: number) => {
+    if (typeof window === 'undefined') return { x, y };
+    const rect = menuRef.current?.getBoundingClientRect();
+    const width = rect?.width || MENU_WIDTH;
+    const height = rect?.height || 420;
+    const maxX = Math.max(0, window.innerWidth - width);
+    const maxY = Math.max(0, window.innerHeight - height);
+    return {
+      x: Math.min(maxX, Math.max(0, x)),
+      y: Math.min(maxY, Math.max(0, y)),
+    };
+  }, []);
 
   useEffect(() => {
-    setSavedLinks(getSavedLinks());
-  }, []);
-  const refreshLinks = useCallback(() => setSavedLinks(getSavedLinks()), []);
+    setSavedLinks(getSavedLinks(boardId));
+  }, [boardId]);
+  const refreshLinks = useCallback(() => setSavedLinks(getSavedLinks(boardId)), [boardId]);
 
   const allLocators = (elements || []).filter((el) => el.type === 'locator');
+  const openMisImagenes = (elements || []).filter((el) => el.type === 'mis-imagenes' && (el as any).minimized !== true);
+  const closedMisImagenes = (elements || []).filter((el) => el.type === 'mis-imagenes' && (el as any).minimized === true);
 
   const handleAddElement = useCallback(
     (type: ElementType, props?: any) => {
       addElement(type, props);
+    },
+    [addElement]
+  );
+
+  const handleAddNotebookElement = useCallback(
+    (type: ElementType, props?: any) => {
+      addElement(type, { ...(props || {}), zIndex: 0 });
     },
     [addElement]
   );
@@ -167,19 +205,30 @@ export default function MiniToolsSidebar({
     }
   }, [addElement, onLocateElement]);
 
+  useEffect(() => {
+    const next = clampToViewport(rndPos.x, rndPos.y);
+    if (next.x !== rndPos.x || next.y !== rndPos.y) {
+      setRndPos(next);
+    }
+  }, [clampToViewport, rndPos.x, rndPos.y]);
+
   return (
     <>
       <Rnd
         default={{ x: rndPos.x, y: rndPos.y, width: MENU_WIDTH, height: 420 }}
+        position={{ x: rndPos.x, y: rndPos.y }}
         minWidth={MENU_WIDTH}
         maxWidth={MENU_WIDTH}
         minHeight={200}
         bounds="window"
         dragHandleClassName="drag-handle-mini"
-        onDragStop={(_, d) => setRndPos({ x: d.x, y: d.y })}
+        onDrag={(_, d) => setRndPos({ x: d.x, y: d.y })}
+        onDragStop={(_, d) => setRndPos(clampToViewport(d.x, d.y))}
         className="z-[10003]"
+        style={{ position: 'fixed' }}
       >
         <div
+          ref={menuRef}
           className="flex flex-col rounded-lg shadow-lg border border-white/10 overflow-hidden"
           style={{ backgroundColor: MENU_BG, width: MENU_WIDTH }}
         >
@@ -244,25 +293,57 @@ export default function MiniToolsSidebar({
               {savedLinks.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
-                  {savedLinks.map((link) => (
-                    <DropdownMenuItem key={link.id} onClick={() => window.open(link.url, '_blank')}>
-                      <LinkIcon className="mr-2 h-4 w-4" />
-                      {link.name}
-                    </DropdownMenuItem>
-                  ))}
+                  {savedLinks.map((link) => {
+                    const url = link.url || '';
+                    const lower = url.toLowerCase();
+                    let badgeColor = 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                    let badgeLabel = 'DOC';
+
+                    if (/\.(doc|docx)$/.test(lower)) {
+                      badgeColor = 'bg-blue-100 text-blue-800 border-blue-200';
+                      badgeLabel = 'Word';
+                    } else if (/\.(xls|xlsx|csv)$/.test(lower)) {
+                      badgeColor = 'bg-green-100 text-green-800 border-green-200';
+                      badgeLabel = 'Excel';
+                    } else if (lower.endsWith('.pdf')) {
+                      badgeColor = 'bg-red-100 text-red-800 border-red-200';
+                      badgeLabel = 'PDF';
+                    }
+
+                    return (
+                      <DropdownMenuItem key={link.id} onClick={() => window.open(link.url, '_blank')}>
+                        {/* Icono de hoja de cuaderno simulada */}
+                        <FileText className="mr-2 h-4 w-4 text-white" />
+                        <span className="flex-1 truncate">{link.name}</span>
+                        <span
+                          className={`ml-2 inline-flex items-center px-1.5 py-0.5 text-[10px] font-semibold rounded-full border ${badgeColor}`}
+                        >
+                          {badgeLabel}
+                        </span>
+                      </DropdownMenuItem>
+                    );
+                  })}
                 </>
               )}
             </MiniSidebarButton>
 
             {/* Cuadernos - solo notepad */}
             <MiniSidebarButton icon={BookCopy} label="Cuadernos" title="Agregar cuaderno" hasDropdown>
-              <DropdownMenuItem onClick={() => handleAddElement('notepad')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('notepad')}>
                 <Plus className="mr-2 h-4 w-4" />
                 Agregar Cuaderno
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddElement('block-dibujo')}>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('dictado')}>
+                <Plus className="mr-2 h-4 w-4" />
+                iPhone
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo')}>
                 <Plus className="mr-2 h-4 w-4" />
                 Block de Dibujo
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo-2')}>
+                <Plus className="mr-2 h-4 w-4" />
+                Dibujar
               </DropdownMenuItem>
             </MiniSidebarButton>
 
@@ -276,10 +357,24 @@ export default function MiniToolsSidebar({
                 <ListTodo className="mr-2 h-4 w-4" />
                 Listas de tareas
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('timer-lista')}>
+                <Timer className="mr-2 h-4 w-4" />
+                Timer Lista
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleAddElement('weekly-planner')}>
                 <CalendarRange className="mr-2 h-4 w-4" />
                 Planner semanal
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('image-frame')}>
+                <Frame className="mr-2 h-4 w-4" />
+                Marco de foto
+              </DropdownMenuItem>
+              {onOpenUrlDocDialog && (
+                <DropdownMenuItem onClick={onOpenUrlDocDialog}>
+                  <FileText className="mr-2 h-4 w-4" />
+                  + URL docs
+                </DropdownMenuItem>
+              )}
             </MiniSidebarButton>
 
             {/* Tools */}
@@ -325,12 +420,46 @@ export default function MiniToolsSidebar({
               <DropdownMenuItem onClick={onExportBoardToPng}>
                 Exportar PNG
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (selectedElementId && onDeleteElement) {
+                    onDeleteElement(selectedElementId);
+                  }
+                }}
+                disabled={!selectedElementId || !onDeleteElement}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar seleccionado
+              </DropdownMenuItem>
+              {user?.uid && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={async () => {
+                      try {
+                        await signOut();
+                        router.push('/');
+                      } catch (error) {
+                        console.error('Error al cerrar sesión desde Tablero Mini:', error);
+                      }
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Cerrar sesión
+                  </DropdownMenuItem>
+                </>
+              )}
             </MiniSidebarButton>
           </div>
         </div>
       </Rnd>
 
-      <AddLinkDialog open={openAddLinkDialog} onOpenChange={setOpenAddLinkDialog} onSaved={refreshLinks} />
+      <AddLinkDialog
+        open={openAddLinkDialog}
+        onOpenChange={setOpenAddLinkDialog}
+        onSaved={refreshLinks}
+        boardId={boardId}
+      />
       <CreateBoardDialog
         isOpen={isCreateBoardOpen}
         onOpenChange={setIsCreateBoardOpen}
@@ -340,7 +469,6 @@ export default function MiniToolsSidebar({
       {isToolsPanelOpen && (
         <MiniToolsPanel
           onClose={() => setIsToolsPanelOpen(false)}
-          onAddImageFromUrl={onAddImageFromUrl}
         />
       )}
     </>
