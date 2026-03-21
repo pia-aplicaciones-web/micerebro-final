@@ -403,8 +403,18 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
     }
   }, { enableOnFormTags: false }, [handlePasteElement]);
 
-  // Cmd/Ctrl + Z → SOLO undo local del navegador (no tocamos el tablero)
-  // Atajo para undo GLOBAL del tablero: Cmd/Ctrl + Shift + Z
+  // Cmd/Ctrl + Z:
+  // - En campos editables: undo local del navegador.
+  // - Fuera de campos editables: undo global del tablero.
+  useHotkeys('mod+z', (ev) => {
+    if (shouldIgnoreKeyboard()) return;
+    if (undoStack.length > 0) {
+      ev.preventDefault();
+      undo();
+    }
+  }, { enableOnFormTags: false }, [undo, undoStack, shouldIgnoreKeyboard]);
+
+  // Redo global del tablero
   useHotkeys('mod+shift+z', (ev) => {
     if (shouldIgnoreKeyboard()) return;
     if (redoStack.length > 0) {
