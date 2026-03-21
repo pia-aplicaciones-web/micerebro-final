@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Paintbrush } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -69,11 +69,16 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(name || '');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [localBackgroundColor, setLocalBackgroundColor] = useState(backgroundColor || '#96e4e6');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setEditValue(name || '');
   }, [name]);
+
+  useEffect(() => {
+    setLocalBackgroundColor(backgroundColor || '#96e4e6');
+  }, [backgroundColor]);
 
   const handleClick = () => {
     setIsEditing(true);
@@ -113,10 +118,11 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
               <button
                 type="button"
                 aria-label="Color de fondo del tablero"
-                className="w-4 h-4 rounded-full border border-black/20 shadow-sm hover:scale-105 transition-transform"
-                style={{ backgroundColor: backgroundColor || '#96e4e6' }}
+                className="h-7 w-7 p-1 rounded-full border border-black/10 bg-white/80 hover:bg-white transition-colors shadow-sm"
                 title="Color de fondo del tablero"
-              />
+              >
+                <Paintbrush className="h-4 w-4 text-pink-500" />
+              </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-auto p-2">
               <div className="grid grid-cols-4 gap-2">
@@ -124,9 +130,12 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
                   <button
                     key={color}
                     type="button"
-                    className="w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                    className={`w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform ${localBackgroundColor === color ? 'ring-2 ring-offset-1 ring-gray-700' : ''}`}
                     style={{ backgroundColor: color }}
-                    onClick={() => onUpdateBackgroundColor(color)}
+                    onClick={() => {
+                      setLocalBackgroundColor(color);
+                      onUpdateBackgroundColor(color);
+                    }}
                     title={color}
                   />
                 ))}
@@ -194,10 +203,11 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
             <button
               type="button"
               aria-label="Color de fondo del tablero"
-              className="w-4 h-4 rounded-full border border-black/20 shadow-sm hover:scale-105 transition-transform"
-              style={{ backgroundColor: backgroundColor || '#96e4e6' }}
+              className="h-7 w-7 p-1 rounded-full border border-black/10 bg-white/80 hover:bg-white transition-colors shadow-sm"
               title="Color de fondo del tablero"
-            />
+            >
+              <Paintbrush className="h-4 w-4 text-pink-500" />
+            </button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-auto p-2">
             <div className="grid grid-cols-4 gap-2">
@@ -205,9 +215,12 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
                 <button
                   key={color}
                   type="button"
-                  className="w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform"
+                  className={`w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform ${localBackgroundColor === color ? 'ring-2 ring-offset-1 ring-gray-700' : ''}`}
                   style={{ backgroundColor: color }}
-                  onClick={() => onUpdateBackgroundColor(color)}
+                  onClick={() => {
+                    setLocalBackgroundColor(color);
+                    onUpdateBackgroundColor(color);
+                  }}
                   title={color}
                 />
               ))}

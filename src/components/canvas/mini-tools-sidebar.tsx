@@ -113,16 +113,23 @@ function MiniSidebarButton({
   );
 
   const content = children ? (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{btn}</DropdownMenuTrigger>
-      <DropdownMenuContent side="right" align="start" sideOffset={6} className="min-w-[160px]">
-        {children}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Tooltip>
+      <DropdownMenu>
+        <TooltipTrigger asChild>
+          <DropdownMenuTrigger asChild>{btn}</DropdownMenuTrigger>
+        </TooltipTrigger>
+        <DropdownMenuContent side="right" align="start" sideOffset={6} className="min-w-[160px]">
+          {children}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <TooltipContent side="right" className="bg-white/95 text-slate-700 border border-slate-200 shadow-sm text-[11px] px-2 py-1">
+        {title}
+      </TooltipContent>
+    </Tooltip>
   ) : (
     <Tooltip>
       <TooltipTrigger asChild>{btn}</TooltipTrigger>
-      <TooltipContent side="right" className="bg-gray-100 text-black text-xs">
+      <TooltipContent side="right" className="bg-white/95 text-slate-700 border border-slate-200 shadow-sm text-[11px] px-2 py-1">
         {title}
       </TooltipContent>
     </Tooltip>
@@ -377,11 +384,11 @@ export default function MiniToolsSidebar({
               )}
             </MiniSidebarButton>
 
-            {/* Tools */}
+            {/* ToolsSidebar */}
             <MiniSidebarButton
               icon={PenTool}
-              label="Tools"
-              title="Herramientas de formato"
+              label="ToolsSidebar"
+              title="ToolsSidebar"
               isActive={isToolsPanelOpen}
               onClick={() => setIsToolsPanelOpen((p) => !p)}
             />
@@ -419,6 +426,19 @@ export default function MiniToolsSidebar({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onExportBoardToPng}>
                 Exportar PNG
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const centeredX = Math.max(0, (window.innerWidth - 988) / 2);
+                    localStorage.setItem('toolsSidebarFloatingMode', 'true');
+                    localStorage.setItem('toolsSidebarPosition', JSON.stringify({ x: centeredX, y: 5 }));
+                    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+                  }
+                  router.push('/');
+                }}
+              >
+                XTRa menu: menu principal de la App
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {

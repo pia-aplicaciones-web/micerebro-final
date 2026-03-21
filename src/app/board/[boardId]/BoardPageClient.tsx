@@ -184,6 +184,12 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   // Estado local
   const { boards, handleRenameBoard, handleUpdateBoardBackgroundColor, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
   const canvasRef = useRef<any>(null);
+  const handleBoardBackgroundColorChange = useCallback((newColor: string) => {
+    useBoardStore.setState((state) => ({
+      board: state.board ? ({ ...state.board, backgroundColor: newColor } as any) : state.board,
+    }));
+    void handleUpdateBoardBackgroundColor(newColor);
+  }, [handleUpdateBoardBackgroundColor]);
   
   // Estados de UI
   const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
@@ -1362,7 +1368,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
           name={board?.name || ''}
           backgroundColor={(board as any)?.backgroundColor}
           onUpdateName={handleRenameBoard}
-          onUpdateBackgroundColor={handleUpdateBoardBackgroundColor}
+          onUpdateBackgroundColor={handleBoardBackgroundColorChange}
           onDeleteBoard={handleDeleteBoard}
         />
 

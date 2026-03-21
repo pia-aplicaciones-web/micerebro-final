@@ -6,7 +6,6 @@ import {
   Type,
   Underline,
   Highlighter,
-  Paintbrush,
   X,
   GripVertical,
   ChevronRight,
@@ -168,7 +167,7 @@ export default function MiniToolsPanel({ onClose }: MiniToolsPanelProps) {
       >
         <div className="drag-panel-mini cursor-grab active:cursor-grabbing flex items-center justify-between px-2 py-1.5 border-b border-white/10">
           <GripVertical className="size-4 text-white/70" />
-          <span className="text-xs font-medium text-white/90">Tools</span>
+          <span className="text-xs font-medium text-white/90">ToolsSidebar</span>
           <button type="button" onClick={onClose} className="p-1 hover:bg-white/15 rounded text-white">
             <X className="size-4" />
           </button>
@@ -261,7 +260,17 @@ export default function MiniToolsPanel({ onClose }: MiniToolsPanelProps) {
           <Popover open={popover === 'color'} onOpenChange={(o) => setPopover(o ? 'color' : null)}>
             <PopoverTrigger asChild>
               <button className={btnClass} onMouseDown={(e) => e.preventDefault()}>
-                <Paintbrush className="size-4" />
+                <span
+                  className="text-sm font-semibold leading-none text-white"
+                  style={{
+                    textDecorationLine: 'underline',
+                    textDecorationColor: '#28c4d8',
+                    textDecorationThickness: '3px',
+                    textUnderlineOffset: '2px',
+                  }}
+                >
+                  A
+                </span>
                 <ChevronRight className="size-3 ml-0.5" />
               </button>
             </PopoverTrigger>

@@ -136,6 +136,12 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
 
   const { boards, handleRenameBoard, handleUpdateBoardBackgroundColor, handleDeleteBoard, clearCanvas } = useBoardState(boardId);
   const canvasRef = useRef<any>(null); // Ref para el Canvas
+  const handleBoardBackgroundColorChange = useCallback((newColor: string) => {
+    useBoardStore.setState((state) => ({
+      board: state.board ? ({ ...state.board, backgroundColor: newColor } as any) : state.board,
+    }));
+    void handleUpdateBoardBackgroundColor(newColor);
+  }, [handleUpdateBoardBackgroundColor]);
 
   // Estados de UI
   const [isFormatToolbarOpen, setIsFormatToolbarOpen] = useState(false);
@@ -750,7 +756,7 @@ export default function MobileBoardClient({ boardId }: MobileBoardClientProps) {
               name={board?.name || ""}
               backgroundColor={(board as any)?.backgroundColor}
               onUpdateName={handleRenameBoard}
-              onUpdateBackgroundColor={handleUpdateBoardBackgroundColor}
+              onUpdateBackgroundColor={handleBoardBackgroundColorChange}
               onDeleteBoard={handleDeleteBoard}
             />
 
