@@ -26,6 +26,7 @@ import {
   Trash2,
   LogOut,
   FileText,
+  Languages,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -288,6 +289,17 @@ export default function MiniToolsSidebar({
               }}
               onClick={() => onToggleDictation()}
             />
+
+            <MiniSidebarButton icon={Languages} label="EN" title="estudio Ingles — menú" hasDropdown>
+              <DropdownMenuItem onClick={() => handleAddElement('english-flashcards')}>
+                <Languages className="mr-2 h-4 w-4" />
+                Tarjetas EN (libre)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleAddElement('irregular-verbs')}>
+                <ListTodo className="mr-2 h-4 w-4" />
+                Verbos irregulares
+              </DropdownMenuItem>
+            </MiniSidebarButton>
 
             {/* Link */}
             <MiniSidebarButton icon={LinkIcon} label="Link" title="Páginas guardadas" hasDropdown>

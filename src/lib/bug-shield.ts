@@ -15,7 +15,7 @@ const VALID_ELEMENT_TYPES: ElementType[] = [
   'container', 'two-columns',
   'locator', 'image-frame', 'url-doc',
   'photo-grid', 'photo-grid-horizontal', 'photo-grid-adaptive', 'photo-grid-free', 'libreta',
-  'block-dibujo'
+  'block-dibujo', 'english-flashcards', 'irregular-verbs'
 ];
 
 // Dimensiones por defecto por tipo
@@ -42,6 +42,8 @@ const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number }> = {
   'photo-grid-adaptive': { width: 480, height: 420 },
   'photo-grid-free': { width: 600, height: 500 },
   'libreta': { width: 378, height: 567 },
+  'english-flashcards': { width: 420, height: 720 },
+  'irregular-verbs': { width: 720, height: 680 },
   'block-dibujo': { width: 567, height: 756 },
   'time-list': { width: 320, height: 200 },
   'timer-lista': { width: 320, height: 280 },
@@ -203,6 +205,70 @@ function sanitizeContent(type: ElementType, content: unknown): unknown {
       }
       return { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] };
 
+    case 'english-flashcards':
+      if (typeof content === 'object' && content !== null) {
+        const fc = content as Record<string, unknown>;
+        const rawCards = Array.isArray(fc.cards) ? fc.cards : [];
+        const cards = (rawCards as Record<string, unknown>[])
+          .slice(0, 30)
+          .map((row) => ({
+            en: typeof row?.en === 'string' ? row.en.slice(0, 2000) : '',
+            es: typeof row?.es === 'string' ? row.es.slice(0, 2000) : '',
+            mastered: typeof row?.mastered === 'boolean' ? row.mastered : false,
+          }));
+        const dir = fc.studyDirection === 'reverse' ? 'reverse' : 'forward';
+        const mode = fc.cardMode === 'phrase' ? 'phrase' : 'word';
+        const reviewHide = typeof fc.reviewHideMastered === 'boolean' ? fc.reviewHideMastered : false;
+        return {
+          title: typeof fc.title === 'string' ? fc.title.slice(0, 200) : 'Estudio EN',
+          studyDirection: dir,
+          cardMode: mode,
+          reviewHideMastered: reviewHide,
+          cards: cards.length > 0 ? cards : [{ en: '', es: '', mastered: false }],
+        };
+      }
+      return {
+        title: 'Estudio EN',
+        studyDirection: 'forward',
+        cardMode: 'word',
+        reviewHideMastered: false,
+        cards: [{ en: '', es: '', mastered: false }],
+      };
+
+    case 'irregular-verbs':
+      if (typeof content === 'object' && content !== null) {
+        const iv = content as Record<string, unknown>;
+        const ids = Array.isArray(iv.selectedIds)
+          ? (iv.selectedIds as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 200)
+          : [];
+        const practice = Array.isArray(iv.practiceVerbIds)
+          ? (iv.practiceVerbIds as unknown[]).filter((x): x is string => typeof x === 'string').slice(0, 200)
+          : [];
+        const ph = iv.phase === 'practice' ? 'practice' : iv.phase === 'quiz' ? 'quiz' : 'browse';
+        const qIdx =
+          typeof iv.quizStepIndex === 'number' && !isNaN(iv.quizStepIndex)
+            ? Math.max(0, Math.min(199, Math.floor(iv.quizStepIndex)))
+            : 0;
+        return {
+          title: typeof iv.title === 'string' ? iv.title.slice(0, 200) : 'Verbos irregulares',
+          phase: ph,
+          selectedIds: ids,
+          practiceVerbIds: practice,
+          quizStepIndex: qIdx,
+          shuffleOnGenerate: typeof iv.shuffleOnGenerate === 'boolean' ? iv.shuffleOnGenerate : false,
+          orderPracticeBy: iv.orderPracticeBy === 'table' ? 'table' : 'alphabetical',
+        };
+      }
+      return {
+        title: 'Verbos irregulares',
+        phase: 'browse',
+        selectedIds: [],
+        practiceVerbIds: [],
+        quizStepIndex: 0,
+        shuffleOnGenerate: false,
+        orderPracticeBy: 'alphabetical',
+      };
+
     case 'image':
       if (typeof content === 'object' && content !== null) {
         const imgContent = content as Record<string, unknown>;
@@ -345,6 +411,24 @@ function getDefaultContent(type: ElementType): unknown {
       return { title: '', text: '', content: '' };
     case 'block-dibujo':
       return { title: 'BLOCK DIBUJO', text: '', searchQuery: '', images: [] };
+    case 'english-flashcards':
+      return {
+        title: 'Estudio EN',
+        studyDirection: 'forward',
+        cardMode: 'word',
+        reviewHideMastered: false,
+        cards: [{ en: '', es: '', mastered: false }],
+      };
+    case 'irregular-verbs':
+      return {
+        title: 'Verbos irregulares',
+        phase: 'browse',
+        selectedIds: [],
+        practiceVerbIds: [],
+        quizStepIndex: 0,
+        shuffleOnGenerate: false,
+        orderPracticeBy: 'alphabetical',
+      };
     case 'image':
       return { url: '' };
     case 'moodboard':

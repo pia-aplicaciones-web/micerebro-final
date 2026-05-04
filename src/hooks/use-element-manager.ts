@@ -645,6 +645,60 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         };
         break;
       }
+      case 'english-flashcards': {
+        const enSize = { width: 420, height: 720 };
+        const enPos = getCenteredPosition(enSize.width, enSize.height);
+        newElementData = {
+          type,
+          x: enPos.x,
+          y: enPos.y,
+          width: enSize.width,
+          height: enSize.height,
+          userId,
+          properties: { ...baseProperties, position: enPos, size: enSize },
+          content: (props?.content && typeof props.content === 'object')
+            ? props.content
+            : {
+                title: 'Estudio EN',
+                studyDirection: 'forward',
+                cardMode: 'word',
+                reviewHideMastered: false,
+                cards: [{ en: '', es: '', mastered: false }],
+              },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      }
+      case 'irregular-verbs': {
+        const ivSize = { width: 720, height: 680 };
+        const ivPos = getCenteredPosition(ivSize.width, ivSize.height);
+        newElementData = {
+          type,
+          x: ivPos.x,
+          y: ivPos.y,
+          width: ivSize.width,
+          height: ivSize.height,
+          userId,
+          properties: { ...baseProperties, position: ivPos, size: ivSize },
+          content: (props?.content && typeof props.content === 'object')
+            ? props.content
+            : {
+                title: 'Verbos irregulares',
+                phase: 'browse',
+                selectedIds: [],
+                practiceVerbIds: [],
+                quizStepIndex: 0,
+                shuffleOnGenerate: false,
+                orderPracticeBy: 'alphabetical',
+              },
+          zIndex,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        break;
+      }
       case 'pomodoro-timer':
         const pomodoroSize = { width: 260, height: 200 };
         const pomodoroPos = getCenteredPosition(pomodoroSize.width, pomodoroSize.height);

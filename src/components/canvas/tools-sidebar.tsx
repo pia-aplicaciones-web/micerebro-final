@@ -45,7 +45,7 @@ import { BookCopy,
   Menu,
   X as CloseIcon,
   Crop,
-  Pencil
+  Languages
 } from 'lucide-react';
 import { signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
@@ -80,7 +80,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { ElementType, CanvasElement, Board, WithId, NotepadContent, PhotoGridContent, PhotoGridFreeContent, LibretaContent, TodoContent } from '@/lib/types';
+import type { ElementType, CanvasElement, Board, WithId, NotepadContent, PhotoGridContent, PhotoGridFreeContent, LibretaContent, TodoContent, EnglishFlashcardsContent, IrregularVerbsContent } from '@/lib/types';
 
 type AuthUser = {
   uid?: string;
@@ -199,16 +199,6 @@ interface ToolsSidebarProps {
   canvasScale: number;
   isGalleryPanelOpen: boolean;
   onToggleGalleryPanel: () => void;
-  drawingMode?: {
-    isDrawingMode: boolean;
-    drawingColor: 'red' | 'white' | 'calipso' | 'fucsia' | 'purple';
-    strokeWidth: 2 | 4 | 6;
-    toggleDrawingMode: () => void;
-    setColor: (color: 'red' | 'white' | 'calipso' | 'fucsia' | 'purple') => void;
-    setStrokeWidth: (width: 2 | 4 | 6) => void;
-    getColorHex: () => string;
-    getStrokeWidth: () => number;
-  };
   onCreateMiniBoard?: () => Promise<string | null>;
 }
  
@@ -245,7 +235,6 @@ interface ToolsSidebarProps {
    canvasScale,
    isGalleryPanelOpen,
    onToggleGalleryPanel,
-  drawingMode,
   onCreateMiniBoard,
  }, ref) => {
   const { toast } = useToast();
@@ -353,7 +342,7 @@ interface ToolsSidebarProps {
   };
 
   const elementsOnCanvas = useMemo(
-    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true),
+    () => (Array.isArray(elements) ? elements : []).filter((el) => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true),
     [elements]
   );
 
@@ -380,7 +369,7 @@ interface ToolsSidebarProps {
   const hiddenNotebooks = useMemo(
     () =>
       hiddenElements.filter((el) =>
-        ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type)
+        ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2'].includes(el.type)
       ),
     [hiddenElements]
   );
@@ -444,7 +433,7 @@ interface ToolsSidebarProps {
     const w = typeof size.width === 'number' ? size.width : parseFloat(String(size.width)) || 300;
     const h = typeof size.height === 'number' ? size.height : parseFloat(String(size.height)) || 200;
     const currentSize = { width: w, height: h };
-    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'block-dibujo', 'block-dibujo-2'];
+    const typesWithMinimized = ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2'];
     if (typesWithMinimized.includes(element.type)) {
       updateElement(id, {
         minimized: true,
@@ -679,6 +668,52 @@ interface ToolsSidebarProps {
             )}
           />
 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                title="estudio Ingles — menú EN"
+                className={cn(
+                  'flex flex-col items-center justify-center h-auto py-[5px] px-[6px] w-[75px] text-[11px] gap-0.5',
+                  'hover:bg-[#ADD8E6] focus-visible:bg-[#ADD8E6] active:bg-white',
+                  'text-black border border-border rounded-md bg-white'
+                )}
+                style={{
+                  color: '#000000',
+                  border: '1px solid hsl(var(--border))',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Languages className="size-[19px] flex-shrink-0 text-black" style={{ color: '#000000' }} />
+                <span className="flex items-center gap-0.5 text-center leading-tight text-[10px] text-black" style={{ color: '#000000' }}>
+                  EN
+                  <ChevronDown className="size-2.5 shrink-0 opacity-70" />
+                </span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="right" align="start" sideOffset={5}>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleAddElement('english-flashcards');
+                }}
+              >
+                <Languages className="mr-2 h-4 w-4" />
+                <span>Tarjetas EN (libre)</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleAddElement('irregular-verbs');
+                }}
+              >
+                <List className="mr-2 h-4 w-4" />
+                <span>Verbos irregulares</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* Cuaderno */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -721,14 +756,7 @@ interface ToolsSidebarProps {
                 <Plus className="mr-2 h-4 w-4" />
                 <span>iPhone</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo')}>
-                <Plus className="mr-2 h-4 w-4" />
-                <span>BLOCK DIBUJO</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo-2')}>
-                <Plus className="mr-2 h-4 w-4" />
-                <span>Dibujar</span>
-              </DropdownMenuItem>
+              {/* BLOCK DIBUJO y Dibujar desactivados en Cuadernos por solicitud */}
               {elementsOnCanvas.length > 0 && (
                 <>
                   <DropdownMenuSeparator />
@@ -775,6 +803,16 @@ interface ToolsSidebarProps {
                             const dictadoContentOpen = element.content as any;
                             title = dictadoContentOpen?.title || 'iPhone';
                             break;
+                          case 'english-flashcards': {
+                            const enOpen = element.content as EnglishFlashcardsContent;
+                            title = enOpen?.title || 'Estudio EN';
+                            break;
+                          }
+                          case 'irregular-verbs': {
+                            const ivOpen = element.content as IrregularVerbsContent;
+                            title = ivOpen?.title || 'Verbos irregulares';
+                            break;
+                          }
                           case 'block-dibujo': {
                             const blockDibujoContent = element.content as any;
                             title = blockDibujoContent?.title || 'BLOCK DIBUJO';
@@ -852,6 +890,16 @@ interface ToolsSidebarProps {
                             const dictadoContentHidden = element.content as any;
                             title = dictadoContentHidden?.title || 'iPhone';
                             break;
+                          case 'english-flashcards': {
+                            const enHidden = element.content as EnglishFlashcardsContent;
+                            title = enHidden?.title || 'Estudio EN';
+                            break;
+                          }
+                          case 'irregular-verbs': {
+                            const ivHidden = element.content as IrregularVerbsContent;
+                            title = ivHidden?.title || 'Verbos irregulares';
+                            break;
+                          }
                           case 'block-dibujo': {
                             const blockDibujoContentHidden = element.content as any;
                             title = blockDibujoContentHidden?.title || 'BLOCK DIBUJO';
@@ -1104,102 +1152,6 @@ interface ToolsSidebarProps {
               <DropdownMenuItem onClick={onAddImageFromUrlWithCrop}>
                 <LinkIcon className="mr-2 h-4 w-4" />
                 <span>Desde URL + Crop</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Lápiz */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <SidebarButton
-                icon={Pencil}
-                label="Lápiz"
-                title={drawingMode?.isDrawingMode ? "Desactivar modo dibujo" : "Activar modo dibujo"}
-                isActive={drawingMode?.isDrawingMode}
-                className={drawingMode?.isDrawingMode ? 'bg-teal-100 border-teal-500' : ''}
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="start" sideOffset={5}>
-              <DropdownMenuItem onClick={() => drawingMode?.toggleDrawingMode()}>
-                {drawingMode?.isDrawingMode ? 'Desactivar' : 'Activar'} modo dibujo
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Colores:</div>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem onClick={() => drawingMode?.setColor('red')}>
-                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#ef4444' }} />
-                    <span>Rojo</span>
-                    {drawingMode?.drawingColor === 'red' && <span className="ml-auto text-xs">✓</span>}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent>Rojo</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem onClick={() => drawingMode?.setColor('white')}>
-                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300 bg-white" />
-                    <span>Blanco</span>
-                    {drawingMode?.drawingColor === 'white' && <span className="ml-auto text-xs">✓</span>}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent>Blanco</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem onClick={() => drawingMode?.setColor('calipso')}>
-                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#28c4d8' }} />
-                    <span>Calipso</span>
-                    {drawingMode?.drawingColor === 'calipso' && <span className="ml-auto text-xs">✓</span>}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent>Calipso</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem onClick={() => drawingMode?.setColor('fucsia')}>
-                    <div className="w-4 h-4 rounded-full mr-2 border border-gray-300" style={{ backgroundColor: '#e91e8c' }} />
-                    <span>Fucsia</span>
-                    {drawingMode?.drawingColor === 'fucsia' && <span className="ml-auto text-xs">✓</span>}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent>Fucsia</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenuItem onClick={() => drawingMode?.setColor('purple')}>
-                    <div className="w-4 h-4 rounded-full bg-purple-500 mr-2 border border-gray-300" />
-                    <span>Morado</span>
-                    {drawingMode?.drawingColor === 'purple' && <span className="ml-auto text-xs">✓</span>}
-                  </DropdownMenuItem>
-                </TooltipTrigger>
-                <TooltipContent>Morado</TooltipContent>
-              </Tooltip>
-              <DropdownMenuSeparator />
-              <div className="px-2 py-1.5 text-xs text-gray-500 font-medium">Grosor:</div>
-              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(2)}>
-                <div className="w-6 h-1 rounded-full bg-gray-700 mr-2" style={{ height: 2 }} />
-                <span>Fino</span>
-                {drawingMode?.strokeWidth === 2 && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(4)}>
-                <div className="w-6 rounded-full bg-gray-700 mr-2" style={{ height: 4 }} />
-                <span>Medio</span>
-                {drawingMode?.strokeWidth === 4 && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => drawingMode?.setStrokeWidth(6)}>
-                <div className="w-6 rounded-full bg-gray-700 mr-2" style={{ height: 6 }} />
-                <span>Grueso</span>
-                {drawingMode?.strokeWidth === 6 && <span className="ml-auto text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo')}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Crear BLOCK DIBUJO</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAddNotebookElement('block-dibujo-2')}>
-                <Pencil className="mr-2 h-4 w-4" />
-                <span>Crear Dibujar</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

@@ -39,7 +39,9 @@ export type ElementType =
   'block-dibujo' |
   'block-dibujo-2' |
   'timer-lista' |
-  'url-doc';
+  'url-doc' |
+  'english-flashcards' |
+  'irregular-verbs';
 
 // Interfaz para propiedades de elementos del canvas
 export interface CanvasElementProperties {
@@ -483,6 +485,68 @@ export interface UrlDocCanvasElement extends BaseVisualProperties {
   content?: { url: string; title?: string };
 }
 
+/** Tarjeta individual del cuaderno Estudio EN */
+export interface EnglishFlashcardCard {
+  en: string;
+  es: string;
+  /** Marca vocabulario ya dominado (útil con repaso) */
+  mastered?: boolean;
+}
+
+/** Tarjetas de vocabulario EN ↔ ES (menú Estudio EN) */
+export interface EnglishFlashcardsContent {
+  title?: string;
+  /** forward: escribes EN, traducción ES | reverse: escribes ES, traducción EN */
+  studyDirection?: 'forward' | 'reverse';
+  /** word: foco palabra | phrase: más espacio para frases */
+  cardMode?: 'word' | 'phrase';
+  /** En repaso, ocultar tarjetas marcadas como dominadas */
+  reviewHideMastered?: boolean;
+  cards: EnglishFlashcardCard[];
+}
+
+export interface EnglishFlashcardsCanvasElement extends BaseVisualProperties {
+  type: 'english-flashcards';
+  hidden?: boolean;
+  content: EnglishFlashcardsContent;
+}
+
+/** Fila del listado estático de verbos irregulares (cuaderno aparte de Estudio EN) */
+export interface IrregularVerbRow {
+  id: string;
+  base: string;
+  past: string;
+  participle: string;
+  meaningEs: string;
+  esBase?: string;
+  esPast?: string;
+  esParticiple?: string;
+}
+
+export type IrregularVerbsPhase = 'browse' | 'practice' | 'quiz';
+
+/** Cuaderno: listado 4 columnas → Practir → tarjetas (no mezclar con english-flashcards) */
+export interface IrregularVerbsContent {
+  title?: string;
+  phase?: IrregularVerbsPhase;
+  /** IDs seleccionados para practicar */
+  selectedIds?: string[];
+  /** Orden actual del mazo en modo práctica y quiz */
+  practiceVerbIds?: string[];
+  /** Índice en practiceVerbIds durante el quiz (escritura) */
+  quizStepIndex?: number;
+  /** Si al pulsar Practir se baraja el mazo (tras aplicar orden) */
+  shuffleOnGenerate?: boolean;
+  /** Orden al generar: alfabético por infinitivo o fila del listado filtrado */
+  orderPracticeBy?: 'alphabetical' | 'table';
+}
+
+export interface IrregularVerbsCanvasElement extends BaseVisualProperties {
+  type: 'irregular-verbs';
+  hidden?: boolean;
+  content: IrregularVerbsContent;
+}
+
 export type CanvasElement =
   | ImageCanvasElement
   | TextCanvasElement
@@ -504,7 +568,9 @@ export type CanvasElement =
   | ImageCarouselCanvasElement
   | PomodoroTimerCanvasElement
   | LocatorCanvasElement
-  | UrlDocCanvasElement;
+  | UrlDocCanvasElement
+  | EnglishFlashcardsCanvasElement
+  | IrregularVerbsCanvasElement;
 
 export type WithId<T> = T & { id: string };
 
@@ -567,6 +633,8 @@ export type ElementContent =
   | BlockDibujoContent
   | BlockDibujo2Content
   | DictadoContent
+  | EnglishFlashcardsContent
+  | IrregularVerbsContent
   | Record<string, unknown>;
 
 // --- INTERFAZ UNIVERSAL DE PROPS -- CORRECTED ---

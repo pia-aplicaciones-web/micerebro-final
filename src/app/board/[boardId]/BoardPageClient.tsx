@@ -1467,7 +1467,6 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                 isListening={isListening}
                 onToggleDictation={toggleListening}
                 onSaveSelectionBeforeMic={saveSelectionBeforeMic}
-                drawingMode={drawingMode}
                 onCreateMiniBoard={user?.uid ? async () => {
                   const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
                   return id || null;

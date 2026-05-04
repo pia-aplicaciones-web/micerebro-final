@@ -44,6 +44,8 @@ import NotesElement from './elements/notes-element';
 import MiniElement from './elements/mini-element';
 import CountdownElement from './elements/countdown-element';
 import DictadoElement from './elements/dictado-element';
+import EnglishFlashcardsElement from './elements/english-flashcards-element';
+import IrregularVerbsElement from './elements/irregular-verbs-element';
 import BlockDibujoElement from './elements/block-dibujo-element';
 import BlockDibujo2Element from './elements/block-dibujo-2-element';
 import TimeListElement from './elements/time-list-element';
@@ -84,6 +86,8 @@ const ElementComponentMap: { [key: string]: React.FC<CommonElementProps> } = {
   'mini': MiniElement,
   'countdown': CountdownElement,
   'dictado': DictadoElement,
+  'english-flashcards': EnglishFlashcardsElement,
+  'irregular-verbs': IrregularVerbsElement,
   'block-dibujo': BlockDibujoElement,
   'block-dibujo-2': BlockDibujo2Element,
   'time-list': TimeListElement,
@@ -220,7 +224,7 @@ export default function TransformableElement({
   // - Cuadernos siempre van en la última capa (z=-1) cuando NO están en edición.
   // - Al seleccionar para editar, suben temporalmente a z=999.
   // - Al terminar edición (deselección), vuelven a su capa base.
-  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'libreta'].includes(element.type);
+  const isNotebookElement = ['notepad', 'yellow-notepad', 'notes', 'mini-notes', 'mini', 'libreta', 'english-flashcards', 'irregular-verbs'].includes(element.type);
   const baseZIndex = isNotebookElement ? -1 : (elementProps.zIndex ?? element.zIndex ?? 1);
   const zIndex = isDraggingOrResizing ? 30001 : (isSelected ? 999 : baseZIndex);
 
@@ -842,7 +846,7 @@ export default function TransformableElement({
                   backgroundColor={element.backgroundColor}
                   hidden={element.hidden}
                   minimized={
-                    ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'block-dibujo', 'block-dibujo-2', 'mis-imagenes'].includes(element.type)
+                    ['notepad', 'yellow-notepad', 'notes', 'libreta', 'mini', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2', 'mis-imagenes'].includes(element.type)
                       ? (element as { minimized?: boolean }).minimized
                       : undefined
                   }

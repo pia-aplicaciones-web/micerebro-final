@@ -568,6 +568,8 @@ export default function ContainerElement(
       (element.type as any) === 'libreta' ||
       (element.type as any) === 'mini' ||
       (element.type as any) === 'dictado' ||
+      (element.type as any) === 'english-flashcards' ||
+      (element.type as any) === 'irregular-verbs' ||
       (element.type as any) === 'block-dibujo' ||
       (element.type as any) === 'block-dibujo-2'
     ) {
@@ -583,22 +585,42 @@ export default function ContainerElement(
               ? 'Mini'
                 : typeStr === 'dictado'
                   ? 'iPhone'
+                  : typeStr === 'english-flashcards'
+                    ? 'Estudio EN'
+                  : typeStr === 'irregular-verbs'
+                    ? 'Verbos irregulares'
                 : typeStr === 'block-dibujo-2'
                   ? 'Dibujar'
                   : 'Block Dibujo');
 
-      let raw =
-        c?.text ||
-        c?.content ||
-        (Array.isArray(c?.pages) ? c.pages[c.currentPage || 0] || c.pages[0] || '' : '');
-      raw = String(raw || '');
-      const previewText = raw.replace(/<[^>]*>/g, '').trim() || 'Sin contenido';
+      let previewText: string;
+      if (typeStr === 'english-flashcards') {
+        const cards = Array.isArray(c?.cards) ? c.cards : [];
+        const ens = cards
+          .map((x: any) => (typeof x?.en === 'string' ? x.en.trim() : ''))
+          .filter(Boolean);
+        previewText = ens.length ? ens.slice(0, 8).join(' · ') : 'Sin palabras aún';
+      } else if (typeStr === 'irregular-verbs') {
+        const nSel = Array.isArray(c?.selectedIds) ? c.selectedIds.length : 0;
+        const phase =
+          c?.phase === 'quiz' ? 'quiz' : c?.phase === 'practice' ? 'práctica' : 'lista';
+        previewText = `${phase} · ${nSel} seleccionados`;
+      } else {
+        let raw =
+          c?.text ||
+          c?.content ||
+          (Array.isArray(c?.pages) ? c.pages[c.currentPage || 0] || c.pages[0] || '' : '');
+        raw = String(raw || '');
+        previewText = raw.replace(/<[^>]*>/g, '').trim() || 'Sin contenido';
+      }
 
       const bgByType: Record<string, string> = {
         notes: '#dcefe1',
         libreta: '#e8f1ff',
         mini: '#f0f9ff',
         dictado: '#f3f4f6',
+        'english-flashcards': '#18181b',
+        'irregular-verbs': '#18181b',
         'block-dibujo': '#fff7ed',
         'block-dibujo-2': '#f8fafc',
       };
@@ -617,7 +639,14 @@ export default function ContainerElement(
                 'repeating-linear-gradient(to bottom, transparent 0, transparent 10px, rgba(148,163,184,0.16) 10px, rgba(148,163,184,0.16) 11px)',
             }}
           >
-            <div className="text-[11px] text-gray-700 line-clamp-5 leading-relaxed">
+            <div
+              className={cn(
+                'text-[11px] line-clamp-5 leading-relaxed',
+                typeStr === 'english-flashcards' || typeStr === 'irregular-verbs'
+                  ? 'text-zinc-300'
+                  : 'text-gray-700'
+              )}
+            >
               {previewText.substring(0, 150)}
             </div>
           </div>

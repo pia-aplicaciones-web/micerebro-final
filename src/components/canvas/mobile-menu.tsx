@@ -57,7 +57,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
-import type { ElementType, CanvasElement, Board, WithId, NotepadContent } from '@/lib/types';
+import type { ElementType, CanvasElement, Board, WithId, NotepadContent, EnglishFlashcardsContent, IrregularVerbsContent } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { getSavedLinks } from '@/lib/saved-links';
 import type { SavedLink } from '@/lib/saved-links';
@@ -238,13 +238,15 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         { label: 'Nuevo Block', onClick: () => handleAddElement('yellow-notepad') },
         { label: 'Agregar Apuntes', onClick: () => handleAddElement('mini-notes') },
         { label: 'iPhone', onClick: () => handleAddElement('dictado') },
+        { label: 'EN · Tarjetas libre', onClick: () => handleAddElement('english-flashcards') },
+        { label: 'EN · Verbos irregulares', onClick: () => handleAddElement('irregular-verbs') },
         { label: 'Libreta', onClick: () => handleAddElement('libreta') },
         { label: 'Mini', onClick: () => handleAddElement('mini') },
         { label: 'Block Dibujo', onClick: () => handleAddElement('block-dibujo') },
         { label: 'Dibujar', onClick: () => handleAddElement('block-dibujo-2') },
         {
           label: 'Elementos Abiertos',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'mini-notes', 'mini', 'libreta', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden !== true).map(element => {
             let title = 'Sin título';
             const elementType = element.type as ElementType;
             switch (elementType) {
@@ -269,6 +271,16 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 const dictadoContentOpen = element.content as any;
                 title = dictadoContentOpen?.title || 'iPhone';
                 break;
+              case 'english-flashcards': {
+                const enMobileOpen = element.content as EnglishFlashcardsContent;
+                title = enMobileOpen?.title || 'Estudio EN';
+                break;
+              }
+              case 'irregular-verbs': {
+                const ivMobileOpen = element.content as IrregularVerbsContent;
+                title = ivMobileOpen?.title || 'Verbos irregulares';
+                break;
+              }
               case 'block-dibujo':
                 const blockDibujoContent = element.content as any;
                 title = blockDibujoContent?.title || 'BLOCK DIBUJO';
@@ -285,7 +297,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
         },
         {
           label: 'Cerrados',
-          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden === true).map(element => {
+          subMenu: elements.filter(el => ['notepad', 'yellow-notepad', 'notes', 'mini', 'libreta', 'dictado', 'english-flashcards', 'irregular-verbs', 'block-dibujo', 'block-dibujo-2'].includes(el.type) && el.hidden === true).map(element => {
             let title = 'Sin título';
             const elementType = element.type as ElementType;
             switch (elementType) {
@@ -308,6 +320,16 @@ const MobileMenu: React.FC<MobileMenuProps> = ({
                 const dictadoContent = element.content as any;
                 title = dictadoContent?.title || 'iPhone';
                 break;
+              case 'english-flashcards': {
+                const enMobileHidden = element.content as EnglishFlashcardsContent;
+                title = enMobileHidden?.title || 'Estudio EN';
+                break;
+              }
+              case 'irregular-verbs': {
+                const ivMobileHidden = element.content as IrregularVerbsContent;
+                title = ivMobileHidden?.title || 'Verbos irregulares';
+                break;
+              }
               case 'block-dibujo':
                 const blockDibujoContentHidden = element.content as any;
                 title = blockDibujoContentHidden?.title || 'BLOCK DIBUJO';
