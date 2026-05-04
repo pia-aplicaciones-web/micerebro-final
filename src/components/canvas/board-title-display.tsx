@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import TextToolsMenu from './text-tools-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface BoardTitleDisplayProps {
   name: string;
@@ -55,14 +57,14 @@ const handleTextFormat = (command: string, value?: string) => {
 };
 
 const BOARD_BG_COLORS = [
-  '#96e4e6',
-  '#a9e5d3',
-  '#d9f99d',
-  '#fef3c7',
-  '#ffd5c2',
-  '#fbcfe8',
-  '#c7d2fe',
-  '#e5e7eb',
+  { key: '#96e4e6', name: 'Calipso', bg: '#96e4e6', text: '#0f172a' },
+  { key: '#a9e5d3', name: 'Menta', bg: '#a9e5d3', text: '#0f172a' },
+  { key: '#d9f99d', name: 'Lima', bg: '#d9f99d', text: '#1f2937' },
+  { key: '#fef3c7', name: 'Crema', bg: '#fef3c7', text: '#374151' },
+  { key: '#ffd5c2', name: 'Durazno', bg: '#ffd5c2', text: '#7c2d12' },
+  { key: '#fbcfe8', name: 'Rosa', bg: '#fbcfe8', text: '#831843' },
+  { key: '#c7d2fe', name: 'Lavanda', bg: '#c7d2fe', text: '#312e81' },
+  { key: '#e5e7eb', name: 'Gris', bg: '#e5e7eb', text: '#111827' },
 ];
 
 export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName, onUpdateBackgroundColor, onDeleteBoard }: BoardTitleDisplayProps) {
@@ -109,40 +111,51 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
     handleSave();
   };
 
+  const boardColorPicker = onUpdateBackgroundColor ? (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 p-1 hover:bg-black/10 rounded"
+          title="Cambiar color"
+        >
+          <Paintbrush className="h-4 w-4 text-gray-700" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-3 border-none bg-white shadow-xl rounded-xl">
+        <div className="grid grid-cols-6 gap-2">
+          {BOARD_BG_COLORS.map((palette) => (
+            <button
+              key={palette.key}
+              type="button"
+              onClick={() => {
+                setLocalBackgroundColor(palette.key);
+                onUpdateBackgroundColor(palette.key);
+              }}
+              className={cn(
+                'w-8 h-8 rounded-lg shadow-sm hover:scale-110 transition-transform flex items-center justify-center text-xs font-bold',
+                localBackgroundColor === palette.key && 'ring-2 ring-offset-1 ring-gray-800 scale-110'
+              )}
+              style={{
+                backgroundColor: palette.bg,
+                color: palette.text,
+                border: `1px solid ${palette.text}30`,
+              }}
+              title={palette.name}
+            >
+              Aa
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  ) : null;
+
   if (isEditing) {
     return (
       <div className="fixed top-2.5 right-3 z-[10005] flex items-center gap-2 pointer-events-auto">
-        {onUpdateBackgroundColor && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label="Color de fondo del tablero"
-                className="h-7 w-7 p-1 rounded-full border border-black/10 bg-white/80 hover:bg-white transition-colors shadow-sm"
-                title="Color de fondo del tablero"
-              >
-                <Paintbrush className="h-4 w-4 text-pink-500" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-auto p-2">
-              <div className="grid grid-cols-4 gap-2">
-                {BOARD_BG_COLORS.map((color) => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform ${localBackgroundColor === color ? 'ring-2 ring-offset-1 ring-gray-700' : ''}`}
-                    style={{ backgroundColor: color }}
-                    onClick={() => {
-                      setLocalBackgroundColor(color);
-                      onUpdateBackgroundColor(color);
-                    }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
+        {boardColorPicker}
         <input
           ref={inputRef}
           value={editValue}
@@ -197,37 +210,7 @@ export default function BoardTitleDisplay({ name, backgroundColor, onUpdateName,
 
   return (
     <div className="fixed top-2.5 right-3 z-[10005] pointer-events-auto flex items-center gap-2">
-      {onUpdateBackgroundColor && (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Color de fondo del tablero"
-              className="h-7 w-7 p-1 rounded-full border border-black/10 bg-white/80 hover:bg-white transition-colors shadow-sm"
-              title="Color de fondo del tablero"
-            >
-              <Paintbrush className="h-4 w-4 text-pink-500" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-auto p-2">
-            <div className="grid grid-cols-4 gap-2">
-              {BOARD_BG_COLORS.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className={`w-5 h-5 rounded-full border border-gray-300 hover:scale-110 transition-transform ${localBackgroundColor === color ? 'ring-2 ring-offset-1 ring-gray-700' : ''}`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => {
-                    setLocalBackgroundColor(color);
-                    onUpdateBackgroundColor(color);
-                  }}
-                  title={color}
-                />
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      )}
+      {boardColorPicker}
       <h1
         className="text-xs font-medium tracking-tight opacity-70 cursor-pointer hover:opacity-100 transition-opacity max-w-[72vw] truncate"
         style={{

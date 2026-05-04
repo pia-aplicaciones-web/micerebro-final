@@ -213,6 +213,7 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
   const [selectedCommentForEdit, setSelectedCommentForEdit] = useState<WithId<CanvasElement> | null>(null);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+  const [isMainToolsSidebarVisible, setIsMainToolsSidebarVisible] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const mobileMenuTouchedRef = useRef(false);
   const galleryTabTouchedRef = useRef(false);
@@ -1425,50 +1426,54 @@ export default function BoardPageClient({ boardId }: BoardPageClientProps) {
                 const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
                 return id || null;
               } : undefined}
+              onToggleMainMenuVisibility={() => setIsMainToolsSidebarVisible((prev) => !prev)}
+              isMainMenuVisible={isMainToolsSidebarVisible}
             />
 
-            <ToolsSidebar
-              elements={elements || []}
-              boards={boards || []}
-              boardId={boardId}
-              user={user}
-              onUploadImage={handleUploadImage}
-              onAddImageFromUrl={() => {
-                setIsImageUrlDialogOpen(true);
-                setShouldOpenCropAfterUrl(false);
-              }}
-              onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
-              onCropImage={handleCropImage}
-              onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
-              onPanToggle={() => canvasRef.current?.activatePanMode()}
-              onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
-              onDeleteBoard={handleDeleteBoard}
-              onDeleteAllUserImages={deleteAllUserImages}
-              onOpenNotepad={handleOpenNotepad}
-              onLocateElement={handleLocateElement}
-              onAddComment={handleAddMarker}
-              updateElement={updateElement}
-              selectedElementIds={selectedElementIds}
-              addElement={addElement}
-              selectElement={handleSelectElement}
-              clearCanvas={() => clearCanvas(elements)}
-              onExportBoardToPng={handleExportToPng}
-              onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
-              isFormatToolbarOpen={isFormatToolbarOpen}
-              onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
-              canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
-              canvasScale={canvasRef.current?.getTransform().scale || 1}
-              isGalleryPanelOpen={isGalleryOpen}
-              onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
-              isListening={isListening}
-              onToggleDictation={toggleListening}
-              onSaveSelectionBeforeMic={saveSelectionBeforeMic}
-              drawingMode={drawingMode}
-              onCreateMiniBoard={user?.uid ? async () => {
-                const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
-                return id || null;
-              } : undefined}
-            />
+            {isMainToolsSidebarVisible && (
+              <ToolsSidebar
+                elements={elements || []}
+                boards={boards || []}
+                boardId={boardId}
+                user={user}
+                onUploadImage={handleUploadImage}
+                onAddImageFromUrl={() => {
+                  setIsImageUrlDialogOpen(true);
+                  setShouldOpenCropAfterUrl(false);
+                }}
+                onOpenUrlDocDialog={() => setIsUrlDocDialogOpen(true)}
+                onCropImage={handleCropImage}
+                onAddImageFromUrlWithCrop={handleAddImageFromUrlWithCrop}
+                onPanToggle={() => canvasRef.current?.activatePanMode()}
+                onRenameBoard={() => setIsRenameBoardDialogOpen(true)}
+                onDeleteBoard={handleDeleteBoard}
+                onDeleteAllUserImages={deleteAllUserImages}
+                onOpenNotepad={handleOpenNotepad}
+                onLocateElement={handleLocateElement}
+                onAddComment={handleAddMarker}
+                updateElement={updateElement}
+                selectedElementIds={selectedElementIds}
+                addElement={addElement}
+                selectElement={handleSelectElement}
+                clearCanvas={() => clearCanvas(elements)}
+                onExportBoardToPng={handleExportToPng}
+                onFormatToggle={() => setIsFormatToolbarOpen(p => !p)}
+                isFormatToolbarOpen={isFormatToolbarOpen}
+                onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
+                canvasScrollPosition={canvasRef.current?.getTransform().x || 0}
+                canvasScale={canvasRef.current?.getTransform().scale || 1}
+                isGalleryPanelOpen={isGalleryOpen}
+                onToggleGalleryPanel={() => setIsGalleryOpen(prev => !prev)}
+                isListening={isListening}
+                onToggleDictation={toggleListening}
+                onSaveSelectionBeforeMic={saveSelectionBeforeMic}
+                drawingMode={drawingMode}
+                onCreateMiniBoard={user?.uid ? async () => {
+                  const id = await createBoardRef.current?.(user.uid, 'Tablero Mini', undefined, 'mini');
+                  return id || null;
+                } : undefined}
+              />
+            )}
           </>
         )}
 

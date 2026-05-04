@@ -8,7 +8,7 @@ import {
   FileImage, Settings, Settings2,
   Info, Eraser, CalendarDays, FileSignature, Calendar,
   ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock, Sparkles, Copy,
-  Volume2, Pause, Square, Printer
+  Volume2, Pause, Square, Printer, Languages
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -1093,6 +1093,41 @@ export default function NotepadElement(props: CommonElementProps) {
     window.speechSynthesis.speak(utterance);
   }, [typedContent.pages, typedContent.currentPage, isReading, isPaused, toast, speechRate, selectedVoiceName, getReadableText, contentRef]);
 
+  // Lectura en voz inglesa (encabezado)
+  const handleReadAloudEnglish = useCallback(() => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      toast({ variant: 'destructive', title: 'Tu navegador no soporta lectura de voz' });
+      return;
+    }
+
+    const pages = typedContent.pages || [];
+    const currentPageIndex = typedContent.currentPage || 0;
+    const textToRead = getReadableText(pages, currentPageIndex, contentRef);
+
+    if (!textToRead.trim()) {
+      toast({ variant: 'destructive', title: 'No hay texto para leer desde la posición actual' });
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice =
+      voices.find((v) => v.lang.toLowerCase().startsWith('en') && /female|samantha|google us english|fiona/i.test(v.name)) ||
+      voices.find((v) => v.lang.toLowerCase().startsWith('en')) ||
+      null;
+
+    utterance.voice = englishVoice;
+    utterance.lang = englishVoice?.lang || 'en-US';
+    utterance.rate = speechRate;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    utterance.onstart = () => { setIsReading(true); setIsPaused(false); };
+    utterance.onend = () => { setIsReading(false); setIsPaused(false); };
+    utterance.onerror = () => { setIsReading(false); setIsPaused(false); };
+    window.speechSynthesis.speak(utterance);
+  }, [typedContent.pages, typedContent.currentPage, toast, speechRate, getReadableText, contentRef]);
+
   // Detener lectura
   const handleStopReading = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -1263,6 +1298,16 @@ export default function NotepadElement(props: CommonElementProps) {
                       onClick={handleReadAloud}
                     >
                       {isReading && !isPaused ? <Pause className="size-4" /> : <Volume2 className="size-4" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      title="Leer en inglés"
+                      aria-label="Leer en inglés"
+                      onClick={handleReadAloudEnglish}
+                    >
+                      <Languages className="size-4" />
                     </Button>
                     {isReading && (
                       <Button variant="ghost" size="icon" className="size-7" title="Detener" onClick={handleStopReading}>

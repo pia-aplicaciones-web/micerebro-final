@@ -146,8 +146,26 @@ interface MiniToolsPanelProps {
 }
 
 export default function MiniToolsPanel({ onClose }: MiniToolsPanelProps) {
-  const [popover, setPopover] = useState<'font' | 'underline' | 'highlight' | 'color' | null>(null);
+  const [popover, setPopover] = useState<'font' | 'underline' | 'highlight' | null>(null);
   const highlightSelRef = useRef<Range | null>(null);
+  const textColorInputRef = useRef<HTMLInputElement>(null);
+  const textColorSelectionRef = useRef<Range | null>(null);
+
+  const saveTextColorSelection = () => {
+    const sel = window.getSelection();
+    if (sel?.rangeCount) {
+      textColorSelectionRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const restoreTextColorSelection = () => {
+    const saved = textColorSelectionRef.current;
+    if (!saved) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(saved);
+  };
 
   const btnClass = 'flex items-center justify-center w-9 h-9 rounded hover:bg-white/15 text-white transition-colors';
   const gridClass = 'grid grid-cols-4 gap-1.5';
@@ -256,40 +274,42 @@ export default function MiniToolsPanel({ onClose }: MiniToolsPanelProps) {
             </PopoverContent>
           </Popover>
 
-          {/* Color texto (rueda cromática) */}
-          <Popover open={popover === 'color'} onOpenChange={(o) => setPopover(o ? 'color' : null)}>
-            <PopoverTrigger asChild>
-              <button className={btnClass} onMouseDown={(e) => e.preventDefault()}>
-                <span
-                  className="text-sm font-semibold leading-none text-white"
-                  style={{
-                    textDecorationLine: 'underline',
-                    textDecorationColor: '#28c4d8',
-                    textDecorationThickness: '3px',
-                    textUnderlineOffset: '2px',
-                  }}
-                >
-                  A
-                </span>
-                <ChevronRight className="size-3 ml-0.5" />
-              </button>
-            </PopoverTrigger>
-            <PopoverContent side="right" align="start" className="p-2" onMouseDown={(e) => e.preventDefault()}>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  defaultValue="#111111"
-                  onChange={(e) => {
-                    applyTextColor(e.target.value);
-                    setPopover(null);
-                  }}
-                  className="h-9 w-9 cursor-pointer rounded border border-gray-300 bg-transparent"
-                  aria-label="Selector de color de texto"
-                />
-                <span className="text-xs text-white/80">Color de texto</span>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {/* Color texto (A subrayada): abre rosa cromática inmediatamente */}
+          <button
+            className={btnClass}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              saveTextColorSelection();
+            }}
+            onClick={() => {
+              saveTextColorSelection();
+              textColorInputRef.current?.click();
+            }}
+            title="Color de texto"
+          >
+            <span
+              className="text-sm font-semibold leading-none text-white"
+              style={{
+                textDecorationLine: 'underline',
+                textDecorationColor: '#28c4d8',
+                textDecorationThickness: '3px',
+                textUnderlineOffset: '2px',
+              }}
+            >
+              A
+            </span>
+          </button>
+          <input
+            ref={textColorInputRef}
+            type="color"
+            defaultValue="#111111"
+            onChange={(e) => {
+              restoreTextColorSelection();
+              applyTextColor(e.target.value);
+            }}
+            className="sr-only"
+            aria-label="Selector de color de texto"
+          />
 
         </div>
       </div>

@@ -68,6 +68,8 @@ interface MiniToolsSidebarProps {
   onExportBoardToPng: () => void;
   onCreateMiniBoard?: () => Promise<string | null>;
   onOpenUrlDocDialog?: () => void;
+  onToggleMainMenuVisibility?: () => void;
+  isMainMenuVisible?: boolean;
 }
 
 function MiniSidebarButton({
@@ -96,6 +98,7 @@ function MiniSidebarButton({
       type="button"
       onClick={onClick}
       onMouseDown={onMouseDown}
+      title={title}
       className={cn(
         'flex flex-col items-center justify-center w-full py-3 gap-0.5 rounded-md transition-colors',
         'hover:bg-white/15 text-white',
@@ -148,6 +151,8 @@ export default function MiniToolsSidebar({
   onExportBoardToPng,
   onCreateMiniBoard,
   onOpenUrlDocDialog,
+  onToggleMainMenuVisibility,
+  isMainMenuVisible,
 }: MiniToolsSidebarProps) {
   const router = useRouter();
   const [savedLinks, setSavedLinks] = useState<SavedLink[]>([]);
@@ -420,19 +425,11 @@ export default function MiniToolsSidebar({
               <DropdownMenuItem onClick={onExportBoardToPng}>
                 Exportar PNG
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    const centeredX = Math.max(0, (window.innerWidth - 988) / 2);
-                    localStorage.setItem('toolsSidebarFloatingMode', 'true');
-                    localStorage.setItem('toolsSidebarPosition', JSON.stringify({ x: centeredX, y: 5 }));
-                    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
-                  }
-                  router.push('/');
-                }}
-              >
-                XTRa menu: menu principal de la App
-              </DropdownMenuItem>
+              {onToggleMainMenuVisibility && (
+                <DropdownMenuItem onClick={onToggleMainMenuVisibility}>
+                  {isMainMenuVisible === false ? 'Mostrar menú principal' : 'Ocultar menú principal'}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => {
                   if (selectedElementId && onDeleteElement) {
