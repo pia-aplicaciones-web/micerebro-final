@@ -90,16 +90,17 @@ export default function NotesElement(props: CommonElementProps) {
   const isMinimized = !!minimizedProp;
 
   const typedContent = (content || {}) as NotesContent;
-  const pages = normalizePages(typedContent);
-  const currentPage = Math.min(
+  const remotePages = normalizePages(typedContent);
+  const remotePageIndex = Math.min(
     Math.max(0, typedContent.currentPage ?? 0),
-    Math.max(0, pages.length - 1)
+    Math.max(0, remotePages.length - 1)
   );
-  const pageText = stripHtml(pages[currentPage] ?? '');
 
   const [title, setTitle] = useState(typedContent.title || 'Apuntes');
   const [searchQuery, setSearchQuery] = useState(typedContent.searchQuery || '');
-  const [text, setText] = useState(pageText);
+  const [pages, setPages] = useState<string[]>(() => remotePages.map(stripHtml));
+  const [currentPage, setCurrentPage] = useState(remotePageIndex);
+  const [text, setText] = useState(() => stripHtml(remotePages[remotePageIndex] ?? ''));
 
   const initialBackgroundColor = (properties as any)?.backgroundColor || DEFAULT_BG;
   const [backgroundColor, setBackgroundColor] = useState(initialBackgroundColor);
@@ -110,12 +111,18 @@ export default function NotesElement(props: CommonElementProps) {
   const currentPageRef = useRef(currentPage);
   const titleRefValue = useRef(title);
   const searchQueryRef = useRef(searchQuery);
-  const suppressSyncRef = useRef(false);
+  const headerBarRef = useRef<HTMLDivElement>(null);
+  const skipRemoteContentSyncRef = useRef(false);
+  const skipRemoteHeaderSyncRef = useRef(false);
+  const headerColorPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     pagesRef.current = pages;
+  }, [pages]);
+
+  useEffect(() => {
     currentPageRef.current = currentPage;
-  }, [pages, currentPage]);
+  }, [currentPage]);
 
   useEffect(() => {
     titleRefValue.current = title;
@@ -145,25 +152,49 @@ export default function NotesElement(props: CommonElementProps) {
     if (next && next !== backgroundColor) setBackgroundColor(next);
   }, [(properties as any)?.backgroundColor]);
 
+  // Solo sincronizar color remoto si no estamos eligiendo color localmente
   useEffect(() => {
+    if (skipRemoteHeaderSyncRef.current || colorPickerOpen) return;
     const next = (properties as any)?.headerColor;
-    if (next && next !== headerColor) setHeaderColor(next);
-  }, [(properties as any)?.headerColor]);
+    if (typeof next === 'string' && next && next !== headerColor) {
+      setHeaderColor(next);
+      if (headerBarRef.current) headerBarRef.current.style.backgroundColor = next;
+    }
+  }, [(properties as any)?.headerColor, colorPickerOpen]);
 
-  // Sync editor when page changes or external content updates
+  // Aplicar contenido remoto solo si no hay mutación local reciente (evita copiar hoja 1)
   useEffect(() => {
-    if (suppressSyncRef.current) return;
-    const next = stripHtml(pages[currentPage] ?? '');
+    if (skipRemoteContentSyncRef.current) return;
+    const normalized = remotePages.map(stripHtml);
+    const sameLength = normalized.length === pagesRef.current.length;
+    const samePages =
+      sameLength && normalized.every((p, i) => p === (pagesRef.current[i] ?? ''));
+    if (samePages && remotePageIndex === currentPageRef.current) return;
+
+    setPages(normalized);
+    setCurrentPage(remotePageIndex);
+    const next = normalized[remotePageIndex] ?? '';
     setText(next);
     if (contentRef.current && document.activeElement !== contentRef.current) {
       contentRef.current.innerText = next;
     }
-  }, [currentPage, pages[currentPage]]);
+  }, [remotePages.join('\u0001'), remotePageIndex]);
+
+  // Pintar el editor al montar / cambiar de página local
+  useEffect(() => {
+    if (skipRemoteContentSyncRef.current) return;
+    const next = pages[currentPage] ?? '';
+    setText(next);
+    if (contentRef.current && document.activeElement !== contentRef.current) {
+      contentRef.current.innerText = next;
+    }
+  }, [currentPage]);
 
   const buildContentPayload = useCallback(
     (overrides: Partial<NotesContent> = {}) => {
       const html = contentRef.current?.innerText ?? text;
       const nextPages = [...pagesRef.current];
+      while (nextPages.length <= currentPageRef.current) nextPages.push('');
       nextPages[currentPageRef.current] = html;
       return {
         title: titleRefValue.current || 'Apuntes',
@@ -177,19 +208,40 @@ export default function NotesElement(props: CommonElementProps) {
     [text]
   );
 
-  const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange } = useAutoSave({
+  const {
+    saveStatus,
+    handleBlur: handleAutoSaveBlur,
+    handleChange,
+    cancelPendingSave,
+  } = useAutoSave({
     getContent: () => contentRef.current?.innerText || '',
     onSave: async (newText) => {
-      setText(newText);
-      const payload = buildContentPayload();
-      pagesRef.current = payload.pages || pagesRef.current;
+      const pageIdx = currentPageRef.current;
+      const nextPages = [...pagesRef.current];
+      while (nextPages.length <= pageIdx) nextPages.push('');
+      nextPages[pageIdx] = typeof newText === 'string' ? newText : contentRef.current?.innerText || '';
+      pagesRef.current = nextPages;
+      setPages(nextPages);
+      setText(nextPages[pageIdx] || '');
+      const payload: NotesContent = {
+        title: titleRefValue.current || 'Apuntes',
+        searchQuery: searchQueryRef.current || '',
+        pages: nextPages,
+        currentPage: pageIdx,
+        text: nextPages[pageIdx] || '',
+      };
       await onUpdate(id, { content: payload });
     },
     debounceMs: 4000,
-    compareContent: (oldContent, newContent) => {
-      return (text || '').trim() === (newContent || '').trim();
-    },
   });
+
+  useEffect(() => {
+    return () => {
+      if (headerColorPersistTimerRef.current) {
+        clearTimeout(headerColorPersistTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleExportToPng = useCallback(
     async (e: React.MouseEvent) => {
@@ -434,45 +486,58 @@ export default function NotesElement(props: CommonElementProps) {
     }
   }, [title, toast]);
 
+  const applyEditorText = useCallback((plain: string) => {
+    setText(plain);
+    if (contentRef.current) {
+      contentRef.current.innerText = plain;
+    }
+  }, []);
+
   const persistPages = useCallback(
     async (nextPages: string[], nextPage: number) => {
-      suppressSyncRef.current = true;
-      pagesRef.current = nextPages;
-      currentPageRef.current = nextPage;
+      skipRemoteContentSyncRef.current = true;
+      const safePages = nextPages.map((p) => (typeof p === 'string' ? p : ''));
+      const safeIndex = Math.min(Math.max(0, nextPage), Math.max(0, safePages.length - 1));
+      pagesRef.current = safePages;
+      currentPageRef.current = safeIndex;
+      setPages(safePages);
+      setCurrentPage(safeIndex);
+      const plain = stripHtml(safePages[safeIndex] || '');
+      applyEditorText(plain);
       const payload: NotesContent = {
         title: titleRefValue.current || 'Apuntes',
         searchQuery: searchQueryRef.current || '',
-        pages: nextPages,
-        currentPage: nextPage,
-        text: nextPages[nextPage] || '',
+        pages: safePages,
+        currentPage: safeIndex,
+        text: plain,
       };
-      await onUpdate(id, { content: payload });
-      const plain = stripHtml(nextPages[nextPage] || '');
-      setText(plain);
-      if (contentRef.current) {
-        contentRef.current.innerText = plain;
+      try {
+        await onUpdate(id, { content: payload });
+      } finally {
+        window.setTimeout(() => {
+          skipRemoteContentSyncRef.current = false;
+        }, 800);
       }
-      requestAnimationFrame(() => {
-        suppressSyncRef.current = false;
-      });
     },
-    [onUpdate, id]
+    [onUpdate, id, applyEditorText]
   );
 
   const handlePageChange = useCallback(
     async (newPage: number) => {
       if (isPreview) return;
+      cancelPendingSave();
       const currentText = contentRef.current?.innerText ?? text;
       const nextPages = [...pagesRef.current];
       nextPages[currentPageRef.current] = currentText;
       if (newPage < 0 || newPage >= nextPages.length || newPage === currentPageRef.current) return;
       await persistPages(nextPages, newPage);
     },
-    [isPreview, text, persistPages]
+    [isPreview, text, persistPages, cancelPendingSave]
   );
 
   const handleAddPage = useCallback(async () => {
     if (isPreview) return;
+    cancelPendingSave();
     const currentText = contentRef.current?.innerText ?? text;
     const nextPages = [...pagesRef.current];
     nextPages[currentPageRef.current] = currentText;
@@ -480,11 +545,19 @@ export default function NotesElement(props: CommonElementProps) {
       toast({ variant: 'destructive', title: 'Máximo 20 páginas' });
       return;
     }
-    // Página nueva vacía (no duplicar la actual)
+    // Página nueva vacía — nunca clonar la hoja actual
     nextPages.push('');
-    await persistPages(nextPages, nextPages.length - 1);
+    const newIndex = nextPages.length - 1;
+    // Vaciar editor de inmediato para feedback visual
+    skipRemoteContentSyncRef.current = true;
+    pagesRef.current = nextPages;
+    currentPageRef.current = newIndex;
+    setPages(nextPages);
+    setCurrentPage(newIndex);
+    applyEditorText('');
+    await persistPages(nextPages, newIndex);
     toast({ title: 'Página nueva', description: `Página ${nextPages.length} creada.` });
-  }, [isPreview, text, persistPages, toast]);
+  }, [isPreview, text, persistPages, toast, cancelPendingSave, applyEditorText]);
 
   const handleRestoreOriginalSize = useCallback(() => {
     if (isPreview) return;
@@ -498,18 +571,47 @@ export default function NotesElement(props: CommonElementProps) {
     });
   }, [isPreview, properties, onUpdate, id]);
 
-  const handleChangeHeaderColor = useCallback(
-    (color: { hex: string }) => {
-      const hex = color.hex || headerColor;
-      setHeaderColor(hex);
+  const persistHeaderColor = useCallback(
+    (hex: string) => {
+      skipRemoteHeaderSyncRef.current = true;
       onUpdate(id, {
         properties: {
           ...((properties as object) || {}),
           headerColor: hex,
         },
       });
+      window.setTimeout(() => {
+        skipRemoteHeaderSyncRef.current = false;
+      }, 1000);
     },
-    [id, onUpdate, properties, headerColor]
+    [id, onUpdate, properties]
+  );
+
+  // Solo actualiza UI mientras se arrastra la rueda (sin saturar Firestore)
+  const handleChangeHeaderColor = useCallback((color: { hex?: string }) => {
+    const hex = color?.hex || headerColor;
+    setHeaderColor(hex);
+    if (headerBarRef.current) headerBarRef.current.style.backgroundColor = hex;
+    if (headerColorPersistTimerRef.current) {
+      clearTimeout(headerColorPersistTimerRef.current);
+    }
+    headerColorPersistTimerRef.current = setTimeout(() => {
+      persistHeaderColor(hex);
+    }, 250);
+  }, [headerColor, persistHeaderColor]);
+
+  const handleHeaderColorComplete = useCallback(
+    (color: { hex?: string }) => {
+      const hex = color?.hex || headerColor;
+      setHeaderColor(hex);
+      if (headerBarRef.current) headerBarRef.current.style.backgroundColor = hex;
+      if (headerColorPersistTimerRef.current) {
+        clearTimeout(headerColorPersistTimerRef.current);
+        headerColorPersistTimerRef.current = null;
+      }
+      persistHeaderColor(hex);
+    },
+    [headerColor, persistHeaderColor]
   );
 
   const handleTitleBlur = useCallback(() => {
@@ -598,6 +700,7 @@ export default function NotesElement(props: CommonElementProps) {
     >
       {/* Header */}
       <div
+        ref={headerBarRef}
         className="flex items-center justify-between px-3 py-2 drag-handle shrink-0"
         data-notepad-header
         style={{
@@ -703,9 +806,18 @@ export default function NotesElement(props: CommonElementProps) {
               onMouseDown={(e) => e.stopPropagation()}
               className="z-[9999] w-auto p-0 border-none bg-transparent shadow-xl rounded-xl overflow-hidden"
             >
-              <div className="bg-white p-2 rounded-xl shadow-lg">
+              <div
+                className="bg-white p-2 rounded-xl shadow-lg"
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
                 <p className="text-xs text-gray-600 px-1 pb-2">Color del encabezado</p>
-                <ChromePicker color={headerColor} onChange={handleChangeHeaderColor} disableAlpha />
+                <ChromePicker
+                  color={headerColor}
+                  onChange={handleChangeHeaderColor}
+                  onChangeComplete={handleHeaderColorComplete}
+                  disableAlpha
+                />
               </div>
             </PopoverContent>
           </Popover>
