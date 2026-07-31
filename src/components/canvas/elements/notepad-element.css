@@ -54,7 +54,7 @@
   left: 20px; /* Margen rojo mÃ¡s cerca para formato pequeÃ±o */
 }
 
-/* Ãrea de contenido editable - ALINEACIÃ“N PERFECTA con Poppins */
+/* Ãrea de contenido editable - ALINEACIÃ“N PERFECTA con tipografía configurable */
 /* IMPORTANTE: El texto debe iniciar DESPUÃ‰S de la lÃ­nea de margen */
 .notepad-content-editable {
   position: relative;
@@ -64,9 +64,9 @@
   min-height: 100%;
   outline: none;
   padding-left: 70px !important; /* 50px (margen rojo) + 20px (espacio despuÃ©s del margen) - Sobrescribe padding de Tailwind */
-  font-family: 'Poppins', sans-serif !important; /* Fuente Poppins - Sobrescribe font-body */
-  font-size: 16px !important; /* TamaÃ±o de 16px */
-  line-height: 1.625rem !important; /* 26px - Interlineado aumentado */
+  font-family: var(--notebook-font-family, 'Poppins', sans-serif) !important;
+  font-size: var(--notebook-font-size, 16px) !important;
+  line-height: var(--notebook-line-height, 1.625rem) !important;
   color: #1e293b;
   white-space: pre-wrap;
   word-wrap: break-word;
@@ -89,12 +89,12 @@
 
 /* Permitir posicionamiento del cursor en cualquier lÃ­nea */
 .notepad-content-editable * {
-  line-height: 1.625rem; /* 26px - Debe coincidir exactamente con background-size */
-  min-height: 1.625rem; /* 26px */
+  line-height: var(--notebook-line-height, 1.625rem);
+  min-height: var(--notebook-line-height, 1.625rem);
 }
 
 .notepad-content-editable div {
-  min-height: 1.625rem; /* 26px */
+  min-height: var(--notebook-line-height, 1.625rem);
 }
 
 /* Estilo para texto provisional del dictado (gris claro) */
@@ -108,8 +108,8 @@
 /* VersiÃ³n para formato horizontal (20x15) */
 .notepad-content-editable.horizontal-format {
   padding-left: 70px !important; /* Mantener padding estÃ¡ndar para mejor legibilidad */
-  font-size: 16px !important; /* TamaÃ±o de 16px */
-  line-height: 1rem !important; /* Interlineado 1, alineaciÃ³n perfecta */
+  font-size: var(--notebook-font-size, 16px) !important;
+  line-height: var(--notebook-line-height, 1.625rem) !important;
 }
 
 /* Scroll infinito hacia abajo para elemento kRfKpBDg946Y99668Tih */

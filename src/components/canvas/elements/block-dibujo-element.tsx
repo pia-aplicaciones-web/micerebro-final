@@ -23,6 +23,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { NotebookTypographyControls } from '@/components/canvas/notebook-typography-controls';
+import {
+  getNotebookFont,
+  notebookLineHeightPx,
+  resolveNotebookFontId,
+  resolveNotebookFontSize,
+  type NotebookFontId,
+  type NotebookFontSize,
+} from '@/lib/notebook-typography';
 
 const HELP_ITEMS = [
   { title: 'Escribir', detail: 'Usa el área principal para escribir o pegar contenido.' },
@@ -75,6 +84,48 @@ export default function BlockDibujoElement(props: CommonElementProps) {
   const [title, setTitle] = useState(initialTitle);
   const [pages, setPages] = useState<string[]>(initialPages);
   const [currentPageIndex, setCurrentPageIndex] = useState(initialCurrentPage);
+  const [fontSize, setFontSize] = useState<NotebookFontSize>(() =>
+    resolveNotebookFontSize((properties as any)?.fontSize, 16)
+  );
+  const [fontFamilyId, setFontFamilyId] = useState<NotebookFontId>(() =>
+    resolveNotebookFontId((properties as any)?.fontFamily, 'space-grotesk')
+  );
+
+  useEffect(() => {
+    const nextSize = resolveNotebookFontSize((properties as any)?.fontSize, fontSize);
+    if (nextSize !== fontSize) setFontSize(nextSize);
+    const nextFont = resolveNotebookFontId((properties as any)?.fontFamily, fontFamilyId);
+    if (nextFont !== fontFamilyId) setFontFamilyId(nextFont);
+  }, [(properties as any)?.fontSize, (properties as any)?.fontFamily]);
+
+  const persistTypography = useCallback(
+    (nextSize: NotebookFontSize, nextFontId: NotebookFontId) => {
+      onUpdate(id, {
+        properties: {
+          ...((properties as object) || {}),
+          fontSize: nextSize,
+          fontFamily: nextFontId,
+        },
+      });
+    },
+    [id, onUpdate, properties]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: NotebookFontSize) => {
+      setFontSize(size);
+      persistTypography(size, fontFamilyId);
+    },
+    [fontFamilyId, persistTypography]
+  );
+
+  const handleFontFamilyChange = useCallback(
+    (fontId: NotebookFontId) => {
+      setFontFamilyId(fontId);
+      persistTypography(fontSize, fontId);
+    },
+    [fontSize, persistTypography]
+  );
 
   // Refs para mantener referencias estables
   const typedContentRef = useRef(typedContent);
@@ -878,6 +929,13 @@ export default function BlockDibujoElement(props: CommonElementProps) {
 
         {/* Right: Action icons */}
         <div className="flex items-center gap-1">
+          <NotebookTypographyControls
+            fontSize={fontSize}
+            fontFamilyId={fontFamilyId}
+            onFontSizeChange={handleFontSizeChange}
+            onFontFamilyChange={handleFontFamilyChange}
+            dark
+          />
           <Popover>
             <PopoverTrigger asChild>
               <Button
@@ -1181,9 +1239,9 @@ export default function BlockDibujoElement(props: CommonElementProps) {
               'select-text'
             )}
             style={{
-              fontFamily: "'Kalam', cursive",
-              fontSize: '22px',
-              lineHeight: '30px',
+              fontFamily: getNotebookFont(fontFamilyId).family,
+              fontSize: `${fontSize}px`,
+              lineHeight: `${notebookLineHeightPx(fontSize)}px`,
               color: '#000000',
               overflowY: 'auto', // Scroll vertical
               userSelect: 'text',

@@ -12,6 +12,15 @@ import { cn } from '@/lib/utils';
 import { shouldAllowTouchEdit } from '@/lib/touch-edit-guard';
 import { format } from 'date-fns';
 import DeleteNotepadDialog from './delete-notepad-dialog';
+import { NotebookTypographyControls } from '@/components/canvas/notebook-typography-controls';
+import {
+  getNotebookFont,
+  notebookLineHeightPx,
+  resolveNotebookFontId,
+  resolveNotebookFontSize,
+  type NotebookFontId,
+  type NotebookFontSize,
+} from '@/lib/notebook-typography';
 
 // Type guard para LibretaContent
 function isLibretaContent(content: unknown): content is LibretaContent {
@@ -42,6 +51,48 @@ export default function LibretaElement(props: CommonElementProps) {
 
   // Safe properties parsing
   const safeProperties = typeof properties === 'object' && properties !== null ? properties : {};
+  const [fontSize, setFontSize] = useState<NotebookFontSize>(() =>
+    resolveNotebookFontSize((safeProperties as any)?.fontSize, 12)
+  );
+  const [fontFamilyId, setFontFamilyId] = useState<NotebookFontId>(() =>
+    resolveNotebookFontId((safeProperties as any)?.fontFamily, 'space-grotesk')
+  );
+
+  useEffect(() => {
+    const nextSize = resolveNotebookFontSize((properties as any)?.fontSize, fontSize);
+    if (nextSize !== fontSize) setFontSize(nextSize);
+    const nextFont = resolveNotebookFontId((properties as any)?.fontFamily, fontFamilyId);
+    if (nextFont !== fontFamilyId) setFontFamilyId(nextFont);
+  }, [(properties as any)?.fontSize, (properties as any)?.fontFamily]);
+
+  const persistTypography = useCallback(
+    (nextSize: NotebookFontSize, nextFontId: NotebookFontId) => {
+      onUpdate(id, {
+        properties: {
+          ...((properties as object) || {}),
+          fontSize: nextSize,
+          fontFamily: nextFontId,
+        },
+      });
+    },
+    [id, onUpdate, properties]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: NotebookFontSize) => {
+      setFontSize(size);
+      persistTypography(size, fontFamilyId);
+    },
+    [fontFamilyId, persistTypography]
+  );
+
+  const handleFontFamilyChange = useCallback(
+    (fontId: NotebookFontId) => {
+      setFontFamilyId(fontId);
+      persistTypography(fontSize, fontId);
+    },
+    [fontSize, persistTypography]
+  );
 
   // Parsear contenido
   const typedContent = (content || {}) as LibretaContent;
@@ -324,6 +375,12 @@ export default function LibretaElement(props: CommonElementProps) {
             {/* Botones del header */}
             {!isPreview && (
               <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center gap-1"> {/* Los botones aquí */}
+                <NotebookTypographyControls
+                  fontSize={fontSize}
+                  fontFamilyId={fontFamilyId}
+                  onFontSizeChange={handleFontSizeChange}
+                  onFontFamilyChange={handleFontFamilyChange}
+                />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -429,9 +486,9 @@ export default function LibretaElement(props: CommonElementProps) {
                 linear-gradient(90deg, #E5E5E5 1px, transparent 1px)
               `, // Cuadriculado gris claro
               backgroundSize: '20px 20px', // Cuadriculado de 20px
-              fontFamily: 'Monaco, Menlo, "Ubuntu Mono", monospace', // Tipografía monospace 12px
-              fontSize: '12px',
-              lineHeight: '1.2', // Interlineado sencillo
+              fontFamily: getNotebookFont(fontFamilyId).family,
+              fontSize: `${fontSize}px`,
+              lineHeight: `${notebookLineHeightPx(fontSize)}px`,
               whiteSpace: 'pre-wrap',
               border: 'none',
               outline: 'none',

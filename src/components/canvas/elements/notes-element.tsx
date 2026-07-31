@@ -37,6 +37,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ChromePicker } from 'react-color';
+import { NotebookTypographyControls } from '@/components/canvas/notebook-typography-controls';
+import {
+  getNotebookFont,
+  notebookLineHeightPx,
+  resolveNotebookFontId,
+  resolveNotebookFontSize,
+  type NotebookFontId,
+  type NotebookFontSize,
+} from '@/lib/notebook-typography';
 
 const NOTES_SIZE = { width: 600, height: 400 };
 const DEFAULT_HEADER_COLOR = '#F7D946';
@@ -106,6 +115,12 @@ export default function NotesElement(props: CommonElementProps) {
   const [backgroundColor, setBackgroundColor] = useState(initialBackgroundColor);
   const initialHeaderColor = (properties as any)?.headerColor || DEFAULT_HEADER_COLOR;
   const [headerColor, setHeaderColor] = useState(initialHeaderColor);
+  const [fontSize, setFontSize] = useState<NotebookFontSize>(() =>
+    resolveNotebookFontSize((properties as any)?.fontSize, 14)
+  );
+  const [fontFamilyId, setFontFamilyId] = useState<NotebookFontId>(() =>
+    resolveNotebookFontId((properties as any)?.fontFamily, 'poppins')
+  );
 
   const pagesRef = useRef(pages);
   const currentPageRef = useRef(currentPage);
@@ -161,6 +176,13 @@ export default function NotesElement(props: CommonElementProps) {
       if (headerBarRef.current) headerBarRef.current.style.backgroundColor = next;
     }
   }, [(properties as any)?.headerColor, colorPickerOpen]);
+
+  useEffect(() => {
+    const nextSize = resolveNotebookFontSize((properties as any)?.fontSize, fontSize);
+    if (nextSize !== fontSize) setFontSize(nextSize);
+    const nextFont = resolveNotebookFontId((properties as any)?.fontFamily, fontFamilyId);
+    if (nextFont !== fontFamilyId) setFontFamilyId(nextFont);
+  }, [(properties as any)?.fontSize, (properties as any)?.fontFamily]);
 
   // Aplicar contenido remoto solo si no hay mutación local reciente (evita copiar hoja 1)
   useEffect(() => {
@@ -614,6 +636,35 @@ export default function NotesElement(props: CommonElementProps) {
     [headerColor, persistHeaderColor]
   );
 
+  const persistTypography = useCallback(
+    (nextSize: NotebookFontSize, nextFontId: NotebookFontId) => {
+      onUpdate(id, {
+        properties: {
+          ...((properties as object) || {}),
+          fontSize: nextSize,
+          fontFamily: nextFontId,
+        },
+      });
+    },
+    [id, onUpdate, properties]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: NotebookFontSize) => {
+      setFontSize(size);
+      persistTypography(size, fontFamilyId);
+    },
+    [fontFamilyId, persistTypography]
+  );
+
+  const handleFontFamilyChange = useCallback(
+    (fontId: NotebookFontId) => {
+      setFontFamilyId(fontId);
+      persistTypography(fontSize, fontId);
+    },
+    [fontSize, persistTypography]
+  );
+
   const handleTitleBlur = useCallback(() => {
     const next = (titleRef.current?.textContent || 'Apuntes').trim() || 'Apuntes';
     setTitle(next);
@@ -759,6 +810,12 @@ export default function NotesElement(props: CommonElementProps) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0" onMouseDown={(e) => e.stopPropagation()}>
+          <NotebookTypographyControls
+            fontSize={fontSize}
+            fontFamilyId={fontFamilyId}
+            onFontSizeChange={handleFontSizeChange}
+            onFontFamilyChange={handleFontFamilyChange}
+          />
           <Button
             variant="ghost"
             size="icon"
@@ -934,16 +991,16 @@ export default function NotesElement(props: CommonElementProps) {
             'text-black whitespace-pre-wrap break-words select-text outline-none'
           )}
           style={{
-            fontFamily: "'Poppins', sans-serif",
-            fontSize: '14px',
-            lineHeight: '24px',
+            fontFamily: getNotebookFont(fontFamilyId).family,
+            fontSize: `${fontSize}px`,
+            lineHeight: `${notebookLineHeightPx(fontSize)}px`,
             color: '#000000',
             overflowY: 'auto',
             userSelect: 'text',
             WebkitUserSelect: 'text',
             backgroundColor: '#FFFFFF',
             backgroundImage: 'linear-gradient(#e2e8f0 1px, transparent 1px)',
-            backgroundSize: '100% 24px',
+            backgroundSize: `100% ${notebookLineHeightPx(fontSize)}px`,
             paddingTop: '8px',
             minHeight: 0,
           }}

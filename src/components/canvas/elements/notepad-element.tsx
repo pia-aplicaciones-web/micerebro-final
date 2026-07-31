@@ -30,6 +30,15 @@ import jsPDF from 'jspdf';
 import ExportPdfDialog from './export-pdf-dialog';
 import { MiniPasswordDialog } from '@/components/MiniPasswordDialog';
 import { getDefaultSpeechVoice } from '@/lib/speech-voice';
+import { NotebookTypographyControls } from '@/components/canvas/notebook-typography-controls';
+import {
+  getNotebookFont,
+  notebookLineHeightPx,
+  resolveNotebookFontId,
+  resolveNotebookFontSize,
+  type NotebookFontId,
+  type NotebookFontSize,
+} from '@/lib/notebook-typography';
 import './notepad-element.css';
 
 
@@ -97,6 +106,48 @@ export default function NotepadElement(props: CommonElementProps) {
   const [speechRate, setSpeechRate] = useState(0.85); // Velocidad de lectura (0.5-1.5)
   const [selectedVoiceName, setSelectedVoiceName] = useState('Paulina'); // Voz seleccionada
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false); // Popover de configuración
+  const [fontSize, setFontSize] = useState<NotebookFontSize>(() =>
+    resolveNotebookFontSize((properties as any)?.fontSize, 16)
+  );
+  const [fontFamilyId, setFontFamilyId] = useState<NotebookFontId>(() =>
+    resolveNotebookFontId((properties as any)?.fontFamily, 'poppins')
+  );
+
+  useEffect(() => {
+    const nextSize = resolveNotebookFontSize((properties as any)?.fontSize, fontSize);
+    if (nextSize !== fontSize) setFontSize(nextSize);
+    const nextFont = resolveNotebookFontId((properties as any)?.fontFamily, fontFamilyId);
+    if (nextFont !== fontFamilyId) setFontFamilyId(nextFont);
+  }, [(properties as any)?.fontSize, (properties as any)?.fontFamily]);
+
+  const persistTypography = useCallback(
+    (nextSize: NotebookFontSize, nextFontId: NotebookFontId) => {
+      onUpdate(id, {
+        properties: {
+          ...((properties as object) || {}),
+          fontSize: nextSize,
+          fontFamily: nextFontId,
+        },
+      });
+    },
+    [id, onUpdate, properties]
+  );
+
+  const handleFontSizeChange = useCallback(
+    (size: NotebookFontSize) => {
+      setFontSize(size);
+      persistTypography(size, fontFamilyId);
+    },
+    [fontFamilyId, persistTypography]
+  );
+
+  const handleFontFamilyChange = useCallback(
+    (fontId: NotebookFontId) => {
+      setFontFamilyId(fontId);
+      persistTypography(fontSize, fontId);
+    },
+    [fontSize, persistTypography]
+  );
   
   // Hook de autoguardado robusto para el contenido del cuaderno
   const { saveStatus, handleBlur: handleAutoSaveBlur, handleChange, forceSave } = useAutoSave({
@@ -1351,6 +1402,12 @@ export default function NotepadElement(props: CommonElementProps) {
                         </div>
                       </PopoverContent>
                     </Popover>
+                    <NotebookTypographyControls
+                      fontSize={fontSize}
+                      fontFamilyId={fontFamilyId}
+                      onFontSizeChange={handleFontSizeChange}
+                      onFontFamilyChange={handleFontFamilyChange}
+                    />
                     <Button variant="ghost" size="icon" className="size-7" title="Info" onClick={() => setIsInfoOpen(!isInfoOpen)}><Info className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Limpiar Formato" onClick={handleRemoveFormat}><Eraser className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
@@ -1505,6 +1562,11 @@ export default function NotepadElement(props: CommonElementProps) {
                                 (id === 'oyDN2LIr8z7VyYA5727F' || id === 'FdQ656GJ94TePuHpotbY' || id === 'Iz0UWQ5gQwXlk1kGBf1' || id === 'kRfKpBDg946Y99668Tih' || id === 'EktERYKT8kyk3JWymwbu' || id === 'rzBhqCTd8wwZmD8JCNEk') && "small-typography",
                                 "p-[32px_24px_16px_0px]" // Padding estándar - sin scroll infinito
                             )}
+                            style={{
+                              ['--notebook-font-family' as string]: getNotebookFont(fontFamilyId).family,
+                              ['--notebook-font-size' as string]: `${fontSize}px`,
+                              ['--notebook-line-height' as string]: `${notebookLineHeightPx(fontSize)}px`,
+                            }}
                             data-element-id={id}
                         />
                         
