@@ -469,7 +469,8 @@ export const useDictation = (
 
     // Comandos de dictado - frases completas que se convierten en símbolos
     // Hacer las búsquedas más flexibles para manejar variaciones del reconocimiento de voz
-    processedText = processedText.replace(/\bnew\b/gi, '\n');
+    // "nueva" -> salto de línea (reemplaza enter/new, que el reconocimiento en ES no detecta bien)
+    processedText = processedText.replace(/\bnueva\b/gi, '\n');
     processedText = processedText.replace(/\bpunto\b/gi, '.');
     processedText = processedText.replace(/\bcoma\b/gi, ',');
     processedText = processedText.replace(/agrega coma/gi, ',');
@@ -479,9 +480,6 @@ export const useDictation = (
 
     // parrafo / párrafo -> doble salto de línea
     processedText = processedText.replace(/\b(?:parrafo|párrafo)\b/gi, '\n\n');
-
-    // ENTER -> salto de línea simple
-    processedText = processedText.replace(/\benter\b/gi, '\n');
 
     // fecha -> fecha actual amigable
     if (/\bfecha\b/i.test(processedText)) {

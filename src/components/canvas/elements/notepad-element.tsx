@@ -1455,7 +1455,7 @@ export default function NotepadElement(props: CommonElementProps) {
                         </p>
                         <ul className="list-disc pl-4 space-y-1 text-gray-700">
                           <li><strong>lineas</strong>, <strong>líneas</strong>, <strong>linea</strong> o <strong>línea</strong>: inserta <code>//</code> en la posición del cursor.</li>
-                          <li><strong>ENTER</strong>: inserta un salto de línea sencillo.</li>
+                          <li><strong>nueva</strong>: inserta un salto de línea sencillo.</li>
                           <li><strong>parrafo</strong> o <strong>párrafo</strong>: inserta un doble salto de línea (nuevo párrafo).</li>
                           <li><strong>fecha</strong>: inserta la fecha actual en formato largo donde esté el cursor.</li>
                           <li><strong>subrayar</strong>: activa el modo subrayado en color teal para el texto que dictes a continuación.</li>

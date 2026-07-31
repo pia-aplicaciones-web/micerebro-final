@@ -5,11 +5,10 @@ Funcionan con el dictado activo y el cursor dentro del cuaderno o del elemento c
 
 PUNTUACIÓN Y SÍMBOLOS
 ---------------------
-• new — Salto de línea
+• nueva — Salto de línea
 • punto — Inserta .
 • coma — Inserta ,
 • agrega coma — Inserta ,
-• enter — Salto de línea sencillo
 • parrafo / párrafo — Doble salto de línea (nuevo párrafo)
 • lineas / líneas / linea / línea — Inserta //
 • resaltar — Inserta -*-
