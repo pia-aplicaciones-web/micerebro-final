@@ -291,10 +291,10 @@ export function useElementManager(boardId: string, getViewportCenter: () => { x:
         const yellowNotepadPos = getCenteredPosition(yellowNotepadSize.width, yellowNotepadSize.height);
         newElementData = { type, x: yellowNotepadPos.x, y: yellowNotepadPos.y, width: yellowNotepadSize.width, height: yellowNotepadSize.height, userId, properties: { ...baseProperties, position: yellowNotepadPos, size: yellowNotepadSize, backgroundColor: '#FFFFE0' }, content: props?.content || { pages: [''], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'notes':
-        // Ajuste estándar iPad: 20cm alto x 15cm ancho (similar a notepad 20x15)
-        const notesSize = { width: 567, height: 756 };
+        // Formato horizontal Apuntes: 600×400 px
+        const notesSize = { width: 600, height: 400 };
         const notesPos = getCenteredPosition(notesSize.width, notesSize.height);
-        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1' }, content: props?.content || { pages: ['<div><br></div>'], currentPage: 0, searchQuery: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
+        newElementData = { type, x: notesPos.x, y: notesPos.y, width: notesSize.width, height: notesSize.height, userId, properties: { ...baseProperties, position: notesPos, size: notesSize, backgroundColor: '#dcefe1', headerColor: '#F7D946' }, content: props?.content || { title: 'Apuntes', pages: [''], currentPage: 0, searchQuery: '', text: '' }, zIndex, createdAt: serverTimestamp(), updatedAt: serverTimestamp() }; break;
       case 'block-dibujo':
         // Estándar iPad: 20cm alto x 15cm ancho (vertical)
         const blockDibujoSize = { width: 567, height: 756 };
