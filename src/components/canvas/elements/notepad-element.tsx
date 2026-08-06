@@ -6,7 +6,7 @@ import type { CommonElementProps, NotepadContent, CanvasElementProperties } from
 import {
   MoreVertical, X, Minus, Maximize, GripVertical,
   FileImage, Settings, Settings2,
-  Info, Eraser, CalendarDays, FileSignature, Calendar,
+  Info, Eraser, CalendarDays, FileSignature,
   ArrowLeft, ArrowRight, Plus, Maximize2, Trash2, Lock, Sparkles, Copy,
   Volume2, Pause, Square, Printer, Languages
 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -169,9 +170,11 @@ export default function NotepadElement(props: CommonElementProps) {
       const updatedPages = [...(latestTypedContent.pages || [])];
       updatedPages[latestPageIndex] = newHtml;
       
+      const liveTitle = titleRef.current?.innerText;
       await latestOnUpdate(latestId, { 
         content: { 
-          ...latestTypedContent, 
+          ...latestTypedContent,
+          ...(liveTitle !== undefined ? { title: liveTitle } : {}),
           pages: updatedPages 
         } 
       });
@@ -996,18 +999,23 @@ export default function NotepadElement(props: CommonElementProps) {
 
   useEffect(() => {
     const titleEl = titleRef.current;
-    if (titleEl && titleEl.innerText !== (typedContent.title || '')) {
-      titleEl.innerText = typedContent.title || '';
+    if (!titleEl) return;
+    // No pisar el título mientras el usuario lo edita
+    if (document.activeElement === titleEl) return;
+    const next = typedContent.title || '';
+    if (titleEl.innerText !== next) {
+      titleEl.innerText = next;
     }
   }, [typedContent.title]);
 
-  // FIX CRÍTICO: Sincronizar título cuando cambia el estado minimized
+  // Sincronizar título al restaurar desde minimizado (sin pelear con contentEditable)
   useEffect(() => {
-    if (!minimized && titleRef.current && typedContent.title) {
-      const titleEl = titleRef.current;
-      if (titleEl.innerText !== typedContent.title) {
-        titleEl.innerText = typedContent.title;
-      }
+    if (minimized) return;
+    const titleEl = titleRef.current;
+    if (!titleEl || document.activeElement === titleEl) return;
+    const next = typedContent.title || '';
+    if (next && titleEl.innerText !== next) {
+      titleEl.innerText = next;
     }
   }, [minimized, typedContent.title]);
 
@@ -1028,7 +1036,14 @@ export default function NotepadElement(props: CommonElementProps) {
     }
   }, []);
 
-  const handleRemoveFormat = useCallback((e: React.MouseEvent) => execCommand(e, 'removeFormat'), [execCommand]);
+  const handleRemoveFormat = useCallback((e?: React.SyntheticEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    if (contentRef.current) {
+      contentRef.current.focus();
+      document.execCommand('removeFormat', false);
+    }
+  }, []);
   const handleInsertShortDate = useCallback((e: React.MouseEvent) => execCommand(e, 'insertHTML', `<span style="color: #a0a1a6;">-- ${format(new Date(), 'dd/MM/yy')} </span>`), [execCommand]);
   
   const getAllPagesText = useCallback(() => {
@@ -1223,30 +1238,6 @@ export default function NotepadElement(props: CommonElementProps) {
     setIsDeleteDialogOpen(false);
   }, [deleteElement, id]);
 
-  const handleInsertDate = useCallback(() => {
-    if (!contentRef.current) return;
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('es-CL', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-    const timeStr = now.toLocaleTimeString('es-CL');
-    const dateTimeStr = `${dateStr} ${timeStr}`;
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(document.createTextNode(dateTimeStr));
-      // Colocar cursor después del texto insertado
-      range.setStartAfter(range.endContainer);
-      range.setEndAfter(range.endContainer);
-      selection.removeAllRanges();
-      selection.addRange(range);
-    }
-  }, []);
-
   const improveOptionLabels: Record<string, string> = {
     correccion: 'Corrección ortográfica',
     reescritura: 'Reescritura clara',
@@ -1303,12 +1294,20 @@ export default function NotepadElement(props: CommonElementProps) {
                 suppressContentEditableWarning
                 onFocus={handleTitleFocus}
                 onBlur={handleTitleBlur}
-                className="bg-transparent flex-grow outline-none cursor-text font-headline text-sm font-semibold p-1"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    (e.target as HTMLElement).blur();
+                  }
+                }}
+                className="bg-transparent min-w-[4rem] flex-1 outline-none cursor-text font-headline text-sm font-semibold p-1 truncate"
                 data-placeholder='Título'
+                title="Clic para editar el título"
                 onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
             />
             {!isPreview && (!typedContent.password || isUnlockedForEditing) && (
-                <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center">
+                <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center shrink-0">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -1408,10 +1407,7 @@ export default function NotepadElement(props: CommonElementProps) {
                       onFontSizeChange={handleFontSizeChange}
                       onFontFamilyChange={handleFontFamilyChange}
                     />
-                    <Button variant="ghost" size="icon" className="size-7" title="Info" onClick={() => setIsInfoOpen(!isInfoOpen)}><Info className="size-4"/></Button>
-                    <Button variant="ghost" size="icon" className="size-7" title="Limpiar Formato" onClick={handleRemoveFormat}><Eraser className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Corta" onClick={handleInsertShortDate}><CalendarDays className="size-4"/></Button>
-                    <Button variant="ghost" size="icon" className="size-7" title="Insertar Fecha Completa" onClick={handleInsertDate}><Calendar className="size-4"/></Button>
                     <Button variant="ghost" size="icon" className="size-7" title="Restaurar tamaño original" onMouseDown={(e) => {e.stopPropagation(); handleRestoreOriginalSize();}}><Maximize2 className="size-4"/></Button>
                     <Button
                       variant="ghost"
@@ -1428,6 +1424,15 @@ export default function NotepadElement(props: CommonElementProps) {
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-6" title="Más opciones"><MoreVertical className="size-3" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => setIsInfoOpen(true)}>
+                              <Info className="mr-2 h-4 w-4" />
+                              <span>Info / Comandos de dictado</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRemoveFormat()}>
+                              <Eraser className="mr-2 h-4 w-4" />
+                              <span>Limpiar formato</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={handleCopyAsTxt}>
                               <FileSignature className="mr-2 h-4 w-4" />
                               <span>Copiar texto como .txt ordenado</span>
