@@ -1300,7 +1300,7 @@ export default function NotepadElement(props: CommonElementProps) {
                     (e.target as HTMLElement).blur();
                   }
                 }}
-                className="bg-transparent min-w-[4rem] flex-1 outline-none cursor-text font-headline text-sm font-semibold p-1 truncate"
+                className="bg-transparent min-w-[12rem] flex-[1_1_40%] outline-none cursor-text font-headline text-sm font-semibold p-1 truncate"
                 data-placeholder='Título'
                 title="Clic para editar el título"
                 onMouseDown={(e) => e.stopPropagation()}
@@ -1308,16 +1308,6 @@ export default function NotepadElement(props: CommonElementProps) {
             />
             {!isPreview && (!typedContent.password || isUnlockedForEditing) && (
                 <div onMouseDown={(e) => e.stopPropagation()} className="flex items-center shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-7"
-                      title={isImprovingText ? 'Mejorando...' : 'Mejorar texto'}
-                      onClick={handleImproveText}
-                      disabled={isImprovingText}
-                    >
-                      <Sparkles className="size-4" />
-                    </Button>
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -1424,6 +1414,10 @@ export default function NotepadElement(props: CommonElementProps) {
                     <DropdownMenu modal={false}>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="size-6" title="Más opciones"><MoreVertical className="size-3" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent>
+                          <DropdownMenuItem onClick={handleImproveText} disabled={isImprovingText}>
+                              <Sparkles className="mr-2 h-4 w-4" />
+                              <span>{isImprovingText ? 'Mejorando...' : 'Mejorar texto'}</span>
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setIsInfoOpen(true)}>
                               <Info className="mr-2 h-4 w-4" />
                               <span>Info / Comandos de dictado</span>
