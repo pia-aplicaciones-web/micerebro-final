@@ -152,23 +152,24 @@ export default function EmailAuthDialog({
               />
             </div>
           )}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end pt-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isLoading}
+              className="min-h-11"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isLoading}>
+            <Button type="submit" disabled={isLoading || !email || !password} className="min-h-11">
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {mode === 'login' ? 'Iniciando sesión...' : 'Creando cuenta...'}
                 </>
               ) : (
-                mode === 'login' ? 'Iniciar Sesión' : 'Crear Cuenta'
+                mode === 'login' ? 'Ingresar' : 'Crear Cuenta'
               )}
             </Button>
           </div>

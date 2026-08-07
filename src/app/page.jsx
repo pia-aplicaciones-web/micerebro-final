@@ -245,12 +245,15 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center" style={{ backgroundColor: '#96e4e6' }}>
-      <div className="w-full max-w-md px-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="h-16 w-16 bg-black rounded-full flex items-center justify-center mb-4 shadow-lg">
-            <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+    <div
+      className="min-h-[100dvh] w-full flex flex-col items-center justify-start sm:justify-center overflow-y-auto py-6 sm:py-10"
+      style={{ backgroundColor: '#96e4e6' }}
+    >
+      <div className="w-full max-w-md px-6 pb-8">
+        {/* Logo — más compacto en el formulario de email */}
+        <div className={`flex flex-col items-center text-center ${showLoginForm ? 'mb-4' : 'mb-8'}`}>
+          <div className={`${showLoginForm ? 'h-12 w-12 mb-2' : 'h-16 w-16 mb-4'} bg-black rounded-full flex items-center justify-center shadow-lg`}>
+            <svg width={showLoginForm ? 28 : 36} height={showLoginForm ? 28 : 36} viewBox="0 0 36 36" fill="none">
               <defs>
                 <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stopColor="#00ffaa" />
@@ -261,12 +264,16 @@ export default function HomePage() {
               <path d="M6 18C6 14 8 12 12 12C14 12 16 13 18 14C20 15 22 16 24 16C26 16 28 15 30 14C32 13 34 14 34 18C34 22 32 24 30 24C28 24 26 23 24 22C22 21 20 20 18 20C16 20 14 21 12 22C10 23 8 22 6 18Z" fill="url(#logoGradient)"/>
             </svg>
           </div>
-          <h1 className="text-6xl font-bold text-slate-900 mb-2">Mi cerebro</h1>
-          <p className="text-slate-500 text-lg">Tu lienzo de ideas infinitas.</p>
+          <h1 className={`${showLoginForm ? 'text-3xl' : 'text-5xl sm:text-6xl'} font-bold text-slate-900 mb-1`}>
+            Mi cerebro
+          </h1>
+          {!showLoginForm && (
+            <p className="text-slate-500 text-base sm:text-lg">Tu lienzo de ideas infinitas.</p>
+          )}
         </div>
 
         {/* Tarjeta Login */}
-        <div className="bg-white p-8 rounded-2xl shadow-xl">
+        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-xl">
           {!showLoginForm ? (
             // Vista principal con botones
             <div className="space-y-4">
@@ -336,7 +343,7 @@ export default function HomePage() {
           ) : (
             // Formulario de email/password
             <form onSubmit={handleEmailLogin} className="space-y-4">
-              <div className="text-center mb-4">
+              <div className="text-center mb-2">
                 <h2 className="text-xl font-bold text-slate-900">
                   {isCreatingAccount ? 'Crear cuenta' : 'Iniciar sesión'}
                 </h2>
@@ -355,7 +362,9 @@ export default function HomePage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16b5a8] focus:border-transparent"
+                  autoComplete="email"
+                  enterKeyHint="next"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#16b5a8] focus:border-transparent"
                   placeholder="tu@email.com"
                 />
               </div>
@@ -371,15 +380,17 @@ export default function HomePage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#16b5a8] focus:border-transparent"
+                  autoComplete={isCreatingAccount ? 'new-password' : 'current-password'}
+                  enterKeyHint="go"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#16b5a8] focus:border-transparent"
                   placeholder="••••••"
                 />
               </div>
 
               <button
                 type="submit"
-                disabled={isLoggingIn}
-                className="w-full bg-[#16b5a8] hover:bg-[#139c91] text-white h-12 rounded-md px-8 flex items-center justify-center font-medium text-sm disabled:opacity-50"
+                disabled={isLoggingIn || !email || !password}
+                className="w-full bg-[#16b5a8] hover:bg-[#139c91] text-white min-h-12 h-12 rounded-md px-8 flex items-center justify-center font-semibold text-base shadow-md disabled:opacity-50 sticky bottom-0"
               >
                 {isLoggingIn ? (
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -388,21 +399,21 @@ export default function HomePage() {
                 ) : (
                   <LogIn className="h-5 w-5 mr-2" />
                 )}
-                {isLoggingIn ? 'Cargando...' : isCreatingAccount ? 'Crear cuenta' : 'Iniciar sesión'}
+                {isLoggingIn ? 'Cargando...' : isCreatingAccount ? 'Crear cuenta' : 'Ingresar'}
               </button>
 
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-sm pt-1">
                 <button
                   type="button"
                   onClick={() => setIsCreatingAccount(!isCreatingAccount)}
-                  className="text-[#16b5a8] hover:underline"
+                  className="text-[#16b5a8] hover:underline py-2"
                 >
                   {isCreatingAccount ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
                 </button>
                 <button
                   type="button"
                   onClick={() => { setShowLoginForm(false); setEmail(''); setPassword(''); }}
-                  className="text-slate-500 hover:text-slate-700"
+                  className="text-slate-500 hover:text-slate-700 py-2"
                 >
                   Volver
                 </button>
