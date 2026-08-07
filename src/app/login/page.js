@@ -3,7 +3,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from '@/context/AuthContext';
-import { signInWithGoogle, signInWithEmail, createUserWithEmail } from '@/lib/auth';
+import { signInWithGoogle, signInWithEmail, createUserWithEmail, handleGoogleSignInResult } from '@/lib/auth';
+import { initFirebase } from '@/lib/firebase';
 import { getDocuments, createDocument, getDocument, setDocument } from '@/lib/firestore';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
@@ -21,13 +22,6 @@ export default function LoginPage() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   
   const hasProcessedRef = useRef(false);
-
-  // Redirigir si ya está autenticado
-  useEffect(() => {
-    if (!authLoading && user && !isRedirecting) {
-      redirectToBoard(user);
-    }
-  }, [user, authLoading, isRedirecting]);
 
   // Función para redirigir al tablero
   const redirectToBoard = useCallback(async (userToProcess) => {
@@ -89,6 +83,30 @@ export default function LoginPage() {
     }
   }, [isRedirecting, router, toast]);
 
+  // Procesar retorno de Google redirect (móvil)
+  useEffect(() => {
+    const processRedirect = async () => {
+      try {
+        const { auth } = await initFirebase();
+        if (!auth) return;
+        const result = await handleGoogleSignInResult(auth);
+        if (result?.user) {
+          await redirectToBoard(result.user);
+        }
+      } catch (error) {
+        console.warn('Redirect Google (login):', error?.message);
+      }
+    };
+    processRedirect();
+  }, [redirectToBoard]);
+
+  // Redirigir si ya está autenticado
+  useEffect(() => {
+    if (!authLoading && user && !isRedirecting) {
+      redirectToBoard(user);
+    }
+  }, [user, authLoading, isRedirecting, redirectToBoard]);
+
   // Handler de login con Google
   const handleGoogleLogin = useCallback(async () => {
     console.log('🔵 handleGoogleLogin llamado', { isLoggingIn, authLoading });
@@ -109,7 +127,10 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error('❌ Error login Google:', error);
-      console.error('❌ Error completo:', JSON.stringify(error, null, 2));
+      if (error?.message?.includes('Redirigiendo a Google')) {
+        // Flujo normal en móvil: la página saldrá hacia Google
+        return;
+      }
       const errorMessage = error?.message || error?.toString() || 'Error al iniciar sesión.';
       toast({ variant: 'destructive', title: 'Error', description: errorMessage });
       setIsLoggingIn(false);

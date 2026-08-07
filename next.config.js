@@ -23,13 +23,24 @@ const nextConfig = {
 
 
   async rewrites() {
-    return [
-      {
-        source: '/',
-        has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
-        destination: '/movil/board/auto-load-board',
-      },
-    ];
+    // Proxy del helper de Firebase Auth en el mismo origen.
+    // Necesario para signInWithRedirect en Safari/iOS y Chrome modernos
+    // (bloquean storage de terceros hacia *.firebaseapp.com).
+    return {
+      beforeFiles: [
+        {
+          source: '/__/auth/:path*',
+          destination: 'https://micerebroapp.firebaseapp.com/__/auth/:path*',
+        },
+      ],
+      afterFiles: [
+        {
+          source: '/',
+          has: [{ type: 'header', key: 'x-device-type', value: 'mobile' }],
+          destination: '/movil/board/auto-load-board',
+        },
+      ],
+    };
   },
 
   async redirects() {

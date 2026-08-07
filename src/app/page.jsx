@@ -7,9 +7,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { signInWithGoogle, signInWithEmail, createUserWithEmail, handleGoogleSignInResult } from '@/lib/auth';
 import { initFirebase, getFirebaseFirestore } from '@/lib/firebase';
+import { useAuthContext } from '@/context/AuthContext';
 
 export default function HomePage() {
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuthContext();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [showLoginForm, setShowLoginForm] = useState(false);
@@ -18,15 +20,12 @@ export default function HomePage() {
   const [password, setPassword] = useState('');
   const hasProcessedRef = useRef(false);
 
-  // Manejar resultado de redirect de Google al cargar la página
-  // Nota: Con la nueva implementación siempre usamos popup, pero mantenemos esto
-  // para procesar redirects pendientes de sesiones anteriores
+  // Manejar resultado de redirect de Google al cargar la página (móvil)
   useEffect(() => {
     const handleRedirectResult = async () => {
       if (hasProcessedRef.current) return;
 
       try {
-        // Inicializar Firebase primero
         const { auth } = await initFirebase();
         if (!auth) {
           console.log('ℹ️ Firebase no disponible en servidor');
@@ -41,18 +40,14 @@ export default function HomePage() {
           await redirectToBoard(result.user);
         }
       } catch (error) {
-        // Solo loggear errores críticos, no mostrar al usuario
-        // Los errores de sessionStorage/initial state son normales cuando no hay redirect pendiente
         const errorMessage = error?.message || '';
         if (errorMessage.includes('sessionStorage') || 
             errorMessage.includes('initial state') || 
             errorMessage.includes('missing initial state')) {
-          // Esto es normal cuando no hay redirect pendiente (flujo normal con popup)
-          console.log('ℹ️ No hay redirect pendiente (normal cuando se usa popup)');
+          console.log('ℹ️ No hay redirect pendiente');
           return;
         }
         console.error('❌ Error procesando redirect de Google:', error);
-        // No mostrar toast para errores de redirect ya que pueden ser normales
       }
     };
 
@@ -133,6 +128,13 @@ export default function HomePage() {
       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo cargar el tablero.' });
     }
   }, [isRedirecting, toast]);
+
+  // Si ya hay sesión (p. ej. tras redirect de Google o visita recurrente), ir al tablero
+  useEffect(() => {
+    if (!authLoading && user && !isRedirecting && !hasProcessedRef.current) {
+      redirectToBoard(user);
+    }
+  }, [user, authLoading, isRedirecting, redirectToBoard]);
 
   // Verificar usuario existente al cargar
   useEffect(() => {

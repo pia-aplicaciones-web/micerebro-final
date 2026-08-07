@@ -1,8 +1,19 @@
 // Firebase configuration - Solo configuración, sin inicialización
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth, setPersistence, browserSessionPersistence } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { initializeFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+
+/**
+ * authDomain en el mismo origen que la app (vía proxy /__/auth).
+ * Evita fallos de login con Google en Safari/iOS por storage de terceros.
+ */
+function resolveAuthDomain(envAuthDomain) {
+  if (typeof window !== 'undefined' && window.location?.hostname) {
+    return window.location.hostname;
+  }
+  return envAuthDomain || 'micerebroapp.firebaseapp.com';
+}
 
 // Configuración de Firebase
 // Prioridad: variables de entorno (.env.local) > config por defecto
@@ -11,7 +22,7 @@ const getFirebaseConfig = () => {
   const env = typeof process !== 'undefined' ? process.env : {};
   return {
     apiKey: env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyCbnZ8uKlOc8PBvTql2N2PkIDxc2BXWFCg',
-    authDomain: env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'micerebroapp.firebaseapp.com',
+    authDomain: resolveAuthDomain(env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
     projectId: env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'micerebroapp',
     storageBucket: env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'micerebroapp.firebasestorage.app',
     messagingSenderId: env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '967156176052',
@@ -59,10 +70,10 @@ export const initFirebase = async () => {
         console.log('✅ Firebase App ya existente, reutilizando');
       }
 
-      // Inicializar Auth con persistencia de sesión
+      // Persistencia local: sobrevive al cierre de pestaña y es más fiable en móvil
       auth = getAuth(app);
-      await setPersistence(auth, browserSessionPersistence);
-      console.log('✅ Firebase Auth inicializado con persistencia de sesión');
+      await setPersistence(auth, browserLocalPersistence);
+      console.log('✅ Firebase Auth inicializado (persistencia local, authDomain:', getFirebaseConfig().authDomain, ')');
 
       // Inicializar Firestore (base de datos datacerebro)
       // CRÍTICO: ignoreUndefinedProperties=true evita errores cuando los objetos tienen undefined

@@ -9,7 +9,7 @@ import { useBoardStore } from '@/lib/store/boardStore';
 
 const MobilePage = ({ params }) => {
   const router = useRouter();
-  const { user, authLoading } = useAuthContext();
+  const { user, loading: authLoading } = useAuthContext();
   const { loadBoard, createBoard } = useBoardStore();
 
   const [resolvedBoardId, setResolvedBoardId] = useState(null);
