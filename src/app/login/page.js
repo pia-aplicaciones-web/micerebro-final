@@ -170,10 +170,10 @@ export default function LoginPage() {
   // Página de login
   return (
     <>
-      <div className="min-h-screen w-full flex flex-col items-center justify-center" style={{ backgroundColor: '#96e4e6' }}>
-        <div className="w-full max-w-md px-6">
+      <div className="min-h-[100dvh] w-full flex flex-col items-center justify-start sm:justify-center overflow-y-auto py-6" style={{ backgroundColor: '#96e4e6' }}>
+        <div className="w-full max-w-md px-6 pb-8">
           {/* Logo */}
-          <div className="flex flex-col items-center mb-10 text-center">
+          <div className="flex flex-col items-center mb-8 text-center">
             <div className="h-16 w-16 bg-black rounded-full flex items-center justify-center mb-4 shadow-lg">
               <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
                 <defs>
